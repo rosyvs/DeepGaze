@@ -6,7 +6,8 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import math
-
+import time
+import dask.dataframe as dd
 
 # Stats of setup
 screen_res = (1920,1080)
@@ -78,7 +79,10 @@ def plot_data(df,event,t_lim=None,x_y_lim=None):
 
 
 def preprocess_data(raw_data_path, output_folder, screen_res, target_frequency=60, current_frequency=1000,subject_dist=989,NA_FLAG=-180,debug=False):
+    print(str(raw_data_path))
     for file_path in raw_data_path.glob('*.csv'):
+        print(f"Processing File Path: {file_path}")
+        start = time.time()
         df = pd.read_csv(file_path,usecols=['ParticipantID','XAvg','YAvg','event','tSample'])
         sampled_df = convert_to_sample_rate(df,current_frequency,target_frequency)
         pixels_per_deg = get_pixels_per_degree(screen_res,screen_size,subject_dist)
@@ -106,10 +110,14 @@ def preprocess_data(raw_data_path, output_folder, screen_res, target_frequency=6
         # Write files
         else:
             write_file_event(res_df,output_folder)
+        print(f"Processed {file_path} in {time.time() - start} seconds")
+
+
 
 def main():
-    data_folder = Path("/Users/rickgentry/emotive_lab/eyemind/data")
-    preprocess_data(Path(data_folder,"samples"), Path(data_folder,"output"),screen_res,debug=True)
+    print("Calling main")
+    data_folder = Path("/mnt/c/Users/rige3027/emotivelab/eyemind/data")
+    preprocess_data(Path(data_folder,"sample"), Path(data_folder,"output"),screen_res)
 
 if __name__ == "__main__":
     main()
