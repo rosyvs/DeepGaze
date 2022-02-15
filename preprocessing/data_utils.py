@@ -77,13 +77,13 @@ def plot_data(df,event,t_lim=None,x_y_lim=None):
     plt.show()    
 
 
-
-def preprocess_data(raw_data_path, output_folder, screen_res, target_frequency=60, current_frequency=1000,subject_dist=989,NA_FLAG=-180,debug=False):
+def preprocess_data(raw_data_path, output_folder, screen_res=(1920,1080), target_frequency=60, current_frequency=1000,subject_dist=989,NA_FLAG=-180, label_cols=[],debug=False):
     print(str(raw_data_path))
     for file_path in raw_data_path.glob('*.csv'):
         print(f"Processing File Path: {file_path}")
         start = time.time()
-        df = pd.read_csv(file_path,usecols=['ParticipantID','XAvg','YAvg','event','tSample'])
+        cols = ['ParticipantID','XAvg','YAvg','event','tSample'] + label_cols
+        df = pd.read_csv(file_path,usecols=cols)
         sampled_df = convert_to_sample_rate(df,current_frequency,target_frequency)
         pixels_per_deg = get_pixels_per_degree(screen_res,screen_size,subject_dist)
         sampled_df = convert_to_angle(sampled_df,(screen_res[0]//2,screen_res[1]//2),pixels_per_deg)
@@ -116,8 +116,8 @@ def preprocess_data(raw_data_path, output_folder, screen_res, target_frequency=6
 
 def main():
     print("Calling main")
-    data_folder = Path("/mnt/c/Users/rige3027/emotivelab/eyemind/data")
-    preprocess_data(Path(data_folder,"sample"), Path(data_folder,"output"),screen_res)
+    data_folder = Path("/Users/rickgentry/emotive_lab/eyemind/data")
+    preprocess_data(Path(data_folder,"raw/shamnosham_sample"), Path(data_folder,"processed/shamnosham_output"))
 
 if __name__ == "__main__":
     main()
