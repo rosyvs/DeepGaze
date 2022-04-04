@@ -88,7 +88,7 @@ def preprocess_data(raw_data_path, output_folder, screen_res=(1920,1080), target
         res_df = get_time_signal(sampled_df)
 
         # Select Columns needed
-        res_df = res_df.filter(items=['ParticipantID','XAvg','YAvg','event','t'])
+        res_df = res_df.filter(items=['ParticipantID','XAvg','YAvg','event','t', 'tSample'])
 
         if debug:
             for event in df.event.unique():
@@ -102,8 +102,8 @@ def preprocess_data(raw_data_path, output_folder, screen_res=(1920,1080), target
 
 def main():
     print("Calling main")
-    data_folder = Path("/Users/rickgentry/emotive_lab/eyemind/data")
-    preprocess_data(Path(data_folder,"raw/shamnosham_sample"), Path(data_folder,"processed/shamnosham_output"))
+    data_folder = Path("/Users/rickgentry/emotive_lab/eyemind/data/")
+    preprocess_data(Path(data_folder,"raw/sample"), Path(data_folder,"processed/output"))
 
 if __name__ == "__main__":
     main()

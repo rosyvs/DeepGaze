@@ -53,7 +53,7 @@ class MultiFileDataset(Dataset):
         else:
             filepath = self._get_file_path(filename)
             # Assumes data has header row
-            x_data = np.loadtxt(open(filepath,"rb"),delimiter=",",skiprows=1,usecols=[1,2])
+            x_data = np.loadtxt(open(filepath,"rb"),delimiter=",",skiprows=1,usecols=[2,3])
             self.cached_data[filename] = x_data
         #print(x_data,label)
         if self.transform_x:
@@ -108,7 +108,7 @@ class GazeDataModule(LightningDataModule):
             self.dataset_train = MultiFileDataset(self.data_dir, file_list=self.file_list, label_mapper=self.label_mapper, transform_x=self.transform_x, transform_y=self.transform_y)
         if stage == "test":
             dir = self.test_dir if self.test_dir is not None else self.data_dir 
-            self.dataset_test = MultiFileDataset(dir, file_list=self.file_list, label_mapper=self.label_mapper, transform_x=self.tranfsorm_x, transform_y=self.transform_y)
+            self.dataset_test = MultiFileDataset(dir, file_list=self.file_list, label_mapper=self.label_mapper, transform_x=self.transform_x, transform_y=self.transform_y)
     
     def train_dataloader(self, shuffle: bool = False, sampler: Sampler=None) -> DataLoader:
         return self._get_dataloader(self.dataset_train, sampler=sampler, shuffle=shuffle)
