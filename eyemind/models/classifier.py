@@ -6,13 +6,8 @@ from torch import nn
 import torch.nn.functional as F
 import torch
 
-import sys
-from pathlib import Path
-sys.path.append(str(Path("/Users/rickgentry/emotive_lab/eyemind/OBF").resolve()))
-
-from obf.model import ae
-from obf.model import creator
-
+from eyemind.obf.model import ae
+from eyemind.obf.model import creator
 
 
 class EncoderClassifierModel(LightningModule):

@@ -7,20 +7,14 @@ from torch import nn
 import torch.nn.functional as F
 import torch
 
-import sys
-from pathlib import Path
-sys.path.append(str(Path("../../OBF").resolve()))
-
-from obf.model import ae
-from obf.model import creator
-
-
+from eyemind.obf.model import ae
+from eyemind.obf.model import creator
 
 class EncoderDecoderModel(LightningModule):
     def __init__(self, encoder: nn.Module, decoder: nn.Module, criterion: nn.Module, num_classes: int, learning_rate=1e-3, lr_scheduler_step_size=1, freeze_encoder=False, cuda=True):
         super().__init__()
         # Saves hyperparameters (init args)
-        self.save_hyperparameters(ignore=["encoder",'decoder'])
+        self.save_hyperparameters(ignore=["encoder",'decoder', 'criterion'])
         self.encoder = encoder
         self.decoder = decoder
         self.criterion = criterion
@@ -58,7 +52,7 @@ class EncoderDecoderModel(LightningModule):
         y = y.int()
         accuracy = self.accuracy_metric(preds, y)
         auroc = self.auroc_metric(probs, y)
-        self.logger.experiment.add_scalars("losses", {f"{step_type}_loss": loss})        
+        self.logger.experiment.add_scalars("losses", {f"{step_type}": loss}, self.global_step)        
         self.log(f"{step_type}_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log(f"{step_type}_accuracy", accuracy, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log(f"{step_type}_auroc", auroc, on_step=False, on_epoch=True, prog_bar=True, logger=True)

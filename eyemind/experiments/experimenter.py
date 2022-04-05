@@ -6,11 +6,8 @@ from torch.utils.data import SubsetRandomSampler
 from eyemind.dataloading.gaze_data import GazeDataModule
 from eyemind.dataloading.load_dataset import get_datamodule, get_filenames_for_dataset, get_label_df, get_label_mapper, get_stratified_group_splits, limit_sequence_len
 from eyemind.models.classifier import EncoderClassifierModel
-# Import OBF
-import sys
-sys.path.append(str(Path("../../OBF").resolve()))
-from obf.model import ae
-from obf.model import creator
+from eyemind.obf.model import ae
+from eyemind.obf.model import creator
 
 class BaseExperiment():
 
