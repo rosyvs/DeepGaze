@@ -1,2 +1,9 @@
 data/*
 results/*
+**__pycache__
+**.DS_Store
+trained_models/*
+results/*
+**.egg-info
+**logs
+.vscode
