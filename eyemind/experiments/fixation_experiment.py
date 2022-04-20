@@ -1,4 +1,6 @@
 from argparse import ArgumentParser
+from distutils.command.config import config
+import json
 from pathlib import Path
 from functools import partial
 import numpy as np
@@ -15,12 +17,13 @@ from eyemind.preprocessing.fixations import fixation_label_mapper
 from eyemind.dataloading.load_dataset import limit_sequence_len
 from eyemind.models.encoder_decoder import EncoderDecoderModel
 from sklearn.model_selection import train_test_split
+from pytorch_lightning.callbacks import LearningRateMonitor
+# Have to add path to enable torch.load to work since they saved it weirdly
+import sys
+sys.path.append(str(Path("../obf").resolve()))
 
-# import sys
-# sys.path.append(str(Path("/Users/rickgentry/emotive_lab/eyemind/OBF").resolve()))
 from eyemind.obf.model import ae
 from eyemind.obf.model import creator
-
 
 def limit_label_seq(y_data, sequence_length, pad_token=-1.):
     if len(y_data) > sequence_length:
@@ -37,6 +40,11 @@ def get_dataloaders_from_split(dm, train_split, val_split):
     val_sampler = SubsetRandomSampler(val_split)
     val_dl = dm.val_dataloader(sampler=val_sampler)
     return train_dl, val_dl
+
+def load_encoder_decoder(pretrained_weights_dirpath, decoder_weights_filename):
+    encoder = creator.load_encoder(str(Path(pretrained_weights_dirpath).resolve()))
+    decoder = torch.load(str(Path(pretrained_weights_dirpath, decoder_weights_filename).resolve()),map_location=torch.device('cpu'))
+    return encoder, decoder
 
 def create_encoder_decoder(hidden_dim=128, use_conv=True, conv_dim=32, input_dim=2, out_dim=2, input_seq_length=500, backbone_type="gru", nlayers=2):
     if use_conv:
@@ -68,6 +76,14 @@ def create_encoder_decoder(hidden_dim=128, use_conv=True, conv_dim=32, input_dim
                                batch_norm=True)
 
     return encoder, fi_decoder
+
+def setup_data_module(data_folderpath, sequence_length, label_mapper, stage="fit"):
+    lim_seq_len = partial(limit_sequence_len, sequence_len=sequence_length, random_part=False)
+    limit_labels = partial(limit_label_seq, sequence_length=sequence_length)
+    transforms = [lim_seq_len,lambda data: torch.tensor(data).float()]
+    dm = GazeDataModule(data_folderpath, label_mapper=label_mapper, transform_x=transforms, transform_y=[limit_labels,lambda data: torch.tensor(data).float()], num_workers=0)
+    dm.setup(stage)
+    return dm
 
 def find_lr():
     # Random Seed
@@ -142,61 +158,81 @@ def train_from_scratch(use_conv=True, tune=False):
 
         # Trainer
         grad_norm = 0.5
-        logger = TensorBoardLogger("lightning_logs", name="fixation_id_non_conv_not_pretrained")
-        trainer = Trainer(max_epochs=5, logger=logger, deterministic=True, gradient_clip_val=grad_norm)
+        logger = TensorBoardLogger("lightning_logs", name="fixation_id_conv_not_pretrained")
+        trainer = Trainer(max_epochs=1, logger=logger, deterministic=True, gradient_clip_val=grad_norm)
 
         # Set up experiment
         experiment = BaseExperiment(dm, [fi_encoder_decoder_model], [trainer], train_val_splits=train_test_splits)
         experiment.run_cross_val()
 
 
-def main():
+def main(args):
 
     # Random Seed
-    seed = 42
+    seed = args.random_seed
     pytorch_lightning.seed_everything(seed, workers=True)
+
     # Data Module Creation
-    data_folder = Path("/Users/rickgentry/emotive_lab/eyemind/data/processed/fixation")
-    sequence_len = 500
-    lim_seq_len = partial(limit_sequence_len, sequence_len=sequence_len, random_part=False)
-    limit_labels = partial(limit_label_seq, sequence_length=sequence_len)
-    transforms = [lim_seq_len,lambda data: torch.tensor(data).float()]
-    # Setting num workers throws an error because of trying to pickle lambda functions
-    dm = GazeDataModule(data_folder, label_mapper=fixation_label_mapper, transform_x=transforms, transform_y=[limit_labels,lambda data: torch.tensor(data).float()], num_workers=0)
-    dm.setup('fit')
+    dm = setup_data_module(args.data_folderpath, args.sequence_length, fixation_label_mapper, args.stage)
 
     # Split Data
     train_split, test_split = train_test_split(np.arange(len(dm.dataset_train.files)), test_size=0.2, random_state=seed, shuffle=True)
     train_test_splits = [(train_split, test_split)]
 
     # Model
-    pre_trained_weights_dir = Path("/Users/rickgentry/emotive_lab/eyemind/OBF/pre_weights/sample_weights")
-    encoder = creator.load_encoder(str(pre_trained_weights_dir.resolve()))
-    fi_decoder = torch.load(str(Path(pre_trained_weights_dir, "fi_1633040995_gru.pt").resolve()),map_location=torch.device('cpu'))
-    class_weights = torch.tensor([3.86, 0.26])
-    criterion = nn.CrossEntropyLoss(class_weights/ class_weights.sum())
-    fi_encoder_decoder_model = EncoderDecoderModel(encoder, fi_decoder, criterion, 2, cuda=False)
+    if args.pretrained_weights_dirpath:
+        encoder, decoder = load_encoder_decoder(args.pretrained_weights_dirpath, args.decoder_weights_filename)
+    else:
+        encoder, decoder = create_encoder_decoder(use_conv=args.use_conv, input_seq_length=args.sequence_length)
+    #class_weights = torch.tensor([3.86, 0.26])
+    class_weights = torch.tensor([3., 1.])
+    #criterion = nn.CrossEntropyLoss(class_weights/ class_weights.sum())
+    criterion = nn.CrossEntropyLoss(class_weights)
+    fi_encoder_decoder_model = EncoderDecoderModel(encoder, decoder, criterion, 2, cuda=False, lr_scheduler_step_size=2)
 
     # Trainer
-    grad_norm = 0.5
-    logger = TensorBoardLogger("lightning_logs", name="fixation_id_full_train")
-    trainer = Trainer(max_epochs=2, logger=logger, deterministic=True, gradient_clip_val=grad_norm)
+    #grad_norm = 0.5
+    lr_monitor = LearningRateMonitor(logging_interval='step')
+    logger = TensorBoardLogger(args.log_dirpath, name=args.experiment_logging_folder)
+    trainer = Trainer.from_argparse_args(args, logger=logger, callbacks=[lr_monitor])
 
     # Set up experiment
     experiment = BaseExperiment(dm, [fi_encoder_decoder_model], [trainer], train_val_splits=train_test_splits)
-    experiment.run_cross_val()
+    last_epoch_metrics = experiment.run_cross_val()
+    print(last_epoch_metrics)
 
 
 if __name__ == "__main__":
-    #parser = ArgumentParser()
+    parser = ArgumentParser()
     
-    # Experiment Args
-
+    # Program Args
+    parser.add_argument("--config_path", type=str, default="")
+    parser.add_argument("--data_folderpath", type=str)
+    parser.add_argument("--pretrained_weights_dirpath", type=str, default="")
+    parser.add_argument("--decoder_weights_filename", type=str)
+    parser.add_argument("--log_dirpath", type=str, default=".")
+    parser.add_argument("--experiment_logging_folder", type=str, default="")
+    parser.add_argument("--random_seed", type=int, default=42)
+    parser.add_argument("--sequence_length", type=int, default=500)
+    parser.add_argument("--stage", type=str, default="fit")
+    parser.add_argument("--use_conv", type=bool, default=True)
     # add training arguments
-    #parser = Trainer.add_argparse_args(parser)
+    parser = Trainer.add_argparse_args(parser)
 
     # add model arguments
 
+    args = parser.parse_args()
 
-    # add data module args
-    train_from_scratch(tune=False, use_conv=False)
+    # if there is a config path then load the arguments from that file
+    if args.config_path:
+        with open(Path(args.config_path).resolve(), 'r') as f:
+            args.__dict__ = json.load(f)
+    # no config path, so save the args to a file
+    else:
+        log_dirpath = Path(args.log_dirpath, args.experiment_logging_folder).resolve()
+        log_dirpath.mkdir(parents=True, exist_ok=True)
+        with open(Path(log_dirpath, "command_args.txt").resolve(), 'w') as f:
+            json.dump(args.__dict__, f, indent=2)
+    
+    main(args)
+    #train_from_scratch(tune=False, use_conv=True)

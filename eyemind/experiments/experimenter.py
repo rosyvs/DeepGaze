@@ -49,14 +49,17 @@ class BaseExperiment():
         return train_dls, val_dls, test_dl
 
     def run_cross_val(self):
+        metrics_last_epoch = []
         try:
             for train_dl, val_dl, model, trainer in zip(self.train_dls, self.val_dls, self.models, self.trainers):
-                self.run_fit(trainer, model, train_dl, val_dl)
+                metrics_last_epoch.append(self.run_fit(trainer, model, train_dl, val_dl))
         except ValueError as e:
             raise e
-
+        return metrics_last_epoch
+        
     def run_fit(self, trainer, model, train_dl, val_dl):
         trainer.fit(model, train_dl, val_dl)
+        return trainer.logged_metrics
 
     def run_test(self, trainer, model, test_dl):
         trainer.test(model, test_dl)
