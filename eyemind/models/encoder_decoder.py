@@ -1,4 +1,5 @@
 from argparse import ArgumentParser
+from pathlib import Path
 from typing import Any
 from numpy import vstack
 from pytorch_lightning import LightningModule
@@ -9,6 +10,42 @@ import torch
 
 from eyemind.obf.model import ae
 from eyemind.obf.model import creator
+
+def load_encoder_decoder(pretrained_weights_dirpath, decoder_weights_filename):
+    encoder = creator.load_encoder(str(Path(pretrained_weights_dirpath).resolve()))
+    decoder = torch.load(str(Path(pretrained_weights_dirpath, decoder_weights_filename).resolve()),map_location=torch.device('cpu'))
+    return encoder, decoder
+
+def create_encoder_decoder(hidden_dim=128, use_conv=True, conv_dim=32, input_dim=2, out_dim=2, input_seq_length=500, backbone_type="gru", nlayers=2):
+    if use_conv:
+        enc_layers = [
+            ae.CNNEncoder(input_dim=input_dim, latent_dim=conv_dim, layers=[
+                16,
+            ]),
+            ae.RNNEncoder(input_dim=conv_dim,
+                        latent_dim=hidden_dim,
+                        backbone=backbone_type,
+                        nlayers=nlayers,
+                        layer_norm=False)
+        ] 
+    else: 
+        enc_layers = [ae.RNNEncoder(input_dim=input_dim,
+                        latent_dim=hidden_dim,
+                        backbone=backbone_type,
+                        nlayers=nlayers,
+                        layer_norm=False)]
+
+    encoder = nn.Sequential(*enc_layers)
+
+    fi_decoder = ae.RNNDecoder(input_dim=hidden_dim,
+                               latent_dim=hidden_dim,
+                               out_dim=out_dim,
+                               seq_length=input_seq_length,
+                               backbone=backbone_type,
+                               nlayers=nlayers,
+                               batch_norm=True)
+
+    return encoder, fi_decoder    
 
 class EncoderDecoderModel(LightningModule):
     def __init__(self, encoder: nn.Module, decoder: nn.Module, criterion: nn.Module, num_classes: int, learning_rate=1e-3, lr_scheduler_step_size=1, freeze_encoder=False, cuda=True):
@@ -67,7 +104,7 @@ class EncoderDecoderModel(LightningModule):
         return res
 
     def _apply_mask(self, logits, targets, mask_flag=-1):
-        masked_indices = targets == -1
+        masked_indices = targets == mask_flag
         masked_logits = logits[~masked_indices]
         masked_targets = targets[~masked_indices]
         return masked_logits, masked_targets
