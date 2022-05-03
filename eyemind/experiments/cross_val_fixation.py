@@ -28,6 +28,8 @@ sys.path.append(str(Path("../obf").resolve()))
 from eyemind.obf.model import ae
 from eyemind.obf.model import creator
 
+def convert_to_float_tensor(data):
+    return torch.tensor(data).float()
 class Fixation_Experiment(Experiment):
     def __init__(self, config):
         self.class_weights = torch.tensor([3.,1.])
@@ -59,8 +61,8 @@ class Fixation_Experiment(Experiment):
         for seq_len in seq_lengths:
             lim_seq_len = partial(limit_sequence_len, sequence_len=seq_len, random_part=False)
             limit_labels = partial(limit_label_seq, sequence_length=seq_len) 
-            x_transforms.append([lim_seq_len,lambda data: torch.tensor(data).float()])
-            y_transforms.append([limit_labels,lambda data: torch.tensor(data).float()])
+            x_transforms.append([lim_seq_len,convert_to_float_tensor])
+            y_transforms.append([limit_labels,convert_to_float_tensor])
         return x_transforms, y_transforms
                
 class Hyperparameter_Experiment(Experiment):
