@@ -86,7 +86,8 @@ class Hyperparameter_Experiment(Experiment):
         # Get Dataloaders
         self.dls = []
         for dm in self.data_modules:
-            self.dls.append(self.get_dataloaders(dm, self.data_splits))
+            for _ in self.config.gru_hidden_size:
+                self.dls.append(self.get_dataloaders(dm, self.data_splits))
 
         # Model
         self.models = self.setup_models()
