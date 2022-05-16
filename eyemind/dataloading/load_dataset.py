@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import StratifiedGroupKFold
 from sklearn.preprocessing import LabelEncoder
-from eyemind.dataloading.gaze_data import GazeDataModule
+# from eyemind.dataloading.gaze_data import GazeDataModule
 from torch.utils.data import SubsetRandomSampler
 
 def label_files(label_df,label_col,filenames,id_col="filename"):
@@ -68,11 +68,11 @@ def get_stratified_group_splits(files, label_df, label_col, id_col="filename", f
   splits = gkf.split(label_df,y,groups=groups)
   return splits
 
-def get_datamodule(label_col, label_df, data_folder, x_transforms=None, y_transforms=None, id_col="filename"):
-        filenames = get_filenames_for_dataset(label_df, data_folder, id_col, label_col)
-        label_mapper = get_label_mapper(label_df, id_col, label_col)
-        dm = GazeDataModule(data_folder, file_list=filenames, label_mapper=label_mapper, transform_x=x_transforms, transform_y=y_transforms)
-        return dm
+# def get_datamodule(label_col, label_df, data_folder, x_transforms=None, y_transforms=None, id_col="filename"):
+#         filenames = get_filenames_for_dataset(label_df, data_folder, id_col, label_col)
+#         label_mapper = get_label_mapper(label_df, id_col, label_col)
+#         dm = GazeDataModule(data_folder, file_list=filenames, label_mapper=label_mapper, transform_x=x_transforms, transform_y=y_transforms)
+#         return dm
 
 def get_datamodules(label_cols, label_df, data_folder, x_transforms=None, y_transforms=None, id_col="filename"):
     l_ds = []

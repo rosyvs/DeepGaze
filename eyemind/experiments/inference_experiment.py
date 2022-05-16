@@ -1,78 +1,28 @@
+from argparse import ArgumentParser
+from email import parser
+from functools import partial
+import json
+from pathlib import Path
+import pandas as pd
 from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import TensorBoardLogger
 import pytorch_lightning
-import torch
-from pathlib import Path
-from torch.utils.data import SubsetRandomSampler
-
-from eyemind.dataloading.gaze_data import GazeDataModule
-from eyemind.dataloading.load_dataset import get_label_df, get_stratified_group_splits, limit_sequence_len
-#from eyemind.experiments.fixation_experiment import setup_data_module
+from pytorch_lightning.utilities.cli import LightningCLI
+from sklearn.model_selection import train_test_split
+from eyemind.dataloading.gaze_data import GazeDataModule, SequenceToLabelDataModule
+from eyemind.dataloading.load_dataset import get_filenames_for_dataset, get_stratified_group_splits
+from eyemind.experiments.experimenter import Experiment
 from eyemind.models.classifier import EncoderClassifierModel
-from eyemind.obf.model import ae
-from eyemind.obf.model import creator
 
-class BaseExperiment():
+class InferenceExperiment(Experiment):
 
-    def __init__(self, data_module, models, trainers, train_val_splits=None, test_split=None):
-        self.data_module = data_module
-        self.models = models
-        self.trainers = trainers
-        self.train_val_splits = train_val_splits
-        self.test_split = test_split
-        self.train_dls, self.val_dls, self.test_dls = self.get_dataloaders()
+    splitters = {"train_test_split": train_test_split,
+                 "stratified_group_kfold": get_stratified_group_splits,
+                }
 
-    @classmethod
-    def setup_from_config(cls, experiment_config):
-        pass
-
-    def get_dataloaders(self):
-        train_dls = []
-        val_dls = []
-        if self.train_val_splits:
-            for train_split, val_split in self.train_val_splits:
-                train_sampler = SubsetRandomSampler(train_split)
-                val_sampler = SubsetRandomSampler(val_split)
-                train_dl = self.data_module.train_dataloader(sampler=train_sampler)
-                val_dl = self.data_module.val_dataloader(sampler=val_sampler)
-                train_dls.append(train_dl)
-                val_dls.append(val_dl)
-        else:
-            train_dl = self.data_module.train_dataloader(shuffle=True)
-            val_dl = self.data_module.val_dataloader(shuffle=True)
-            train_dls.append(train_dl)
-            val_dls.append(val_dl)
-        
-        if self.test_split:
-            test_sampler = SubsetRandomSampler(self.test_split)
-            test_dl = self.data_module.test_dataloader(sampler=test_sampler)
-        else:
-            test_dl = self.data_module.test_dataloader()
-        
-        return train_dls, val_dls, test_dl
-
-    def run_cross_val(self):
-        metrics_last_epoch = []
-        try:
-            for train_dl, val_dl, model, trainer in zip(self.train_dls, self.val_dls, self.models, self.trainers):
-                metrics_last_epoch.append(self.run_fit(trainer, model, train_dl, val_dl))
-        except ValueError as e:
-            raise e
-        return metrics_last_epoch
-        
-    def run_fit(self, trainer, model, train_dl, val_dl):
-        trainer.fit(model, train_dl, val_dl)
-        return trainer.logged_metrics
-
-    def run_test(self, trainer, model, test_dl):
-        trainer.test(model, test_dl)
-
-
-class Experiment():
 
     def __init__(self, config):
-        self.config = config
-        self.setup()      
+        super().__init__(config)
 
     def setup(self):
         # Seed everything for reproducability
@@ -81,7 +31,7 @@ class Experiment():
         # Create datamodule
         self.label_mapper = self.get_label_map()
         self.transforms = self.get_transforms()
-        self.data_module = self.get_datamodule(self.label_mapper, *self.transforms)
+        self.data_module = self.get_datamodule(self.label_mapper, *self.transforms, self.config.splitter)
 
         # Split Data
         self.data_splits = self.setup_data_splits()
@@ -94,8 +44,21 @@ class Experiment():
 
         # Trainer
         self.trainer = self.setup_trainer()
+        
+    def _split_fn(self):
+        fn = self.splitters[self.config.splitter]
+        if self.config.label_csv_path:
+            label_df = pd.read_csv(self.config.label_csv_path)
+            if self.config.splitters == "stratified_group_kfold":
+                return partial(fn, label_df=label_df, label_col=self.config.label_col)
+        else:
+            return fn
 
-    def get_datamodule(self, label_mapper, x_transforms, y_transforms):
+            
+
+
+    def get_datamodule(self, label_mapper, x_transforms, y_transforms, splitter):
+
         dm = GazeDataModule(self.config.data_folderpath, label_mapper=label_mapper, transform_x=x_transforms, transform_y=y_transforms, batch_size=self.config.batch_size)
         return dm
 
@@ -182,26 +145,56 @@ class Experiment():
         return trainer.logged_metrics
 
     def run_test(self, trainer, model, test_dl):
-        trainer.test(model, test_dl)
+        trainer.test(model, test_dl)    
 
-
-
-def get_encoder_classifier_model(pretrained_weights_dir, model_args):
-    encoder = creator.load_encoder(pretrained_weights_dir)
-    model = EncoderClassifierModel(encoder, **model_args)
-    return model
+if __name__ == "__main__":
+    parser = ArgumentParser()
     
-def train(model, train_dl, val_dl, trainer_args):
-    trainer = Trainer(**trainer_args)
-    trainer.fit(model, train_dl, val_dl)
+    # Program Args
+    group = parser.add_argument_group("Program")
+    group.add_argument("--random_seed", type=int, default=42)
+    group.add_argument("--config_path", type=str, default="")
+    # parser.add_argument("--data_folderpath", type=str)
+    # parser.add_argument("--pretrained_weights_dirpath", type=str, default="")
+    # parser.add_argument("--decoder_weights_filename", type=str)
+    # parser.add_argument("--log_dirpath", type=str, default=".")
+    # parser.add_argument("--experiment_logging_folder", type=str, default="")
+    # parser.add_argument("--random_seed", type=int, default=42)
+    # parser.add_argument("--sequence_length", type=int, nargs="+")
+    # parser.add_argument("--stage", type=str, default="fit")
+    # parser.add_argument("--use_conv", type=bool, default=True)
+    # parser.add_argument("--gru_hidden_size", nargs="+", type=int)
 
-def train_one_split():
-    pass
+    # ------- Add Arguments ------------ #
+    # add training arguments
+    parser = Trainer.add_argparse_args(parser)
 
-def train_one_label(data_path, label_path, label_col, split=False):
-    label_df = get_label_df(label_path)
-    dm = get_datamodule(label_col, label_df, data_path, x_transforms=[limit_sequence_len,lambda data: torch.tensor(data).float()], y_transforms=[lambda data: torch.tensor(data).float()])
-    if split:
-        files = [f.split(".")[0] for f in dm.file_list]
-        splits = get_stratified_group_splits( files, label_df, label_col)
+    # add model arguments
+    parser = EncoderClassifierModel.add_model_specific_args(parser)
+
+    # add datamodule arguments
+    parser = SequenceToLabelDataModule.add_datamodule_specific_args(parser)
+    
+    # Parse args
+    args = parser.parse_args()
+
+    # if there is a config path then load the arguments from that file
+    # if args.config_path:
+    #     with open(Path(args.config_path).resolve(), 'r') as f:
+    #         args.__dict__ = json.load(f)
+    # # no config path, so save the args to a file
+    # else:
+    #     log_dirpath = Path(args.log_dirpath, args.experiment_logging_folder).resolve()
+    #     log_dirpath.mkdir(parents=True, exist_ok=True)
+    #     with open(Path(log_dirpath, "command_args.txt").resolve(), 'w') as f:
+    #         json.dump(args.__dict__, f, indent=2)
+
+    # ------- Instantiate -------------- #
+
+    datamodule = SequenceToLabelDataModule.from_argparse_args(args)
+    model = EncoderClassifierModel.from_argparse_args(args)
+    trainer = Trainer.from_argparse_args(args)
+
+    # ----------- Run -------------- #
+    trainer.fit(model, datamodule=datamodule)
     
