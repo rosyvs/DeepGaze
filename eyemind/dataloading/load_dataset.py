@@ -1,6 +1,8 @@
+from fileinput import filename
 from functools import partial
 from pathlib import Path
 import random
+from tempfile import TemporaryFile
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import StratifiedGroupKFold
@@ -15,14 +17,28 @@ def label_files(label_df,label_col,filenames,id_col="filename"):
     labels = [label_df.loc[label_df[id_col] == id][label_col].values[0] for id in ids]
     return labels
 
-def get_filenames_for_dataset(label_df,folder,label_col, id_col="filename", ext="csv"):
-    files = label_df[~label_df[label_col].isna()][id_col].to_list()
+def get_filenames_for_dataset(folder, label_df, label_col, id_col="filename", ext="csv", min_sequence_length=500):
+    files = label_df[(~label_df[label_col].isna()) & (label_df["sequence_length"] > min_sequence_length)][id_col].to_list()
     label_filenames = set([f"{file}.{ext}" for file in files])
-    folder_filenames = set([f.name for f in folder.glob(f'*.{ext}')])
+    folder_filenames = set([f.name for f in Path(folder).glob(f'*.{ext}')])
     return list(label_filenames.intersection(folder_filenames))
 
 def get_id(row):
     return f"{row['ParticipantID']}-{row['Text']}{str(row['PageNum']-1)}"
+
+def get_seq_length(row, data_folder, id_col, ext):
+    filename=row[id_col]
+    path = Path(data_folder, f"{filename}.{ext}")
+    try:
+        df = pd.read_csv(path)
+        sequence_length = len(df)
+        return sequence_length
+    except:
+        return 0
+
+def add_sequence_col(label_df, data_folder, id_col="filename", ext="csv"):
+    label_df["sequence_length"] = label_df.apply(lambda row: get_seq_length(row, data_folder, id_col, ext), axis=1)
+    return label_df
 
 def create_filename_col(label_df):
     label_df["filename"] = label_df.apply(lambda row: get_id(row), axis=1)
@@ -58,11 +74,19 @@ def limit_sequence_len(x_data,sequence_len=3000,random_part=True):
 def get_samplers():
     pass
 
-def get_stratified_group_splits(files, label_df, label_col, id_col="filename", folds=4):
+# def stratified_group_split(X, y, folds=4):
+#     enc = LabelEncoder()
+#     groups = enc.fit_transform(y)
+#     gkf = StratifiedGroupKFold(folds)
+#     splits = gkf.split(X, y, groups)
+#     return splits
+
+def get_stratified_group_splits(files, label_df, label_col, id_col="filename", group_col="ParticipantID", folds=4):
   enc = LabelEncoder()
+  files = [f.split(".")[0] for f in files]
   label_df = label_df[label_df[id_col].isin(files)]
   #label_df = label_df[~label_df[label_col].isna()]
-  groups = enc.fit_transform(label_df[id_col].values)
+  groups = enc.fit_transform(label_df[group_col].values)
   y = label_df[label_col]
   gkf = StratifiedGroupKFold(folds)
   splits = gkf.split(label_df,y,groups=groups)

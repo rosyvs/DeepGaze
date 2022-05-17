@@ -9,8 +9,10 @@ from pytorch_lightning.loggers import TensorBoardLogger
 import pytorch_lightning
 from pytorch_lightning.utilities.cli import LightningCLI
 from sklearn.model_selection import train_test_split
+from torch import seed
 from eyemind.dataloading.gaze_data import GazeDataModule, SequenceToLabelDataModule
 from eyemind.dataloading.load_dataset import get_filenames_for_dataset, get_stratified_group_splits
+from eyemind.experiments.cli import GazeLightningCLI
 from eyemind.experiments.experimenter import Experiment
 from eyemind.models.classifier import EncoderClassifierModel
 
@@ -151,9 +153,9 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     
     # Program Args
-    group = parser.add_argument_group("Program")
-    group.add_argument("--random_seed", type=int, default=42)
-    group.add_argument("--config_path", type=str, default="")
+    # group = parser.add_argument_group("Program")
+    # group.add_argument("--random_seed", type=int, default=42)
+    # group.add_argument("--config_path", type=str, default="")
     # parser.add_argument("--data_folderpath", type=str)
     # parser.add_argument("--pretrained_weights_dirpath", type=str, default="")
     # parser.add_argument("--decoder_weights_filename", type=str)
@@ -167,16 +169,16 @@ if __name__ == "__main__":
 
     # ------- Add Arguments ------------ #
     # add training arguments
-    parser = Trainer.add_argparse_args(parser)
+    # parser = Trainer.add_argparse_args(parser)
 
-    # add model arguments
-    parser = EncoderClassifierModel.add_model_specific_args(parser)
+    # # add model arguments
+    # parser = EncoderClassifierModel.add_model_specific_args(parser)
 
-    # add datamodule arguments
-    parser = SequenceToLabelDataModule.add_datamodule_specific_args(parser)
+    # # add datamodule arguments
+    # parser = SequenceToLabelDataModule.add_datamodule_specific_args(parser)
     
-    # Parse args
-    args = parser.parse_args()
+    # # Parse args
+    # args = parser.parse_args()
 
     # if there is a config path then load the arguments from that file
     # if args.config_path:
@@ -191,10 +193,11 @@ if __name__ == "__main__":
 
     # ------- Instantiate -------------- #
 
-    datamodule = SequenceToLabelDataModule.from_argparse_args(args)
-    model = EncoderClassifierModel.from_argparse_args(args)
-    trainer = Trainer.from_argparse_args(args)
+    # datamodule = SequenceToLabelDataModule.from_argparse_args(args)
+    # model = EncoderClassifierModel.from_argparse_args(args)
+    # trainer = Trainer.from_argparse_args(args)
 
+    cli = GazeLightningCLI(EncoderClassifierModel, SequenceToLabelDataModule, seed_everything_default=42, trainer_defaults={'max_epochs': 10, 'num_sanity_val_steps': 0})
     # ----------- Run -------------- #
-    trainer.fit(model, datamodule=datamodule)
+#trainer.fit(model, datamodule=datamodule)
     

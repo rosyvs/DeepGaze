@@ -15,7 +15,7 @@ from torch.utils.data import Dataset, DataLoader, Sampler, Subset
 
 from pytorch_lightning import LightningDataModule
 
-from eyemind.dataloading.transforms import LimitSequenceLength
+from eyemind.dataloading.transforms import LimitSequenceLength, ToTensor
 
 
 class SequenceToLabelDataset(Dataset):
@@ -68,6 +68,12 @@ class SequenceToLabelDataset(Dataset):
             return x_data, label
         else:
             return x_data
+
+    def get_labels_from_indices(self, indices):
+        return [self.labels[ind] for ind in indices]
+    
+    def get_files_from_indices(self, indices):
+        return [self.files[ind] for ind in indices]
 
 class MultiFileDataset(Dataset):
     def __init__(self, folder_name, file_list=[], file_mapper=None, file_type="csv", transform_x=None, transform_y=None, label_mapper=None):
@@ -181,8 +187,8 @@ class SequenceToLabelDataModule(BaseKFoldDataModule, BaseGazeDataModule):
                 sequence_length: int = 500,
                 num_workers: int = 0,
                 batch_size: int = 8,
-                pin_memory = True,
-                drop_last = True,            
+                pin_memory: bool = True,
+                drop_last: bool = True,            
                 ):
         super().__init__()
         self.data_dir = data_dir
@@ -224,13 +230,27 @@ class SequenceToLabelDataModule(BaseKFoldDataModule, BaseGazeDataModule):
 
     def setup_fold_index(self, fold_index: int) -> None:
         train_indices, val_indices = self.splits[fold_index]
-        self.train_fold = Subset(self.train_dataset, train_indices)
-        self.val_fold = Subset(self.train_dataset, val_indices)
+        self.train_fold = Subset(self.train_dataset.dataset, train_indices)
+        self.val_fold = Subset(self.train_dataset.dataset, val_indices)
 
     def setup_folds(self, num_folds: int) -> None:
         self.num_folds = num_folds
-        self.splits = get_stratified_group_splits(self.train_dataset.files, self.label_df, self.label_col, folds=num_folds)
-        
+        train_indices = self.train_dataset.indices
+        train_files, train_labels = self.train_dataset.dataset.get_files_from_indices(train_indices), self.train_dataset.dataset.get_labels_from_indices(train_indices)
+        if num_folds == 1:
+            split_list = train_test_split(train_indices, test_size=0.15, stratify=train_labels)
+            self.splits = [(split_list[i], split_list[i+1]) for i in range(0, len(split_list)-1)]
+        elif num_folds > 1:
+            splits = []
+            for split in get_stratified_group_splits(train_files, self.label_df, self.label_col, folds=num_folds):
+                train_split = [train_indices[ind] for ind in split[0]]
+                val_split = [train_indices[ind] for ind in split[1]]
+                splits.append((train_split, val_split))
+            self.splits = splits
+            
+        else:
+            raise ValueError
+            
     def train_dataloader(self) -> DataLoader:
         if self.train_fold:
             return self._get_dataloader(self.train_fold)
@@ -265,16 +285,15 @@ class SequenceToLabelDataModule(BaseKFoldDataModule, BaseGazeDataModule):
 
     @property
     def x_transforms(self):
-        return T.Compose([LimitSequenceLength(self.sequence_length), T.ToTensor()])
+        return T.Compose([LimitSequenceLength(self.sequence_length), ToTensor()])
 
     @property
     def y_transforms(self):
-        return T.Compose([LimitSequenceLength(self.sequence_length), T.ToTensor()])
+        return ToTensor()
     
     @property
     def label_mapper(self):
-        label_df = pd.read_csv(label_df)
-        return get_label_mapper(label_df, self.label_col)
+        return get_label_mapper(self.label_df, self.label_col)
     
     @property
     def splitter(self, num_folds, split_fn):
@@ -282,7 +301,7 @@ class SequenceToLabelDataModule(BaseKFoldDataModule, BaseGazeDataModule):
     
     @property
     def file_mapper(self):
-        return partial(get_filenames_for_dataset,self.label_df, self.data_dir, self.label_col)
+        return partial(get_filenames_for_dataset,label_df=self.label_df, label_col=self.label_col)
 
         
         

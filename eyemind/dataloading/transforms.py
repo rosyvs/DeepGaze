@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 
 
 class LimitSequenceLength(object):
@@ -19,3 +20,9 @@ class LimitSequenceLength(object):
             padded_data[:len(sequence)] = sequence
             sequence = padded_data
         return sequence 
+
+class ToTensor(object):
+    def __init__(self):
+        pass
+    def __call__(self, v):
+        return torch.tensor(v).float()

@@ -1,6 +1,4 @@
-from argparse import ArgumentParser
-from base64 import encode
-from numpy import vstack
+from typing import List
 from pytorch_lightning import LightningModule
 import torchmetrics
 from torch import nn
@@ -30,9 +28,10 @@ def create_encoder(hidden_dim=128, backbone_type='gru', nlayers=2, conv_dim=32,i
                         layer_norm=False)]
 
     encoder = nn.Sequential(*enc_layers)
+    return encoder
 
 class EncoderClassifierModel(LightningModule):
-    def __init__(self, encoder_hidden_dim=128, encoder_weights_path="", classifier_hidden_layers=[256,512], n_output: int=1, learning_rate=1e-3, lr_scheduler_step_size=1, dropout=0.5, freeze_encoder=False):
+    def __init__(self, encoder_hidden_dim: int=128, encoder_weights_path: str="", classifier_hidden_layers: List[int]=[256,512], n_output: int=1, learning_rate: float=1e-3, dropout: float=0.5, freeze_encoder: bool=False):
         super().__init__()
         # Saves hyperparameters (init args)
         self.save_hyperparameters()

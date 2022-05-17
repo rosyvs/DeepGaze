@@ -48,8 +48,8 @@ class KFoldLoop(Loop):
         self._reset_fitting()  # requires to reset the tracking stage.
         self.fit_loop.run()
 
-        # self._reset_testing()  # requires to reset the tracking stage.
-        # self.trainer.test_loop.run()
+        self._reset_testing()  # requires to reset the tracking stage.
+        self.trainer.test_loop.run()
         self.current_fold += 1  # increment fold tracking number.
 
     def on_advance_end(self) -> None:
