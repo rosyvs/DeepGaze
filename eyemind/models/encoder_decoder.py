@@ -48,13 +48,12 @@ def create_encoder_decoder(hidden_dim=128, use_conv=True, conv_dim=32, input_dim
     return encoder, fi_decoder    
 
 class EncoderDecoderModel(LightningModule):
-    def __init__(self, encoder: nn.Module, decoder: nn.Module, criterion: nn.Module, num_classes: int, learning_rate=1e-3, lr_scheduler_step_size=1, freeze_encoder=False, cuda=True):
+    def __init__(self, sequence_length: int, hidden_dim: int, class_weights: list, num_classes: int, use_conv=True, learning_rate=1e-3, lr_scheduler_step_size=1, freeze_encoder=False):
         super().__init__()
         # Saves hyperparameters (init args)
-        self.save_hyperparameters(ignore=["encoder",'decoder', 'criterion'])
-        self.encoder = encoder
-        self.decoder = decoder
-        self.criterion = criterion
+        self.save_hyperparameters()
+        self.encoder, self.decoder = create_encoder_decoder(hidden_dim, use_conv, input_seq_length=sequence_length)
+        self.criterion = nn.CrossEntropyLoss(torch.Tensor(class_weights))
         self.num_classes = num_classes
         self.auroc_metric = torchmetrics.AUROC(num_classes=num_classes, average="weighted")
         self.accuracy_metric = torchmetrics.Accuracy(num_classes=num_classes)
@@ -134,6 +133,12 @@ class EncoderDecoderModel(LightningModule):
     @staticmethod
     def add_model_specific_args(parent_parser):
         parser = parent_parser.add_argument_group("EncoderDecoderModel")
-        parser.add_argument('--learning_rate', type=float, default=0.0001)
+        parser.add_argument('--learning_rate', type=float, default=0.001)
+        parser.add_argument('--sequence_length', type=int, default=250)
+        parser.add_argument('--use_conv', type=bool, default=True)
+        parser.add_argument('--hidden_dim', type=int, default=128)
+        parser.add_argument('--class_weights', type=int, nargs='*', default=[3., 1.])
+        parser.add_argument('--num_classes', type=int, default=2)
+        parser.add_argument('--freeze_encoder', type=bool, default=False)
         return parser
 
