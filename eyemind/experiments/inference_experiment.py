@@ -14,7 +14,7 @@ from eyemind.dataloading.gaze_data import GazeDataModule, SequenceToLabelDataMod
 from eyemind.dataloading.load_dataset import get_filenames_for_dataset, get_stratified_group_splits
 from eyemind.experiments.cli import GazeLightningCLI
 from eyemind.experiments.experimenter import Experiment
-from eyemind.models.classifier import EncoderClassifierModel
+from eyemind.models.classifier import EncoderClassifierModel, EncoderClassifierMultiSequenceModel
 
 class InferenceExperiment(Experiment):
 
@@ -197,7 +197,7 @@ if __name__ == "__main__":
     # model = EncoderClassifierModel.from_argparse_args(args)
     # trainer = Trainer.from_argparse_args(args)
 
-    cli = GazeLightningCLI(EncoderClassifierModel, SequenceToLabelDataModule, seed_everything_default=42, trainer_defaults={'max_epochs': 10, 'num_sanity_val_steps': 0})
+    cli = GazeLightningCLI(EncoderClassifierMultiSequenceModel, SequenceToLabelDataModule, seed_everything_default=42, trainer_defaults={'max_epochs': 5, 'num_sanity_val_steps': 0})
     # ----------- Run -------------- #
 #trainer.fit(model, datamodule=datamodule)
     

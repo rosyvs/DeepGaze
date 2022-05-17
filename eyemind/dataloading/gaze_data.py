@@ -212,7 +212,7 @@ class SequenceToLabelDataModule(BaseKFoldDataModule, BaseGazeDataModule):
         pass
 
     def setup(self, stage: Optional[str] = None):
-        if stage in ("fit", None):
+        if stage in ("fit", "predict", None):
             dataset = SequenceToLabelDataset(self.data_dir, file_mapper=self.file_mapper, label_mapper=self.label_mapper, transform_x=self.x_transforms, transform_y=self.y_transforms)
             if self.test_dir:
                 self.train_dataset = dataset
@@ -220,7 +220,6 @@ class SequenceToLabelDataModule(BaseKFoldDataModule, BaseGazeDataModule):
                 splits = train_test_split(np.arange(len(dataset.files)), dataset.labels, test_size=0.15, stratify=dataset.labels)
                 self.train_dataset = Subset(dataset, splits[0])
                 self.test_dataset = Subset(dataset, splits[1])
-        
         elif stage == "test":
             if self.test_dir:
                 self.test_dataset = SequenceToLabelDataset(dir, file_mapper=self.file_mapper, label_mapper=self.label_mapper, transform_x=self.x_transforms, transform_y=self.y_transforms)
@@ -259,6 +258,14 @@ class SequenceToLabelDataModule(BaseKFoldDataModule, BaseGazeDataModule):
 
     def val_dataloader(self) -> Union[DataLoader, List[DataLoader]]:
         return self._get_dataloader(self.val_fold)
+
+    def predict_dataloader(self) -> DataLoader:
+        if self.test_dataset:
+            return self._get_dataloader(self.test_dataset)
+        elif self.val_fold:
+            return self._get_dataloader(self.val_fold)
+        else:
+            return self._get_dataloader(self.train_dataset)
 
     def test_dataloader(self) -> DataLoader:
         return self._get_dataloader(self.test_dataset)

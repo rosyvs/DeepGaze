@@ -22,7 +22,7 @@ class GazeLightningCLI(LightningCLI):
         trainer = super().instantiate_trainer(**kwargs)
         num_folds = self._get(self.config, "num_folds")
         export_path = self._get(self.config, "export_path")
-        if self.config["subcommand"] == "fit" and num_folds > 1:
+        if self.config["subcommand"] == "fit":
             default_fit_loop = trainer.fit_loop
             trainer.fit_loop = KFoldLoop(num_folds, export_path)
             trainer.fit_loop.connect(default_fit_loop)
