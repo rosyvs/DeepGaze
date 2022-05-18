@@ -16,6 +16,9 @@ from eyemind.experiments.cli import GazeLightningCLI
 from eyemind.experiments.experimenter import Experiment
 from eyemind.models.classifier import EncoderClassifierModel, EncoderClassifierMultiSequenceModel
 
+# Have to add path to enable torch.load to work since they saved it weirdly
+import sys
+sys.path.append(str(Path("../obf").resolve()))
 class InferenceExperiment(Experiment):
 
     splitters = {"train_test_split": train_test_split,

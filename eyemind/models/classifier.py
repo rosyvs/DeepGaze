@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import List, Optional
 from pytorch_lightning import LightningModule
 import torchmetrics
@@ -75,7 +76,7 @@ class EncoderClassifierModel(LightningModule):
         y = y.int()
         accuracy = self.accuracy_metric(preds, y)
         auroc = self.auroc_metric(preds, y)
-        self.logger.experiment.add_scalars("losses", {f"{step_type}_loss": loss})        
+        self.logger.experiment.add_scalars("losses", {f"{step_type}_loss": loss}, self.global_step)        
         self.log(f"{step_type}_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log(f"{step_type}_accuracy", accuracy, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log(f"{step_type}_auroc", auroc, on_step=False, on_epoch=True, prog_bar=True, logger=True)
@@ -123,7 +124,7 @@ class EncoderClassifierMultiSequenceModel(LightningModule):
         if encoder_weights_path:
             self.encoder = creator.load_encoder(encoder_weights_path)
         else:
-            self.encoder = create_encoder(encoder_hidden_dim, use_conv=False)
+            self.encoder = create_encoder(encoder_hidden_dim)
         self.model = creator.create_classifier_from_encoder(self.encoder,hidden_layers=classifier_hidden_layers,n_output=1,dropout=0.5)
         self.combiner = MeanCombiner()
         assert(n_output >= 1)

@@ -23,7 +23,7 @@ trainer:
   check_val_every_n_epoch: 1
   fast_dev_run: false
   accumulate_grad_batches: null
-  max_epochs: 5
+  max_epochs: 2
   min_epochs: null
   max_steps: -1
   min_steps: null
@@ -34,7 +34,7 @@ trainer:
   limit_predict_batches: null
   val_check_interval: null
   flush_logs_every_n_steps: null
-  log_every_n_steps: 50
+  log_every_n_steps: 30
   accelerator: null
   strategy: null
   sync_batchnorm: false
@@ -63,7 +63,7 @@ trainer:
 model:
   max_encoder_sequence_length: 250
   encoder_hidden_dim: 128
-  encoder_weights_path: ''
+  encoder_weights_path: '/Users/rickgentry/emotive_lab/eyemind/OBF/pre_weights/sample_weights'
   classifier_hidden_layers:
   - 256
   - 512
@@ -72,7 +72,7 @@ model:
   n_output: 1
   learning_rate: 0.001
   dropout: 0.5
-  freeze_encoder: false
+  freeze_encoder: true
 data:
   data_dir: /Users/rickgentry/emotive_lab/eyemind/data/processed/output
   label_filepath: /Users/rickgentry/emotive_lab/eyemind/data/EML1_pageLevel_with_filename_seq.csv
@@ -87,5 +87,5 @@ data:
   batch_size: 16
   pin_memory: true
   drop_last: true
-num_folds: 4
+num_folds: 2
 export_path: ./
