@@ -166,11 +166,6 @@ class BaseGazeDataModule(LightningDataModule, ABC):
 
     @property 
     @abstractmethod
-    def splitter(self) -> None:
-        pass
-
-    @property 
-    @abstractmethod
     def file_mapper(self) -> None:
         pass
 class SequenceToLabelDataModule(BaseKFoldDataModule, BaseGazeDataModule):
@@ -302,10 +297,6 @@ class SequenceToLabelDataModule(BaseKFoldDataModule, BaseGazeDataModule):
     @property
     def label_mapper(self):
         return get_label_mapper(self.label_df, self.label_col)
-    
-    @property
-    def splitter(self, num_folds, split_fn):
-        return split_fn(num_folds)
     
     @property
     def file_mapper(self):
