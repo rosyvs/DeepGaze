@@ -13,8 +13,8 @@ from torch.utils.data import SubsetRandomSampler
 def label_files(label_df,label_col,filenames,id_col="filename"):
     # Strip extension
     ids = [f.split(".")[0] for f in filenames]
-    #labels = label_df.loc[label_df[id_col].isin(ids)][label_col]
-    labels = [label_df.loc[label_df[id_col] == id][label_col].values[0] for id in ids]
+    labels = label_df[label_col].loc[label_df[id_col].isin(ids)].values.tolist()
+    #labels = [label_df.loc[label_df[id_col] == id][label_col].values[0] for id in ids]
     return labels
 
 def get_filenames_for_dataset(folder, label_df, label_col, id_col="filename", ext="csv", min_sequence_length=500):
@@ -81,16 +81,19 @@ def get_samplers():
 #     splits = gkf.split(X, y, groups)
 #     return splits
 
-def get_stratified_group_splits(files, label_df, label_col, id_col="filename", group_col="ParticipantID", folds=4):
-  enc = LabelEncoder()
-  files = [f.split(".")[0] for f in files]
-  label_df = label_df[label_df[id_col].isin(files)]
-  #label_df = label_df[~label_df[label_col].isna()]
-  groups = enc.fit_transform(label_df[group_col].values)
-  y = label_df[label_col]
-  gkf = StratifiedGroupKFold(folds)
-  splits = gkf.split(label_df,y,groups=groups)
-  return splits
+def get_stratified_group_splits(files, label_df, label_col, id_col="filename", group_col="ParticipantID", folds=4, seed=None):
+    enc = LabelEncoder()
+    files = [f.split(".")[0] for f in files]
+    label_df = label_df[label_df[id_col].isin(files)]
+    #label_df = label_df[~label_df[label_col].isna()]
+    groups = enc.fit_transform(label_df[group_col].values)
+    y = label_df[label_col]
+    if seed:
+        gkf = StratifiedGroupKFold(folds, shuffle=True, random_state=seed)
+    else:
+        gkf = StratifiedGroupKFold(folds)
+    splits = gkf.split(label_df,y,groups=groups)
+    return splits
 
 # def get_datamodule(label_col, label_df, data_folder, x_transforms=None, y_transforms=None, id_col="filename"):
 #         filenames = get_filenames_for_dataset(label_df, data_folder, id_col, label_col)

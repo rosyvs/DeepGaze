@@ -17,11 +17,10 @@ from eyemind.dataloading.gaze_data import BaseKFoldDataModule
 
 
 class KFoldLoop(Loop):
-    def __init__(self, num_folds: int, export_path: str) -> None:
+    def __init__(self, num_folds: int) -> None:
         super().__init__()
         self.num_folds = num_folds
         self.current_fold: int = 0
-        self.export_path = export_path
         self.test_metrics = {}
 
     @property
