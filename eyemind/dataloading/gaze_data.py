@@ -2,10 +2,10 @@ from abc import ABC, abstractmethod, abstractproperty
 from ast import Sub
 from dataclasses import dataclass
 from functools import partial
+import os
 import numpy as np
 from pathlib import Path
 from typing import Any, Callable, List, Optional, Union
-
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from eyemind.dataloading.load_dataset import get_filenames_for_dataset, get_label_df, get_label_mapper, get_stratified_group_splits, limit_sequence_len
@@ -43,7 +43,7 @@ class SequenceToLabelDataset(Dataset):
             self.files = file_mapper(str(self.folder_name.resolve()))
         else:
             self.files = [str(f.resolve()) for f in self.folder_name.glob(f"*.{file_type}")]
-
+        self.files = sorted(self.files)
         self.transform_x = transform_x
         self.transform_y = transform_y
         if label_mapper:
@@ -204,6 +204,7 @@ class SequenceToLabelDataModule(BaseKFoldDataModule, BaseGazeDataModule):
         self.num_workers = num_workers
         self.pin_memory = pin_memory
         self.drop_last = drop_last
+
 
     def prepare_data(self):
         '''

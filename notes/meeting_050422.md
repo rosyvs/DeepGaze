@@ -26,3 +26,11 @@ AUROC metric might cause problems when the dataset is large because it has to st
 
 5. Profiling
 The code is running slowly on the gpus and additionally might have memory leak issues. How can I see the memory usage and run the code across multiple gpus? Should each experiment run in its own task on the cluster?
+
+
+## Meeting 5/19/22
+### Diagram to explain all the parameter training and architectures 
+Detail every experiment in a table that makes the terminology all clear
+### Kfolds are the same for fixation id and inference tests
+
+### Nested cross val for fixation and inference

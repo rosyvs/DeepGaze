@@ -2,23 +2,26 @@ import os.path as osp
 from abc import ABC, abstractmethod
 from copy import deepcopy
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Type
 
+from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning import LightningDataModule, seed_everything, Trainer
 from pytorch_lightning.core.lightning import LightningModule
 from pytorch_lightning.loops.base import Loop
 from pytorch_lightning.loops.fit_loop import FitLoop
 from pytorch_lightning.trainer.states import TrainerFn
+import yaml
 
 from eyemind.dataloading.gaze_data import BaseKFoldDataModule
 
 
 class KFoldLoop(Loop):
-    def __init__(self, num_folds: int, export_path: str) -> None:
+    def __init__(self, num_folds: int) -> None:
         super().__init__()
         self.num_folds = num_folds
         self.current_fold: int = 0
-        self.export_path = export_path
+        self.test_metrics = {}
 
     @property
     def done(self) -> bool:
@@ -42,6 +45,7 @@ class KFoldLoop(Loop):
         print(f"STARTING FOLD {self.current_fold}")
         assert isinstance(self.trainer.datamodule, BaseKFoldDataModule)
         self.trainer.datamodule.setup_fold_index(self.current_fold)
+        self.trainer.logger = TensorBoardLogger(self.trainer.logger.save_dir, self.trainer.logger.name, self.trainer.logger.version, sub_dir=f"fold{self.current_fold}")
 
     def advance(self, *args: Any, **kwargs: Any) -> None:
         """Used to the run a fitting and testing on the current hold."""
@@ -49,26 +53,26 @@ class KFoldLoop(Loop):
         self.fit_loop.run()
 
         self._reset_testing()  # requires to reset the tracking stage.
-        self.trainer.test_loop.run()
+        #self.test_metrics[self.current_fold] = self.trainer.test_loop.run()
+        self.test_metrics[self.current_fold] = self.trainer.test(self.trainer.model, datamodule=self.trainer.datamodule)
         self.current_fold += 1  # increment fold tracking number.
 
     def on_advance_end(self) -> None:
         """Used to save the weights of the current fold and reset the LightningModule and its optimizers."""
-        self.trainer.save_checkpoint(osp.join(self.export_path, f"model.{self.current_fold}.pt"))
+        print(f"CURRENT LOGDIR: {self.trainer.logger.log_dir}")
+        self.trainer.save_checkpoint(osp.join(self.trainer.logger.log_dir, f"model.{self.current_fold}.pt"))
+        #self.trainer.save_checkpoint(osp.join(self.export_path, f"model.{self.current_fold}.pt"))
         # restore the original weights + optimizers and schedulers.
         self.trainer.lightning_module.load_state_dict(self.lightning_module_state_dict)
         self.trainer.strategy.setup_optimizers(self.trainer)
         self.replace(fit_loop=FitLoop)
 
-    # def on_run_end(self) -> None:
-    #     """Used to compute the performance of the ensemble model on the test set."""
-    #     checkpoint_paths = [osp.join(self.export_path, f"model.{f_idx + 1}.pt") for f_idx in range(self.num_folds)]
-    #     voting_model = EnsembleVotingModel(type(self.trainer.lightning_module), checkpoint_paths)
-    #     voting_model.trainer = self.trainer
-    #     # This requires to connect the new model and move it the right device.
-    #     self.trainer.strategy.connect(voting_model)
-    #     self.trainer.strategy.model_to_device()
-    #     self.trainer.test_loop.run()
+    def on_run_end(self) -> None:
+        """Used to output fold metrics"""
+        dirpath = Path(self.trainer.logger.log_dir).parent
+        with open(Path(dirpath, "test_metrics.yml"), 'w+') as f:
+            yaml.dump(self.test_metrics, f)
+        
 
     def on_save_checkpoint(self) -> Dict[str, int]:
         return {"current_fold": self.current_fold}

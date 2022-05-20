@@ -171,30 +171,31 @@ def create_classifier_from_encoder(
     mlp_structure = hidden_layers + [n_output]
   else:
     mlp_structure = [n_output]
-
-  if type(encoder[-1]) is ae.RNNEncoder:
+    
+  #if type(encoder[-1]) is ae.RNNEncoder:
+  #if isinstance(encoder[-1], ae.RNNEncoder):
     # RNN model
-    rnn_type = encoder[-1].backbone
-    dim = encoder[-1].rnn.hidden_size
-    nlayers = encoder[-1].rnn.num_layers
-    input_dim = dim * nlayers
+  rnn_type = encoder[-1].backbone
+  dim = encoder[-1].rnn.hidden_size
+  nlayers = encoder[-1].rnn.num_layers
+  input_dim = dim * nlayers
 
-    if rnn_type == "lstm":
-      input_dim *= 2
+  if rnn_type == "lstm":
+    input_dim *= 2
 
-    layers = [encoder]
+  layers = [encoder]
 
-    if rnn_type == "lstm":
-      layers.append(ae.CatDim(dim=0))
+  if rnn_type == "lstm":
+    layers.append(ae.CatDim(dim=0))
 
-    fc = ae.MLP(input_dim=input_dim,
-                layers=mlp_structure,
-                drop_p=dropout,
-                activation="sigmoid",
-                batch_norm=True)
-    layers += [fc]
-    model = nn.Sequential(*layers)
-  else:
-    raise "Unknown encoder type"
+  fc = ae.MLP(input_dim=input_dim,
+              layers=mlp_structure,
+              drop_p=dropout,
+              activation="sigmoid",
+              batch_norm=True)
+  layers += [fc]
+  model = nn.Sequential(*layers)
+  # else:
+  #   raise "Unknown encoder type"
 
   return model

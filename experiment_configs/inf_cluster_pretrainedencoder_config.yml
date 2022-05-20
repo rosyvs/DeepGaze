@@ -63,7 +63,7 @@ trainer:
 model:
   max_encoder_sequence_length: 250
   encoder_hidden_dim: 128
-  encoder_weights_path: ''
+  encoder_weights_path: /Users/rickgentry/emotive_lab/eyemind/OBF/pre_weights/sample_weights
   classifier_hidden_layers:
   - 256
   - 512
@@ -72,7 +72,7 @@ model:
   n_output: 1
   learning_rate: 0.001
   dropout: 0.5
-  freeze_encoder: false
+  freeze_encoder: true
 data:
   data_dir: ../output
   label_filepath: ../EML1_pageLevel_with_filename_seq.csv
