@@ -83,7 +83,7 @@ data:
   train_fold: null
   val_fold: null
   sequence_length: 3000
-  num_workers: 0
+  num_workers: 4
   batch_size: 16
   pin_memory: true
   drop_last: true

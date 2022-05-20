@@ -53,7 +53,8 @@ class KFoldLoop(Loop):
         self.fit_loop.run()
 
         self._reset_testing()  # requires to reset the tracking stage.
-        self.test_metrics[self.current_fold] = self.trainer.test_loop.run()
+        #self.test_metrics[self.current_fold] = self.trainer.test_loop.run()
+        self.test_metrics[self.current_fold] = self.trainer.test(self.trainer.model, datamodule=self.trainer.datamodule)
         self.current_fold += 1  # increment fold tracking number.
 
     def on_advance_end(self) -> None:

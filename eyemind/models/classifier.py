@@ -180,7 +180,7 @@ class EncoderClassifierMultiSequenceModel(LightningModule):
         y = y.int()
         accuracy = self.accuracy_metric(probs, y)
         auroc = self.auroc_metric(probs, y)
-        self.logger.experiment.add_scalars("losses", {f"{step_type}_loss": loss})        
+        self.logger.experiment.add_scalars("losses", {f"{step_type}_loss": loss}, self.global_step)        
         self.log(f"{step_type}_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log(f"{step_type}_accuracy", accuracy, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log(f"{step_type}_auroc", auroc, on_step=False, on_epoch=True, prog_bar=True, logger=True)
