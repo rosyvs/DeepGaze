@@ -2,10 +2,10 @@ from pathlib import Path
 import pandas as pd
 
 
-def fixation_label_mapper(files):
+def fixation_label_mapper(folder, files):
     labels = []
     for f in files:
-        df = pd.read_csv(f)
+        df = pd.read_csv(str(Path(folder,f).resolve()))
         label_array = df['fixation_label'].to_numpy(float)
         labels.append(label_array)
     return labels

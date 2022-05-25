@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import StratifiedGroupKFold
 from sklearn.preprocessing import LabelEncoder
+import torch
 # from eyemind.dataloading.gaze_data import GazeDataModule
 from torch.utils.data import SubsetRandomSampler
 
@@ -22,6 +23,12 @@ def get_filenames_for_dataset(folder, label_df, label_col, id_col="filename", ex
     label_filenames = set([f"{file}.{ext}" for file in files])
     folder_filenames = set([f.name for f in Path(folder).glob(f'*.{ext}')])
     return list(label_filenames.intersection(folder_filenames))
+
+def filter_files_by_seqlen(map_df, folder, min_sequence_length=500, ext="csv", id_col="filename"):
+    folder_filenames = set([f.name for f in Path(folder).glob(f'*.{ext}')])
+    files = map_df[id_col].loc[map_df["sequence_length"] > min_sequence_length].to_list()
+    filenames = set([f"{file}.{ext}" for file in files])
+    return list(filenames.intersection(folder_filenames))
 
 def get_id(row):
     return f"{row['ParticipantID']}-{row['Text']}{str(row['PageNum']-1)}"
@@ -53,7 +60,51 @@ def get_label_df(label_path):
     label_df = pd.read_csv(label_path)
     label_df = create_filename_col(label_df)
     return label_df
+
+# TODO: Write collate function which will return padded batch, sequence lengths, mask
+def collate_fn_pad(batch, sequence_length):
+    '''
+    Pads batch of variable length
+
+    note: it converts things ToTensor manually here since the ToTensor transform
+    assume it takes in images rather than arbitrary tensors.
+    '''
+    X, y = zip(*batch)
+    X_lengths = torch.tensor([ t.shape[0] for t in X ])
+    y_lengths = torch.tensor([ t.shape[0] for t in y ])
+    ## padd
+    X_padded = torch.nn.utils.rnn.pad_sequence(X, batch_first=True, padding_value=-181.)
+    y_padded = torch.nn.utils.rnn.pad_sequence(y, batch_first=True, padding_value=-181.)
+    # Split
+    torch.split(X_padded, sequence_length, )
+    ## compute mask
+    return X_padded, y_padded, X_lengths, y_lengths
+
+def split_collate_fn(sequence_length, batch):
+    '''
+    Takes variable length sequences, splits them each into 
+    subsequences of sequence_length, and returns tensors:
     
+    Args:
+        batch: List[Tuples(Tensor(X), Tensor(y))] Contains a list of the returned items from dataset
+        sequence_length: int lengths of the subsequences
+
+    Returns:
+        X: Tensor shape (bs, sequence_length, *)
+        y: Tensor shape (bs, sequence_length)
+    '''
+    X, y = zip(*batch)
+    # Splits each example into tensors with sequence length and drops last in case it is a different length
+    X_splits = [torch.stack(torch.split(t, sequence_length, dim=0)[:-1], dim=0) for t in X]
+    y_splits = [torch.stack(torch.split(t, sequence_length, dim=0)[:-1], dim=0) for t in y]
+    
+    X = torch.cat(X_splits, dim=0)
+    y = torch.cat(y_splits, dim=0)
+    return X, y
+
+
+
+
 # What is a good method for choosing the sequence length?
 def limit_sequence_len(x_data,sequence_len=3000,random_part=True):
     if len(x_data) > sequence_len:
