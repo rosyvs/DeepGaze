@@ -1,9 +1,7 @@
 from argparse import ArgumentParser
-from distutils.command.config import config
 import json
 from pathlib import Path
 from functools import partial
-from posixpath import split
 import numpy as np
 import pandas as pd
 from pytorch_lightning import Trainer

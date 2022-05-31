@@ -8,7 +8,6 @@ from eyemind.trainer.loops import KFoldLoop
 class GazeLightningCLI(LightningCLI):
     def add_arguments_to_parser(self, parser: LightningArgumentParser) -> None:
         parser.add_argument("--num_folds", type=int, default=1)
-        parser.add_argument("--export_path", type=str, default="./")
         # parser.set_defaults({
         #     "trainer.logger": {
         #         "class_path": "pytorch_lightning.loggers.TensorBoardLogger",

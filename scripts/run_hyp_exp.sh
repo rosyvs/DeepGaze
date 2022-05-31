@@ -3,7 +3,7 @@
 #SBATCH --nodes=1
 #SBATCH --time=03:00:00
 #SBATCH --partition=sgpu
-#SBATCH --ntasks=1
+#SBATCH --ntasks=1 # always use 1 
 #SBATCH --job-name=fix-hyp-exp
 #SBATCH --output=fix-hyp-exp.%j.out
 

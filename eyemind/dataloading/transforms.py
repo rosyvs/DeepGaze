@@ -16,7 +16,12 @@ class LimitSequenceLength(object):
                 sequence = sequence[:self.sequence_length]    
         else:
             # Pad data
-            padded_data = np.zeros((self.sequence_length,sequence.shape[1]))
+            if len(sequence.shape) == 2:
+                padded_data = np.zeros((self.sequence_length,sequence.shape[1]))
+            elif len(sequence.shape) == 1:
+                padded_data = np.zeros((self.sequence_length,))
+            else:
+                raise ValueError(f"Tensor shape of {sequence.shape} is not allowed")
             padded_data[:len(sequence)] = sequence
             sequence = padded_data
         return sequence 

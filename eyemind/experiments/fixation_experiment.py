@@ -6,16 +6,17 @@ from functools import partial
 import numpy as np
 import pandas as pd
 from pytorch_lightning import Trainer
-import pytorch_lightning
+from pytorch_lightning.utilities.cli import LightningCLI
 from pytorch_lightning.loggers import TensorBoardLogger
 from torch.utils.data import SubsetRandomSampler
 import torch
 from torch import nn
-from eyemind.dataloading.gaze_data import GazeDataModule
+from eyemind.dataloading.gaze_data import GazeDataModule, SequenceToSequenceDataModule
+from eyemind.experiments.cli import GazeLightningCLI
 from eyemind.experiments.experimenter import BaseExperiment
 from eyemind.preprocessing.fixations import fixation_label_mapper
 from eyemind.dataloading.load_dataset import limit_sequence_len
-from eyemind.models.encoder_decoder import EncoderDecoderModel
+from eyemind.models.encoder_decoder import EncoderDecoderModel, VariableSequenceLengthEncoderDecoderModel
 from sklearn.model_selection import train_test_split
 from pytorch_lightning.callbacks import LearningRateMonitor
 # Have to add path to enable torch.load to work since they saved it weirdly
@@ -203,36 +204,4 @@ def main(args):
 
 
 if __name__ == "__main__":
-    parser = ArgumentParser()
-    
-    # Program Args
-    parser.add_argument("--config_path", type=str, default="")
-    parser.add_argument("--data_folderpath", type=str)
-    parser.add_argument("--pretrained_weights_dirpath", type=str, default="")
-    parser.add_argument("--decoder_weights_filename", type=str)
-    parser.add_argument("--log_dirpath", type=str, default=".")
-    parser.add_argument("--experiment_logging_folder", type=str, default="")
-    parser.add_argument("--random_seed", type=int, default=42)
-    parser.add_argument("--sequence_length", type=int, default=500)
-    parser.add_argument("--stage", type=str, default="fit")
-    parser.add_argument("--use_conv", type=bool, default=True)
-    # add training arguments
-    parser = Trainer.add_argparse_args(parser)
-
-    # add model arguments
-
-    args = parser.parse_args()
-
-    # if there is a config path then load the arguments from that file
-    if args.config_path:
-        with open(Path(args.config_path).resolve(), 'r') as f:
-            args.__dict__ = json.load(f)
-    # no config path, so save the args to a file
-    else:
-        log_dirpath = Path(args.log_dirpath, args.experiment_logging_folder).resolve()
-        log_dirpath.mkdir(parents=True, exist_ok=True)
-        with open(Path(log_dirpath, "command_args.txt").resolve(), 'w') as f:
-            json.dump(args.__dict__, f, indent=2)
-    
-    main(args)
-    #train_from_scratch(tune=False, use_conv=True)
+    cli = LightningCLI(VariableSequenceLengthEncoderDecoderModel, SequenceToSequenceDataModule, seed_everything_default=42, trainer_defaults={'max_epochs': 5, 'num_sanity_val_steps': 0})

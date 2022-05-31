@@ -139,14 +139,11 @@ class EncoderClassifierMultiSequenceModel(LightningModule):
         self.accuracy_metric = torchmetrics.Accuracy(num_classes=n_output)
 
     def forward(self, X):
-        assert len(X.shape) == 3
         # splits and removes last sequence which might be different shape
         # Should we check if the split part is all zeros?
         X_splits = torch.split(X, self.hparams.max_encoder_sequence_length, dim=1)[:-1]
         X_stacked = torch.stack(X_splits,1)
         batch_size, splits, seq_len, num_features = X_stacked.shape
-        assert len(X_stacked.shape) == 4
-        assert X_stacked.shape[2] == self.hparams.max_encoder_sequence_length
         X = X_stacked.view(batch_size*splits, seq_len, num_features)
         logits = self.model(X)
         expanded_logits = logits.view(batch_size, splits, self.hparams.n_output)
@@ -174,7 +171,7 @@ class EncoderClassifierMultiSequenceModel(LightningModule):
         except ValueError as e:
             print(f"{batch}")
             raise e
-        logits = self.forward(X).squeeze()
+        logits = self(X).squeeze()
         loss = self.criterion(logits, y)
         probs = self._get_probs(logits)
         y = y.int()
