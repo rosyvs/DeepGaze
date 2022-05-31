@@ -80,6 +80,7 @@ def tune_seq_hidden(lightning_config, num_samples=1, gpus_per_trial=0):
         num_samples=num_samples,
         scheduler=scheduler,
         progress_reporter=reporter,
+        local_dir="./ray_results",
         name="tune_fixation")
 
     print("Best hyperparameters found were: ", analysis.best_config)        
