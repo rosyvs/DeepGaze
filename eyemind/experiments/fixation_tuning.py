@@ -19,7 +19,7 @@ from eyemind.models.encoder_decoder import VariableSequenceLengthEncoderDecoderM
 name_to_cls = {"trainer": Trainer, "model": VariableSequenceLengthEncoderDecoderModel, "data": SequenceToSequenceDataModule}
 
 def init_trainer(config, logger=None, callbacks=None):
-    Trainer()
+    pass
 
 def instantiate_class_from_config(config, cls_name, logger=None):
     args = config[cls_name]
