@@ -1,5 +1,6 @@
 from argparse import ArgumentParser
 import argparse
+from cgi import test
 import math
 from pytorch_lightning import Trainer
 import pytorch_lightning
@@ -51,7 +52,9 @@ def train_tune(hyperparameter_config, lightning_config, num_gpus=0):
                     filename="checkpoint",
                     on="validation_end"
                     )
-    trainer = Trainer(logger=logger, callbacks=[tunecallback], progress_bar_refresh_rate=0)
+    config["trainer"]["logger"] = logger
+    config["trainer"]["callbacks"] = [tunecallback]
+    trainer = Trainer(**config['trainer'])
     trainer.fit(model, datamodule=datamodule)    
 
 def tune_seq_hidden(lightning_config, num_samples=1, gpus_per_trial=0):
@@ -99,4 +102,4 @@ if __name__ == "__main__":
         lightning_config = yaml.safe_load(f)
     pytorch_lightning.seed_everything(lightning_config["seed_everything"], workers=True)
     tune_seq_hidden(lightning_config, num_samples=args.num_samples, gpus_per_trial=args.gpus_per_trial)
-    
+    #test_train_tune(lightning_config)

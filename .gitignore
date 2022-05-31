@@ -9,3 +9,4 @@ results/*
 .vscode
 OBF/
 **command_args*
+**ray_results
