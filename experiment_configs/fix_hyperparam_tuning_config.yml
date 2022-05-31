@@ -5,7 +5,7 @@ trainer:
     #   save_dir: /Users/rickgentry/emotive_lab/eyemind/lightning_logs
     #   name: fixation_id
   checkpoint_callback: null
-  enable_checkpointing: true
+  enable_checkpointing: false
   default_root_dir: null
   gradient_clip_val: null
   gradient_clip_algorithm: null
@@ -25,7 +25,7 @@ trainer:
   check_val_every_n_epoch: 1
   fast_dev_run: false
   accumulate_grad_batches: null
-  max_epochs: 10
+  max_epochs: 40
   min_epochs: null
   max_steps: -1
   min_steps: null
