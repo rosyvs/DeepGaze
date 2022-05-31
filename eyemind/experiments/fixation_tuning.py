@@ -61,13 +61,13 @@ def train_tune(hyperparameter_config, lightning_config, num_gpus=0):
     trainer = Trainer(**config['trainer'])
     trainer.fit(model, datamodule=datamodule)    
 
-def tune_seq_hidden(lightning_config, num_samples=1, gpus_per_trial=0):
-    tune_config = {"sequence_length": tune.grid_search([100,250,500]),
+def tune_seq_hidden(lightning_config, num_samples=1, gpus_per_trial=0, exp_name="tune_fixation"):
+    tune_config = {"sequence_length": tune.grid_search([250,500]),
         "hidden_dim": tune.grid_search([128, 256])}
     num_epochs = lightning_config['trainer']['max_epochs']
     scheduler = ASHAScheduler(
     max_t=num_epochs,
-    grace_period=1,
+    grace_period=5,
     reduction_factor=2)
 
     reporter = CLIReporter(parameter_columns=["sequence_length", "hidden_dim"],
@@ -101,9 +101,10 @@ if __name__ == "__main__":
     parser.add_argument("-c", type=str, help="lightning configuration path")
     parser.add_argument("--gpus_per_trial", type=int, default=0)
     parser.add_argument("--num_samples", type=int, default=1)
+    parser.add_argument("--exp_name", type=str, default="tune_fixation")
     args = parser.parse_args()
     with open(args.c, 'r') as f:
         lightning_config = yaml.safe_load(f)
     pytorch_lightning.seed_everything(lightning_config["seed_everything"], workers=True)
-    tune_seq_hidden(lightning_config, num_samples=args.num_samples, gpus_per_trial=args.gpus_per_trial)
+    tune_seq_hidden(lightning_config, num_samples=args.num_samples, gpus_per_trial=args.gpus_per_trial, exp_name=args.exp_name)
     #test_train_tune(lightning_config)
