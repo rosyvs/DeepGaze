@@ -39,6 +39,10 @@ def combine_hyperparameter_config(config, hp_config):
                     l_module_dict[hp_k] = hp_v
     return config
 
+def train_tune_shared_data(hyperparameter_config, lightning_config, datamodule=None, num_gpus=0):
+    pass
+
+
 def train_tune(hyperparameter_config, lightning_config, num_gpus=0):
     config = combine_hyperparameter_config(lightning_config, hyperparameter_config)
     config["trainer"]["gpus"] = math.ceil(num_gpus)
