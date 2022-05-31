@@ -55,8 +55,8 @@ def train_tune(hyperparameter_config, lightning_config, num_gpus=0):
     trainer.fit(model, datamodule=datamodule)    
 
 def tune_seq_hidden(lightning_config, num_samples=1, gpus_per_trial=0):
-    tune_config = {"sequence_length": tune.choice([100,250,500]),
-        "hidden_dim": tune.choice([128, 256])}
+    tune_config = {"sequence_length": tune.grid_search([100,250,500]),
+        "hidden_dim": tune.grid_search([128, 256])}
     num_epochs = lightning_config['trainer']['max_epochs']
     scheduler = ASHAScheduler(
     max_t=num_epochs,
