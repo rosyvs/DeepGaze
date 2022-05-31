@@ -44,7 +44,14 @@ def train_tune(hyperparameter_config, lightning_config, num_gpus=0):
     logger = TensorBoardLogger(save_dir=tune.get_trial_dir(), name="", version=".")
     model = VariableSequenceLengthEncoderDecoderModel(**config["model"])
     datamodule = BaseSequenceToSequenceDataModule(**config["data"])
-    trainer = Trainer(logger=logger, callbacks=[TuneReportCallback({"val_loss": "val_loss", "val_auroc": "val_auroc"}, on="validation_end")])
+    tunecallback = TuneReportCheckpointCallback(
+                    metrics={
+                        "val_loss": "val_loss",
+                        "val_auroc": "val_auroc"},
+                    filename="checkpoint",
+                    on="validation_end"
+                    )
+    trainer = Trainer(logger=logger, callbacks=[tunecallback])
     trainer.fit(model, datamodule=datamodule)    
 
 def tune_seq_hidden(lightning_config, num_samples=1, gpus_per_trial=0):
