@@ -10,6 +10,21 @@ from sklearn.preprocessing import LabelEncoder
 import torch
 # from eyemind.dataloading.gaze_data import GazeDataModule
 from torch.utils.data import SubsetRandomSampler
+import yaml
+
+def write_splits(splits, filepath, folds=False):
+    if folds:
+        split_out = {"folds": [{"train": split[0], "val": split[1]} for split in splits]}
+    else:
+        split_out = {"train": splits[0], "test": splits[1]}
+    with open(filepath, 'w') as f:
+        yaml.dump(split_out, f)
+    return splits
+
+def load_file_folds(path):
+    with open(path, 'r') as f:
+        file_folds_dict = yaml.safe_load(f)    
+    return [(fold["train"], fold["val"]) for fold in file_folds_dict["folds"]]
 
 def label_files(label_df,label_col,filenames,id_col="filename"):
     # Strip extension

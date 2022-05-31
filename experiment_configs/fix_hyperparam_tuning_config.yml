@@ -79,8 +79,6 @@ data:
   test_dir: null
   train_dataset: null
   test_dataset: null
-  train_fold: null
-  val_fold: null
   sequence_length: 250
   num_workers: 4
   batch_size: 16

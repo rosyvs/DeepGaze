@@ -75,7 +75,7 @@ model:
   freeze_encoder: false
 data:
   data_dir: /Users/rickgentry/emotive_lab/eyemind/data/processed/output
-  label_filepath: /Users/rickgentry/emotive_lab/eyemind/data/EML1_pageLevel_with_filename_seq.csv
+  label_filepath: /Users/rickgentry/emotive_lab/eyemind/data/processed/EML1_pageLevel_with_filename_seq.csv
   label_col: Rote_X
   test_dir: null
   train_dataset: null

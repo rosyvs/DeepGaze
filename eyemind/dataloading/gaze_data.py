@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod, abstractproperty
 from ast import Sub
 from cProfile import label
+from cgi import test
 from dataclasses import dataclass
 from functools import partial
 import os
@@ -9,7 +10,8 @@ from pathlib import Path
 from typing import Any, Callable, List, Optional, Union
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from eyemind.dataloading.load_dataset import filter_files_by_seqlen, get_filenames_for_dataset, get_label_df, get_label_mapper, get_stratified_group_splits, limit_sequence_len, split_collate_fn
+import yaml
+from eyemind.dataloading.load_dataset import filter_files_by_seqlen, get_filenames_for_dataset, get_label_df, get_label_mapper, get_stratified_group_splits, limit_sequence_len, load_file_folds, split_collate_fn, write_splits
 
 import torchvision.transforms as T
 from torch.utils.data import Dataset, DataLoader, Sampler, Subset
@@ -76,6 +78,10 @@ class SequenceLabelDataset(Dataset):
     
     def get_files_from_indices(self, indices):
         return [self.files[ind] for ind in indices]
+
+    def get_indices_from_files(self, files):
+        file_index_map = {f: i for i, f in enumerate(self.files)}
+        return [file_index_map[f] for f in files if f in file_index_map]
 
     def save_dataset(self, path):
         pass
@@ -158,17 +164,14 @@ class BaseKFoldDataModule(LightningDataModule, ABC):
     def setup_fold_index(self, fold_index: int) -> None:
         pass
 
-    def save_setup(self, path):
-        pass
-
     def save_folds(self, path):
-        pass
-
-    def load_setup(self, path):
-        pass
+        file_folds = [(self.train_dataset.dataset.get_files_from_indices(split[0]), self.train_dataset.dataset.get_files_from_indices(split[1])) for split in self.splits]
+        write_splits(file_folds, path, folds=True)
 
     def load_folds(self, path):
-        pass
+        file_folds = load_file_folds(path)
+        self.splits = [(self.train_dataset.dataset.get_indices_from_files(fold[0]), self.train_dataset.dataset.get_indices_from_files(fold[1])) for fold in file_folds]
+        
 class GroupStratifiedKFoldDataModule(BaseKFoldDataModule):
     
     def setup_fold_index(self, fold_index: int) -> None:
@@ -196,6 +199,43 @@ class GroupStratifiedKFoldDataModule(BaseKFoldDataModule):
             
 
 class BaseGazeDataModule(LightningDataModule, ABC):
+    
+    def save_setup(self, path):
+        train_files = None
+        val_files = None
+        test_files = None
+        if isinstance (self.train_dataset, Subset):
+            train_files = self.train_dataset.dataset.get_files_from_indices(self.train_dataset.indices)
+        else:
+            train_files = self.train_dataset.files
+        if hasattr(self, "val_dataset"):
+            if isinstance (self.val_dataset, Subset):
+                val_files = self.val_dataset.dataset.get_files_from_indices(self.val_dataset.indices)
+            else:
+                val_files = self.val_dataset.files
+        if hasattr(self, "test_dataset"):        
+            if isinstance (self.test_dataset, Subset):
+                test_files = self.test_dataset.dataset.get_files_from_indices(self.test_dataset.indices)
+            else:
+                test_files = self.test_dataset.files              
+        save_dict = {dataset_str: files_list for dataset_str,files_list in zip(["train", "val", "test"],[train_files, val_files, test_files]) if files_list}
+        with open(path, 'w') as f:
+            yaml.safe_dump(save_dict, f)        
+
+    def load_setup(self, dataset):
+        with open(self.load_setup_path, 'r') as f:
+            file_dict = yaml.safe_load(f)              
+        for k,v in file_dict.items():
+            split = dataset.get_indices_from_files(v)
+            if k == "train":
+                self.train_dataset = Subset(dataset, split)
+            elif k == "val":
+                self.val_dataset = Subset(dataset, split)
+            elif k == "test":
+                self.test_dataset = Subset(dataset, split)
+            else:
+                raise ValueError("File doesn't have train, val, or test files")
+
     @property 
     @abstractmethod
     def x_transforms(self) -> None:
@@ -221,6 +261,7 @@ class SequenceToLabelDataModule(GroupStratifiedKFoldDataModule, BaseGazeDataModu
                 data_dir: str,
                 label_filepath: str,
                 label_col: str,
+                load_setup_path: Optional[str] = None,
                 test_dir: Optional[str] = None,
                 train_dataset: Optional[Dataset] = None,
                 test_dataset: Optional[Dataset] = None,
@@ -236,6 +277,7 @@ class SequenceToLabelDataModule(GroupStratifiedKFoldDataModule, BaseGazeDataModu
         self.data_dir = data_dir
         self.label_col = label_col
         self.label_df = get_label_df(label_filepath)
+        self.load_setup_path = load_setup_path
         self.test_dir = test_dir
         self.train_dataset = train_dataset
         self.test_dataset = test_dataset
@@ -257,18 +299,21 @@ class SequenceToLabelDataModule(GroupStratifiedKFoldDataModule, BaseGazeDataModu
     def setup(self, stage: Optional[str] = None):
         if stage in ("fit", "predict", None):
             dataset = SequenceLabelDataset(self.data_dir, file_mapper=self.file_mapper, label_mapper=self.label_mapper, transform_x=self.x_transforms, transform_y=self.y_transforms)
-            if self.test_dir:
-                self.train_dataset = dataset
+            if self.load_setup_path:
+                self.load_setup(dataset)
             else:
-                splits = train_test_split(np.arange(len(dataset.files)), dataset.labels, test_size=0.15, stratify=dataset.labels)
-                self.train_dataset = Subset(dataset, splits[0])
-                self.test_dataset = Subset(dataset, splits[1])
+                if self.test_dir:
+                    self.train_dataset = dataset
+                else:
+                    splits = train_test_split(np.arange(len(dataset.files)), dataset.labels, test_size=0.15, stratify=dataset.labels)
+                    self.train_dataset = Subset(dataset, splits[0])
+                    self.test_dataset = Subset(dataset, splits[1])
         elif stage == "test":
             if self.test_dir:
                 self.test_dataset = SequenceLabelDataset(dir, file_mapper=self.file_mapper, label_mapper=self.label_mapper, transform_x=self.x_transforms, transform_y=self.y_transforms)
             
             assert self.test_dataset is not None
-            
+
     def train_dataloader(self) -> DataLoader:
         if self.train_fold:
             return self._get_dataloader(self.train_fold)
@@ -325,12 +370,124 @@ class SequenceToLabelDataModule(GroupStratifiedKFoldDataModule, BaseGazeDataModu
     def file_mapper(self):
         return partial(get_filenames_for_dataset,label_df=self.label_df, label_col=self.label_col)
 
-        
+class BaseSequenceToSequenceDataModule(BaseGazeDataModule):
+
+    def __init__(self,
+                data_dir: str,
+                label_filepath: str,
+                load_setup_path: Optional[str] = None,
+                test_dir: Optional[str] = None,
+                train_dataset: Optional[Dataset] = None,
+                val_dataset: Optional[Dataset] = None,
+                test_dataset: Optional[Dataset] = None,
+                sequence_length: int = 500,
+                num_workers: int = 0,
+                batch_size: int = 8,
+                pin_memory: bool = True,
+                drop_last: bool = True,            
+                ):
+        super().__init__()
+        self.data_dir = data_dir
+        self.label_df = get_label_df(label_filepath)
+        self.load_setup_path = load_setup_path
+        self.test_dir = test_dir
+        self.train_dataset = train_dataset
+        self.val_dataset = val_dataset
+        self.test_dataset = test_dataset
+        self.sequence_length = sequence_length
+        self.batch_size = batch_size
+        self.num_workers = num_workers
+        self.pin_memory = pin_memory
+        self.drop_last = drop_last
+
+
+    def prepare_data(self):
+        '''
+        Download and save data, do some preprocessing before transforms are applited
+        '''
+        pass
+
+    def setup(self, stage: Optional[str] = None):
+        if stage in ("fit", "predict", None):
+            dataset = SequenceLabelDataset(self.data_dir, file_mapper=self.file_mapper, label_mapper=self.label_mapper, transform_x=self.x_transforms, transform_y=self.y_transforms, usecols=[2,3])
+            if self.load_setup_path:
+                self.load_setup(dataset)
+            else:
+                if self.test_dir:
+                    self.splits = train_test_split(np.arange(len(dataset.files)), test_size=0.2)
+                else:
+                    train_val_splits, test_split = train_test_split(np.arange(len(dataset.files)), test_size=0.1)
+                    train_split, val_split = train_test_split(train_val_splits, test_size=0.2)
+                    self.splits = (train_split, val_split, test_split)
+                    self.test_dataset = Subset(dataset, self.splits[2])
+                self.train_dataset = Subset(dataset, self.splits[0])
+                self.val_dataset = Subset(dataset, self.splits[1])
+
+        elif stage == "test":
+            if self.test_dir:
+                self.test_dataset = SequenceLabelDataset(dir, file_mapper=self.file_mapper, label_mapper=self.label_mapper, transform_x=self.x_transforms, transform_y=self.y_transforms)
+            
+            assert self.test_dataset is not None
+            
+    def train_dataloader(self) -> DataLoader:
+        return self._get_dataloader(self.train_dataset)
+
+    def val_dataloader(self) -> Union[DataLoader, List[DataLoader]]:
+        return self._get_dataloader(self.val_dataset)
+
+    def predict_dataloader(self) -> DataLoader:
+        if self.test_dataset:
+            return self._get_dataloader(self.test_dataset)
+        elif self.val_dataset:
+            return self._get_dataloader(self.val_dataset)
+        else:
+            return self._get_dataloader(self.train_dataset) 
+
+    def test_dataloader(self) -> DataLoader:
+        return self._get_dataloader(self.test_dataset)
+
+    def _get_dataloader(self, dataset: Dataset):
+        return DataLoader(
+            dataset, 
+            batch_size=self.batch_size, 
+            num_workers=self.num_workers, 
+            drop_last=self.drop_last, 
+            pin_memory=self.pin_memory,
+            collate_fn=partial(split_collate_fn, self.sequence_length))
+
+    @staticmethod
+    def add_datamodule_specific_args(parent_parser):
+        group = parent_parser.add_argument_group("BaseSequenceToSequenceDataModule")
+        group.add_argument("--data_dir", type=str)
+        group.add_argument("--test_dir", type=str, default="")
+        group.add_argument("--num_workers", type=int, default=0)
+        group.add_argument("--batch_size", type=int, default=8)
+        group.add_argument("--label_filepath", type=str)
+        group.add_argument("--sequence_length", type=int, default=500)
+        return parent_parser
+
+    @property
+    def x_transforms(self):
+        return ToTensor()
+
+    @property
+    def y_transforms(self):
+        return ToTensor()
+
+    @property
+    def label_mapper(self):
+        return partial(fixation_label_mapper, self.data_dir)
+    
+    @property
+    def file_mapper(self):
+        return partial(filter_files_by_seqlen, self.label_df)   
+
 class SequenceToSequenceDataModule(GroupStratifiedKFoldDataModule, BaseGazeDataModule):
 
     def __init__(self,
                 data_dir: str,
                 label_filepath: str,
+                load_setup_path: Optional[str] = None,
                 test_dir: Optional[str] = None,
                 train_dataset: Optional[Dataset] = None,
                 test_dataset: Optional[Dataset] = None,
@@ -345,6 +502,7 @@ class SequenceToSequenceDataModule(GroupStratifiedKFoldDataModule, BaseGazeDataM
         super().__init__()
         self.data_dir = data_dir
         self.label_df = get_label_df(label_filepath)
+        self.load_setup_path = load_setup_path
         self.test_dir = test_dir
         self.train_dataset = train_dataset
         self.test_dataset = test_dataset
@@ -366,12 +524,15 @@ class SequenceToSequenceDataModule(GroupStratifiedKFoldDataModule, BaseGazeDataM
     def setup(self, stage: Optional[str] = None):
         if stage in ("fit", "predict", None):
             dataset = SequenceLabelDataset(self.data_dir, file_mapper=self.file_mapper, label_mapper=self.label_mapper, transform_x=self.x_transforms, transform_y=self.y_transforms, usecols=[2,3])
-            if self.test_dir:
-                self.train_dataset = dataset
+            if self.load_setup_path:
+                self.load_setup(dataset)
             else:
-                splits = train_test_split(np.arange(len(dataset.files)), dataset.labels, test_size=0.15)
-                self.train_dataset = Subset(dataset, splits[0])
-                self.test_dataset = Subset(dataset, splits[1])
+                if self.test_dir:
+                    self.train_dataset = dataset
+                else:
+                    splits = train_test_split(np.arange(len(dataset.files)), dataset.labels, test_size=0.15)
+                    self.train_dataset = Subset(dataset, splits[0])
+                    self.test_dataset = Subset(dataset, splits[1])
         elif stage == "test":
             if self.test_dir:
                 self.test_dataset = SequenceLabelDataset(dir, file_mapper=self.file_mapper, label_mapper=self.label_mapper, transform_x=self.x_transforms, transform_y=self.y_transforms)
