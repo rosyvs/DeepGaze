@@ -51,7 +51,7 @@ def train_tune(hyperparameter_config, lightning_config, num_gpus=0):
                     filename="checkpoint",
                     on="validation_end"
                     )
-    trainer = Trainer(logger=logger, callbacks=[tunecallback])
+    trainer = Trainer(logger=logger, callbacks=[tunecallback], progress_bar_refresh_rate=0)
     trainer.fit(model, datamodule=datamodule)    
 
 def tune_seq_hidden(lightning_config, num_samples=1, gpus_per_trial=0):
