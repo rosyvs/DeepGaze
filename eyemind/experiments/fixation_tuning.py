@@ -67,7 +67,7 @@ def tune_seq_hidden(lightning_config, num_samples=1, gpus_per_trial=0, exp_name=
     num_epochs = lightning_config['trainer']['max_epochs']
     scheduler = ASHAScheduler(
     max_t=num_epochs,
-    grace_period=5,
+    grace_period=num_epochs//2,
     reduction_factor=2)
 
     reporter = CLIReporter(parameter_columns=["sequence_length", "hidden_dim"],
@@ -88,7 +88,7 @@ def tune_seq_hidden(lightning_config, num_samples=1, gpus_per_trial=0, exp_name=
         scheduler=scheduler,
         progress_reporter=reporter,
         local_dir="./ray_results",
-        name="tune_fixation")
+        name=exp_name)
 
     print("Best hyperparameters found were: ", analysis.best_config)        
 
@@ -107,4 +107,3 @@ if __name__ == "__main__":
         lightning_config = yaml.safe_load(f)
     pytorch_lightning.seed_everything(lightning_config["seed_everything"], workers=True)
     tune_seq_hidden(lightning_config, num_samples=args.num_samples, gpus_per_trial=args.gpus_per_trial, exp_name=args.exp_name)
-    #test_train_tune(lightning_config)
