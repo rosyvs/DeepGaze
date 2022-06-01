@@ -13,7 +13,6 @@ import yaml
 from eyemind.dataloading.gaze_data import SequenceToLabelDataModule
 from eyemind.models.classifier import EncoderClassifierMultiSequenceModel
 import ray
-ray.init(local_mode=True)
 
 name_to_cls = {"trainer": Trainer, "model": EncoderClassifierMultiSequenceModel, "data": SequenceToLabelDataModule}
 
