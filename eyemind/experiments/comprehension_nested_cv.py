@@ -91,7 +91,8 @@ def run_tune(hyperparameter_config, lightning_config, datamodule, train_ds, val_
 
 def nested_cv_tune(lightning_config, num_outer_folds=4, num_inner_folds=4, num_samples=1, gpus_per_trial=0, exp_name="comprehension_tuning"):
     # Tuning configurations and reporting
-    tune_config = {"freeze_encoder": tune.grid_search([True, False])}
+    tune_config = {"freeze_encoder": tune.grid_search([True, False]),
+                    "classifier_hidden_layers": tune.grid_search([[256,512], [256,128]])}
     hparam_keys = list(tune_config.keys())
     num_epochs = lightning_config['trainer']['max_epochs']
     resources_per_trial = {"cpu": 1, "gpu": gpus_per_trial}
