@@ -197,6 +197,48 @@ class GroupStratifiedKFoldDataModule(BaseKFoldDataModule):
         else:
             raise ValueError
             
+class GroupStratifiedNestedCVDataModule(GroupStratifiedKFoldDataModule):
+
+    def setup_cv_folds(self, num_outer_folds: int, num_inner_folds: int) -> None:
+        train_indices = self.train_dataset.indices
+        train_files, train_labels = self.train_dataset.dataset.get_files_from_indices(train_indices), self.train_dataset.dataset.get_labels_from_indices(train_indices)        
+        if num_outer_folds == 1:
+            self.outer_splits = train_test_split(train_indices, test_size=0.15, stratify=train_labels)
+        elif num_outer_folds > 1:
+            outer_splits = []
+            inner_splits_list = []
+            for outer_split in get_stratified_group_splits(train_files, self.label_df, self.label_col, folds=num_outer_folds):
+                train_split = [train_indices[ind] for ind in outer_split[0]]
+                val_split = [train_indices[ind] for ind in outer_split[1]]
+                outer_splits.append((train_split, val_split))
+                inner_splits = []
+                outer_split_train_files = self.train_dataset.dataset.get_files_from_indices(train_split)
+                for inner_split in get_stratified_group_splits(outer_split_train_files, self.label_df, self.label_col, folds=num_inner_folds):
+                    train_split = [train_indices[ind] for ind in inner_split[0]]
+                    val_split = [train_indices[ind] for ind in inner_split[1]]
+                    inner_splits.append((train_split, val_split))
+                inner_splits_list.append(inner_splits)
+            self.outer_splits = outer_splits
+            self.inner_splits = inner_splits_list
+    
+    def setup_cv_fold_index(self, outer_fold_index: int, inner_fold_index: int) -> None:
+        # Use inner fold
+        if inner_fold_index >= 0:
+            train_indices, val_indices = self.inner_splits[outer_fold_index][inner_fold_index]
+        # Use outer fold
+        else:
+            train_indices, val_indices = self.outer_splits[outer_fold_index]
+        self.train_fold = Subset(self.train_dataset.dataset, train_indices)
+        self.val_fold = Subset(self.train_dataset.dataset, val_indices)
+
+    def get_cv_fold(self, outer_fold_index: int, inner_fold_index: int):
+        if inner_fold_index >= 0:
+            train_indices, val_indices = self.inner_splits[outer_fold_index][inner_fold_index]
+        # Use outer fold
+        else:
+            train_indices, val_indices = self.outer_splits[outer_fold_index]
+        return Subset(self.train_dataset.dataset, train_indices), Subset(self.train_dataset.dataset, val_indices)
+
 
 class BaseGazeDataModule(LightningDataModule, ABC):
     
@@ -235,6 +277,14 @@ class BaseGazeDataModule(LightningDataModule, ABC):
                 self.test_dataset = Subset(dataset, split)
             else:
                 raise ValueError("File doesn't have train, val, or test files")
+    
+    def get_dataloader(self, dataset: Dataset):
+        return DataLoader(
+            dataset, 
+            batch_size=self.batch_size, 
+            num_workers=self.num_workers, 
+            drop_last=self.drop_last, 
+            pin_memory=self.pin_memory)
 
     @property 
     @abstractmethod
@@ -255,7 +305,7 @@ class BaseGazeDataModule(LightningDataModule, ABC):
     @abstractmethod
     def file_mapper(self) -> None:
         pass
-class SequenceToLabelDataModule(GroupStratifiedKFoldDataModule, BaseGazeDataModule):
+class SequenceToLabelDataModule(GroupStratifiedNestedCVDataModule, BaseGazeDataModule):
 
     def __init__(self,
                 data_dir: str,
@@ -316,31 +366,23 @@ class SequenceToLabelDataModule(GroupStratifiedKFoldDataModule, BaseGazeDataModu
 
     def train_dataloader(self) -> DataLoader:
         if self.train_fold:
-            return self._get_dataloader(self.train_fold)
+            return self.get_dataloader(self.train_fold)
         else:
-            return self._get_dataloader(self.train_dataset)
+            return self.get_dataloader(self.train_dataset)
 
     def val_dataloader(self) -> Union[DataLoader, List[DataLoader]]:
-        return self._get_dataloader(self.val_fold)
+        return self.get_dataloader(self.val_fold)
 
     def predict_dataloader(self) -> DataLoader:
         if self.test_dataset:
-            return self._get_dataloader(self.test_dataset)
+            return self.get_dataloader(self.test_dataset)
         elif self.val_fold:
-            return self._get_dataloader(self.val_fold)
+            return self.get_dataloader(self.val_fold)
         else:
-            return self._get_dataloader(self.train_dataset)
+            return self.get_dataloader(self.train_dataset)
 
     def test_dataloader(self) -> DataLoader:
-        return self._get_dataloader(self.test_dataset)
-
-    def _get_dataloader(self, dataset: Dataset):
-        return DataLoader(
-            dataset, 
-            batch_size=self.batch_size, 
-            num_workers=self.num_workers, 
-            drop_last=self.drop_last, 
-            pin_memory=self.pin_memory)
+        return self.get_dataloader(self.test_dataset)
 
     @staticmethod
     def add_datamodule_specific_args(parent_parser):
@@ -430,23 +472,23 @@ class BaseSequenceToSequenceDataModule(BaseGazeDataModule):
             assert self.test_dataset is not None
             
     def train_dataloader(self) -> DataLoader:
-        return self._get_dataloader(self.train_dataset)
+        return self.get_dataloader(self.train_dataset)
 
     def val_dataloader(self) -> Union[DataLoader, List[DataLoader]]:
-        return self._get_dataloader(self.val_dataset)
+        return self.get_dataloader(self.val_dataset)
 
     def predict_dataloader(self) -> DataLoader:
         if self.test_dataset:
-            return self._get_dataloader(self.test_dataset)
+            return self.get_dataloader(self.test_dataset)
         elif self.val_dataset:
-            return self._get_dataloader(self.val_dataset)
+            return self.get_dataloader(self.val_dataset)
         else:
-            return self._get_dataloader(self.train_dataset) 
+            return self.get_dataloader(self.train_dataset) 
 
     def test_dataloader(self) -> DataLoader:
-        return self._get_dataloader(self.test_dataset)
+        return self.get_dataloader(self.test_dataset)
 
-    def _get_dataloader(self, dataset: Dataset):
+    def get_dataloader(self, dataset: Dataset):
         return DataLoader(
             dataset, 
             batch_size=self.batch_size, 
@@ -541,25 +583,25 @@ class SequenceToSequenceDataModule(GroupStratifiedKFoldDataModule, BaseGazeDataM
             
     def train_dataloader(self) -> DataLoader:
         if self.train_fold:
-            return self._get_dataloader(self.train_fold)
+            return self.get_dataloader(self.train_fold)
         else:
-            return self._get_dataloader(self.train_dataset)
+            return self.get_dataloader(self.train_dataset)
 
     def val_dataloader(self) -> Union[DataLoader, List[DataLoader]]:
-        return self._get_dataloader(self.val_fold)
+        return self.get_dataloader(self.val_fold)
 
     def predict_dataloader(self) -> DataLoader:
         if self.test_dataset:
-            return self._get_dataloader(self.test_dataset)
+            return self.get_dataloader(self.test_dataset)
         elif self.val_fold:
-            return self._get_dataloader(self.val_fold)
+            return self.get_dataloader(self.val_fold)
         else:
-            return self._get_dataloader(self.train_dataset)
+            return self.get_dataloader(self.train_dataset)
 
     def test_dataloader(self) -> DataLoader:
-        return self._get_dataloader(self.test_dataset)
+        return self.get_dataloader(self.test_dataset)
 
-    def _get_dataloader(self, dataset: Dataset):
+    def get_dataloader(self, dataset: Dataset):
         return DataLoader(
             dataset, 
             batch_size=self.batch_size, 
