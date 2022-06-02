@@ -75,7 +75,7 @@ class EncoderClassifierModel(LightningModule):
         y = y.int()
         accuracy = self.accuracy_metric(preds, y)
         auroc = self.auroc_metric(preds, y)
-        self.logger.experiment.add_scalars("losses", {f"{step_type}_loss": loss}, self.global_step)        
+        self.logger.experiment.add_scalars("losses", {f"{step_type}_loss": loss}, self.current_epoch)        
         self.log(f"{step_type}_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log(f"{step_type}_accuracy", accuracy, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log(f"{step_type}_auroc", auroc, on_step=False, on_epoch=True, prog_bar=True, logger=True)
@@ -205,7 +205,7 @@ class EncoderClassifierMultiSequenceModel(LightningModule):
         
     @staticmethod
     def add_model_specific_args(parent_parser):
-        group = parent_parser.add_argument_group("EncoderClassifierModel")
+        group = parent_parser.add_argument_group("EncoderClassifierMultiSequenceModel")
         group.add_argument('--max_encoder_sequence_length', type=int, default=250)
         group.add_argument('--learning_rate', type=float, default=0.001)
         group.add_argument('--use_conv', type=bool, default=True)
