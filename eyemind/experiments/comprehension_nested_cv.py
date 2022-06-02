@@ -11,7 +11,7 @@ from ray.tune.schedulers import ASHAScheduler
 from ray.tune.integration.pytorch_lightning import TuneReportCheckpointCallback
 import yaml
 from eyemind.dataloading.gaze_data import SequenceToLabelDataModule
-from eyemind.models.classifier import EncoderClassifierMultiSequenceModel
+from eyemind.models.classifier import EncoderClassifierModel, EncoderClassifierMultiSequenceModel
 import ray
 
 name_to_cls = {"trainer": Trainer, "model": EncoderClassifierMultiSequenceModel, "data": SequenceToLabelDataModule}
@@ -66,6 +66,7 @@ def run_train(hyperparameter_config, lightning_config, datamodule, train_ds, val
     config["trainer"]["gpus"] = math.ceil(num_gpus)
     model = EncoderClassifierMultiSequenceModel(**config["model"])
     config["trainer"]["logger"] = logger
+    config["trainer"]["strategy"] = "ddp"
     trainer = Trainer(**config['trainer'])
     trainer.fit(model, train_dataloaders=datamodule.get_dataloader(train_ds), val_dataloaders=datamodule.get_dataloader(val_ds))
 
@@ -76,7 +77,8 @@ def run_tune(hyperparameter_config, lightning_config, datamodule, train_ds, val_
     config = combine_hyperparameter_config(lightning_config, hyperparameter_config)
     config["trainer"]["gpus"] = math.ceil(num_gpus)
     logger = TensorBoardLogger(save_dir=tune.get_trial_dir(), name="", version=".")
-    model = EncoderClassifierMultiSequenceModel(**config["model"])
+    #model = EncoderClassifierMultiSequenceModel(**config["model"])
+    model = EncoderClassifierModel(**config["model"])
     tunecallback = TuneReportCheckpointCallback(
                     metrics={
                         "val_loss": "val_loss",

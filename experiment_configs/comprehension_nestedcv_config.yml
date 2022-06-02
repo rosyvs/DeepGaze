@@ -16,14 +16,14 @@ trainer:
   tpu_cores: null
   ipus: null
   log_gpu_memory: null
-  progress_bar_refresh_rate: null
+  progress_bar_refresh_rate: 0
   enable_progress_bar: true
   overfit_batches: 0.0
   track_grad_norm: -1
   check_val_every_n_epoch: 1
   fast_dev_run: false
   accumulate_grad_batches: null
-  max_epochs: 2
+  max_epochs: 20
   min_epochs: null
   max_steps: -1
   min_steps: null
@@ -34,7 +34,7 @@ trainer:
   limit_predict_batches: null
   val_check_interval: null
   flush_logs_every_n_steps: null
-  log_every_n_steps: 50
+  log_every_n_steps: 30
   accelerator: null
   strategy: null
   sync_batchnorm: false
@@ -82,8 +82,8 @@ data:
   test_dataset: null
   train_fold: null
   val_fold: null
-  sequence_length: 3000
-  num_workers: 4
+  sequence_length: 250
+  num_workers: 2
   batch_size: 16
   pin_memory: true
   drop_last: true
