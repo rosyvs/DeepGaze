@@ -4,9 +4,9 @@
 #SBATCH --time=04:00:00
 #SBATCH --partition=sgpu
 #SBATCH --ntasks=1
-#SBATCH --job-name=fix-tune
+#SBATCH --job-name=comprehension-tune
 #SBATCH --cpus-per-task=4
-#SBATCH --output=fix-tune-exp.%j.out
+#SBATCH --output=comprehension-tune-exp.%j.out
 
 module load cuda/11.2
 module load cudnn/8.1_for_cuda_11.2
