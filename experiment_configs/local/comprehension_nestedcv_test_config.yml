@@ -16,7 +16,7 @@ trainer:
   tpu_cores: null
   ipus: null
   log_gpu_memory: null
-  progress_bar_refresh_rate: null
+  progress_bar_refresh_rate: 0
   enable_progress_bar: true
   overfit_batches: 0.0
   track_grad_norm: -1
