@@ -38,7 +38,7 @@ class EncoderClassifierModel(LightningModule):
         self.save_hyperparameters()
         self.encoder = create_encoder(encoder_hidden_dim)
         if encoder_weights_path:
-            self.encoder = self.encoder.load_state_dict(torch.load(encoder_weights_path))
+           self.encoder.load_state_dict(torch.load(encoder_weights_path))
         self.model = creator.create_classifier_from_encoder(self.encoder,hidden_layers=classifier_hidden_layers,n_output=1,dropout=0.5)
         assert(n_output >= 1)
         self.num_classes = n_output
