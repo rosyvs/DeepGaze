@@ -1,6 +1,4 @@
 from argparse import ArgumentParser
-import argparse
-from cgi import test
 import math
 from pytorch_lightning import Trainer
 import pytorch_lightning
@@ -10,8 +8,7 @@ from torch import Tensor
 from ray import tune
 from ray.tune import CLIReporter
 from ray.tune.schedulers import ASHAScheduler, PopulationBasedTraining
-from ray.tune.integration.pytorch_lightning import TuneReportCallback, \
-    TuneReportCheckpointCallback
+from ray.tune.integration.pytorch_lightning import TuneReportCheckpointCallback
 import yaml
 from eyemind.dataloading.gaze_data import BaseSequenceToSequenceDataModule, SequenceToSequenceDataModule
 from eyemind.models.encoder_decoder import VariableSequenceLengthEncoderDecoderModel
@@ -91,7 +88,14 @@ def tune_seq_hidden(lightning_config, num_samples=1, gpus_per_trial=0, exp_name=
         name=exp_name)
 
     print("Best hyperparameters found were: ", analysis.best_config)        
-
+    # TODO: Save the encoder of the best checkpoint
+    '''
+    import torch
+    ckpt_dir = "/Users/rickgentry/emotive_lab/eyemind/ray_results/fixation_tuning/train_tune_c2ac0_00001_1_hidden_dim=256,sequence_length=250_2022-05-31_16-41-19/checkpoint_epoch=39-step=11160/checkpoint"
+    model = VariableSequenceLengthEncoderDecoderModel.load_from_checkpoint(ckpt_dir)
+    torch.save(model.encoder.state_dict(), "/Users/rickgentry/emotive_lab/eyemind/pretrained_models/encoder_fixation_tuning_seq=250_hidden_dim=256.pt")
+    '''
+    
 def test_train_tune(lightning_config, num_gpus=0):
     hyperparameter_config = {"sequence_length": 500, "hidden_dim": 256}
     train_tune(hyperparameter_config, lightning_config)

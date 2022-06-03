@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, List, Optional
 from pytorch_lightning import LightningModule
 import torchmetrics
 from torch import nn
@@ -32,21 +32,21 @@ def create_encoder(hidden_dim=128, backbone_type='gru', nlayers=2, conv_dim=32,i
     return encoder
 
 class EncoderClassifierModel(LightningModule):
-    def __init__(self, encoder_hidden_dim: int=128, encoder_weights_path: str="", classifier_hidden_layers: List[int]=[256,512], n_output: int=1, learning_rate: float=1e-3, dropout: float=0.5, freeze_encoder: bool=False):
+    def __init__(self, encoder_hidden_dim: int=128, encoder_weights_path: str="", classifier_hidden_layers: List[int]=[256,512], n_output: int=1, pos_weight: Optional[List[float]]=None, learning_rate: float=1e-3, dropout: float=0.5, freeze_encoder: bool=False):
         super().__init__()
         # Saves hyperparameters (init args)
         self.save_hyperparameters()
+        self.encoder = create_encoder(encoder_hidden_dim)
         if encoder_weights_path:
-            self.encoder = creator.load_encoder(encoder_weights_path)
-        else:
-            self.encoder = create_encoder(encoder_hidden_dim)
+           self.encoder.load_state_dict(torch.load(encoder_weights_path))
         self.model = creator.create_classifier_from_encoder(self.encoder,hidden_layers=classifier_hidden_layers,n_output=1,dropout=0.5)
         assert(n_output >= 1)
         self.num_classes = n_output
+        self.pos_weight = torch.tensor(pos_weight,dtype=float) if pos_weight else None
         if self.num_classes == 1:
-            self.criterion = nn.BCEWithLogitsLoss()
+            self.criterion = nn.BCEWithLogitsLoss(pos_weight=self.pos_weight)
         else:
-            self.criterion = nn.CrossEntropyLoss()
+            self.criterion = nn.CrossEntropyLoss(pos_weight=self.pos_weight)
        
         self.auroc_metric = torchmetrics.AUROC(num_classes=n_output, average="weighted")
         self.accuracy_metric = torchmetrics.Accuracy(num_classes=n_output)
@@ -60,6 +60,11 @@ class EncoderClassifierModel(LightningModule):
     
     def validation_step(self, batch, batch_idx):
         self._step(batch, batch_idx, step_type="val")
+
+    def predict_step(self, batch: Any, batch_idx: int, dataloader_idx: int = 0):
+        X, _ = batch
+        logits = self(X)
+        return self._get_preds(logits) 
     
     def test_step(self, batch, batch_idx):
         self._step(batch, batch_idx, step_type="test")
@@ -72,11 +77,11 @@ class EncoderClassifierModel(LightningModule):
             raise e
         logits = self.model(X).squeeze()
         loss = self.criterion(logits, y)
-        preds = self._get_preds(logits)
+        probs = self._get_probs(logits)
         y = y.int()
-        accuracy = self.accuracy_metric(preds, y)
-        auroc = self.auroc_metric(preds, y)
-        self.logger.experiment.add_scalars("losses", {f"{step_type}_loss": loss}, self.global_step)        
+        accuracy = self.accuracy_metric(probs, y)
+        auroc = self.auroc_metric(probs, y)
+        self.logger.experiment.add_scalars("losses", {f"{step_type}_loss": loss}, self.current_epoch)        
         self.log(f"{step_type}_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log(f"{step_type}_accuracy", accuracy, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log(f"{step_type}_auroc", auroc, on_step=False, on_epoch=True, prog_bar=True, logger=True)
@@ -89,12 +94,20 @@ class EncoderClassifierModel(LightningModule):
         res['lr_scheduler'] = {"scheduler": torch.optim.lr_scheduler.StepLR(optimizer, step_size=max(1, int(self.trainer.max_epochs / 5)), gamma=0.5)}
         return res
 
-    def _get_preds(self, logits):
+    def _get_preds(self, logits, threshold=0.5):
         if self.num_classes == 1:
-            preds = torch.sigmoid(logits)
+            probs = torch.sigmoid(logits)
+            preds = (probs > threshold).float()
         elif self.num_classes > 1:
             preds = torch.argmax(logits, dim=1)
         return preds
+
+    def _get_probs(self, logits):
+        if self.num_classes == 1:
+            probs = torch.sigmoid(logits)
+        elif self.num_classes > 1:
+            probs = torch.softmax(logits, dim=1)
+        return probs
         
     @staticmethod
     def add_model_specific_args(parent_parser):
@@ -121,10 +134,9 @@ class EncoderClassifierMultiSequenceModel(LightningModule):
         super().__init__()
         # Saves hyperparameters (init args)
         self.save_hyperparameters()
+        self.encoder = create_encoder(encoder_hidden_dim)
         if encoder_weights_path:
-            self.encoder = creator.load_encoder(encoder_weights_path)
-        else:
-            self.encoder = create_encoder(encoder_hidden_dim)
+            self.encoder.load_state_dict(torch.load(encoder_weights_path))
         self.model = creator.create_classifier_from_encoder(self.encoder,hidden_layers=classifier_hidden_layers,n_output=1,dropout=0.5)
         self.combiner = MeanCombiner()
         assert(n_output >= 1)
@@ -207,7 +219,7 @@ class EncoderClassifierMultiSequenceModel(LightningModule):
         
     @staticmethod
     def add_model_specific_args(parent_parser):
-        group = parent_parser.add_argument_group("EncoderClassifierModel")
+        group = parent_parser.add_argument_group("EncoderClassifierMultiSequenceModel")
         group.add_argument('--max_encoder_sequence_length', type=int, default=250)
         group.add_argument('--learning_rate', type=float, default=0.001)
         group.add_argument('--use_conv', type=bool, default=True)
