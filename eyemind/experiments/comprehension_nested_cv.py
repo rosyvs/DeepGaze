@@ -67,7 +67,7 @@ def run_train(hyperparameter_config, lightning_config, datamodule, train_ds, val
     #model = EncoderClassifierMultiSequenceModel(**config["model"])
     model = EncoderClassifierModel(**config["model"])
     config["trainer"]["logger"] = logger
-    config["trainer"]["strategy"] = "ddp"
+    #config["trainer"]["strategy"] = "ddp"
     trainer = Trainer(**config['trainer'])
     trainer.fit(model, train_dataloaders=datamodule.get_dataloader(train_ds), val_dataloaders=datamodule.get_dataloader(val_ds))
 
