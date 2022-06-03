@@ -78,4 +78,4 @@ Training loss and training AUROC improve: possibly overfitting. Probably need to
 
 - First sequence only
 - Random Sequence
-- Use the outer folds splits for 
+- Use the outer folds splits for the outer folds of the fixation identification

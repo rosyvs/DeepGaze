@@ -11,12 +11,12 @@ trainer:
   num_nodes: 1
   num_processes: null
   devices: null
-  gpus: 1
+  gpus: null
   auto_select_gpus: false
   tpu_cores: null
   ipus: null
   log_gpu_memory: null
-  progress_bar_refresh_rate: 0
+  progress_bar_refresh_rate: null
   enable_progress_bar: true
   overfit_batches: 0.0
   track_grad_norm: -1
@@ -82,8 +82,8 @@ data:
   test_dataset: null
   train_fold: null
   val_fold: null
-  sequence_length: 3000
-  num_workers: 4
+  sequence_length: 250
+  num_workers: 2
   batch_size: 16
   pin_memory: true
   drop_last: true

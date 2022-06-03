@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, List, Optional
 from pytorch_lightning import LightningModule
 import torchmetrics
 from torch import nn
@@ -60,6 +60,11 @@ class EncoderClassifierModel(LightningModule):
     
     def validation_step(self, batch, batch_idx):
         self._step(batch, batch_idx, step_type="val")
+
+    def predict_step(self, batch: Any, batch_idx: int, dataloader_idx: int = 0):
+        X, _ = batch
+        logits = self(X)
+        return self._get_preds(logits) 
     
     def test_step(self, batch, batch_idx):
         self._step(batch, batch_idx, step_type="test")
@@ -72,10 +77,10 @@ class EncoderClassifierModel(LightningModule):
             raise e
         logits = self.model(X).squeeze()
         loss = self.criterion(logits, y)
-        preds = self._get_preds(logits)
+        probs = self._get_probs(logits)
         y = y.int()
-        accuracy = self.accuracy_metric(preds, y)
-        auroc = self.auroc_metric(preds, y)
+        accuracy = self.accuracy_metric(probs, y)
+        auroc = self.auroc_metric(probs, y)
         self.logger.experiment.add_scalars("losses", {f"{step_type}_loss": loss}, self.current_epoch)        
         self.log(f"{step_type}_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log(f"{step_type}_accuracy", accuracy, on_step=True, on_epoch=True, prog_bar=True, logger=True)
@@ -89,12 +94,20 @@ class EncoderClassifierModel(LightningModule):
         res['lr_scheduler'] = {"scheduler": torch.optim.lr_scheduler.StepLR(optimizer, step_size=max(1, int(self.trainer.max_epochs / 5)), gamma=0.5)}
         return res
 
-    def _get_preds(self, logits):
+    def _get_preds(self, logits, threshold=0.5):
         if self.num_classes == 1:
-            preds = torch.sigmoid(logits)
+            probs = torch.sigmoid(logits)
+            preds = (probs > threshold).float()
         elif self.num_classes > 1:
             preds = torch.argmax(logits, dim=1)
         return preds
+
+    def _get_probs(self, logits):
+        if self.num_classes == 1:
+            probs = torch.sigmoid(logits)
+        elif self.num_classes > 1:
+            probs = torch.softmax(logits, dim=1)
+        return probs
         
     @staticmethod
     def add_model_specific_args(parent_parser):

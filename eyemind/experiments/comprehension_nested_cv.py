@@ -62,6 +62,7 @@ def get_best_hp_config(analyses, hparams, metric="val_auroc", mode="max"):
     return res_dict
 
 def run_train(hyperparameter_config, lightning_config, datamodule, train_ds, val_ds, logger, num_gpus=0):
+    print("STARTING OUTER FOLD TRAINING")
     config = combine_hyperparameter_config(lightning_config, hyperparameter_config)
     config["trainer"]["gpus"] = math.ceil(num_gpus)
     #model = EncoderClassifierMultiSequenceModel(**config["model"])
@@ -70,6 +71,7 @@ def run_train(hyperparameter_config, lightning_config, datamodule, train_ds, val
     #config["trainer"]["strategy"] = "ddp"
     trainer = Trainer(**config['trainer'])
     trainer.fit(model, train_dataloaders=datamodule.get_dataloader(train_ds), val_dataloaders=datamodule.get_dataloader(val_ds))
+    print("OUTER FOLD TRAINING FINISHED")
 
 def run_tune(hyperparameter_config, lightning_config, datamodule, train_ds, val_ds, num_gpus=0):
     '''
@@ -143,10 +145,11 @@ def nested_cv_tune(lightning_config, num_outer_folds=4, num_inner_folds=4, num_s
         
         # Calculate best hyperparameter config by taking the mean of the auroc scores
         hp_config = get_best_hp_config(analyses, hparam_keys)
-
+        print(f"Best hyperparameter config: {hp_config}")
         # Pass best hyperparameter config to run_train
         train_fold, val_fold = datamodule.get_cv_fold(i,-1)
         logger = TensorBoardLogger(save_dir=local_dir, name=exp_name, version=get_fold_hparam_name(hp_config, i))
+        print(f"Logging to: {logger.log_dir}")
         run_train(hp_config, lightning_config, datamodule, train_fold, val_fold, logger, num_gpus=min(gpus_per_trial*2, 4))
 
     
