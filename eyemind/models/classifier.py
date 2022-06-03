@@ -32,7 +32,7 @@ def create_encoder(hidden_dim=128, backbone_type='gru', nlayers=2, conv_dim=32,i
     return encoder
 
 class EncoderClassifierModel(LightningModule):
-    def __init__(self, encoder_hidden_dim: int=128, encoder_weights_path: str="", classifier_hidden_layers: List[int]=[256,512], n_output: int=1, learning_rate: float=1e-3, dropout: float=0.5, freeze_encoder: bool=False):
+    def __init__(self, encoder_hidden_dim: int=128, encoder_weights_path: str="", classifier_hidden_layers: List[int]=[256,512], n_output: int=1, pos_weight: Optional[List[float]]=None, learning_rate: float=1e-3, dropout: float=0.5, freeze_encoder: bool=False):
         super().__init__()
         # Saves hyperparameters (init args)
         self.save_hyperparameters()
@@ -42,10 +42,11 @@ class EncoderClassifierModel(LightningModule):
         self.model = creator.create_classifier_from_encoder(self.encoder,hidden_layers=classifier_hidden_layers,n_output=1,dropout=0.5)
         assert(n_output >= 1)
         self.num_classes = n_output
+        self.pos_weight = torch.tensor(pos_weight,dtype=float) if pos_weight else None
         if self.num_classes == 1:
-            self.criterion = nn.BCEWithLogitsLoss()
+            self.criterion = nn.BCEWithLogitsLoss(pos_weight=self.pos_weight)
         else:
-            self.criterion = nn.CrossEntropyLoss()
+            self.criterion = nn.CrossEntropyLoss(pos_weight=self.pos_weight)
        
         self.auroc_metric = torchmetrics.AUROC(num_classes=n_output, average="weighted")
         self.accuracy_metric = torchmetrics.Accuracy(num_classes=n_output)
