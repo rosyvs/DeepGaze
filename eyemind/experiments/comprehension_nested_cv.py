@@ -64,7 +64,8 @@ def get_best_hp_config(analyses, hparams, metric="val_auroc", mode="max"):
 def run_train(hyperparameter_config, lightning_config, datamodule, train_ds, val_ds, logger, num_gpus=0):
     config = combine_hyperparameter_config(lightning_config, hyperparameter_config)
     config["trainer"]["gpus"] = math.ceil(num_gpus)
-    model = EncoderClassifierMultiSequenceModel(**config["model"])
+    #model = EncoderClassifierMultiSequenceModel(**config["model"])
+    model = EncoderClassifierModel(**config["model"])
     config["trainer"]["logger"] = logger
     config["trainer"]["strategy"] = "ddp"
     trainer = Trainer(**config['trainer'])
