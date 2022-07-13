@@ -12,8 +12,11 @@ from ray.tune.integration.pytorch_lightning import TuneReportCheckpointCallback
 import yaml
 from eyemind.dataloading.gaze_data import BaseSequenceToSequenceDataModule, SequenceToSequenceDataModule
 from eyemind.models.encoder_decoder import VariableSequenceLengthEncoderDecoderModel
+from eyemind.models.transformers import InformerEncoderDecoderModel
 
 name_to_cls = {"trainer": Trainer, "model": VariableSequenceLengthEncoderDecoderModel, "data": SequenceToSequenceDataModule}
+
+model_classes = {"VariableSequenceLengthEncoderDecoderModel": VariableSequenceLengthEncoderDecoderModel, "InformerEncoderDecoderModel": InformerEncoderDecoderModel}
 
 def init_trainer(config, logger=None, callbacks=None):
     pass
@@ -40,7 +43,7 @@ def train_tune_shared_data(hyperparameter_config, lightning_config, datamodule=N
     pass
 
 
-def train_tune(hyperparameter_config, lightning_config, num_gpus=0):
+def train_tune(hyperparameter_config, lightning_config, model_cls, num_gpus=0):
     config = combine_hyperparameter_config(lightning_config, hyperparameter_config)
     config["trainer"]["gpus"] = math.ceil(num_gpus)
     logger = TensorBoardLogger(save_dir=tune.get_trial_dir(), name="", version=".")
@@ -58,7 +61,7 @@ def train_tune(hyperparameter_config, lightning_config, num_gpus=0):
     trainer = Trainer(**config['trainer'])
     trainer.fit(model, datamodule=datamodule)    
 
-def tune_seq_hidden(lightning_config, num_samples=1, gpus_per_trial=0, exp_name="tune_fixation"):
+def tune_seq_hidden(lightning_config, num_samples=1, gpus_per_trial=0, model_cls="VariableSequenceLengthEncoderDecoderModel", exp_name="tune_fixation"):
     tune_config = {"sequence_length": tune.grid_search([250,500]),
         "hidden_dim": tune.grid_search([128, 256])}
     num_epochs = lightning_config['trainer']['max_epochs']
@@ -71,7 +74,8 @@ def tune_seq_hidden(lightning_config, num_samples=1, gpus_per_trial=0, exp_name=
                             metric_columns=["val_loss", "val_auroc", "training_iteration"])
 
     train_fn_with_parameters = tune.with_parameters(train_tune, 
-                                                    lightning_config=lightning_config, 
+                                                    lightning_config=lightning_config,
+                                                    model_cls=model_cls, 
                                                     num_gpus=gpus_per_trial)
 
     resources_per_trial = {"cpu": 1, "gpu": gpus_per_trial}
@@ -106,8 +110,9 @@ if __name__ == "__main__":
     parser.add_argument("--gpus_per_trial", type=int, default=0)
     parser.add_argument("--num_samples", type=int, default=1)
     parser.add_argument("--exp_name", type=str, default="tune_fixation")
+    parser.add_argument("--model_cls", type=str, default="VariableSequenceLengthEncoderDecoderModel")
     args = parser.parse_args()
     with open(args.c, 'r') as f:
         lightning_config = yaml.safe_load(f)
     pytorch_lightning.seed_everything(lightning_config["seed_everything"], workers=True)
-    tune_seq_hidden(lightning_config, num_samples=args.num_samples, gpus_per_trial=args.gpus_per_trial, exp_name=args.exp_name)
+    tune_seq_hidden(lightning_config, num_samples=args.num_samples, gpus_per_trial=args.gpus_per_trial, model_cls=args.model_cls, exp_name=args.exp_name)

@@ -14,6 +14,7 @@ from torch import nn
 from eyemind.dataloading.gaze_data import GazeDataModule, SequenceToSequenceDataModule
 from eyemind.experiments.cli import GazeLightningCLI
 from eyemind.experiments.experimenter import BaseExperiment
+from eyemind.models.transformers import InformerEncoderDecoderModel
 from eyemind.preprocessing.fixations import fixation_label_mapper
 from eyemind.dataloading.load_dataset import limit_sequence_len
 from eyemind.models.encoder_decoder import EncoderDecoderModel, VariableSequenceLengthEncoderDecoderModel
@@ -204,4 +205,5 @@ def main(args):
 
 
 if __name__ == "__main__":
-    cli = LightningCLI(VariableSequenceLengthEncoderDecoderModel, SequenceToSequenceDataModule, seed_everything_default=42, trainer_defaults={'max_epochs': 5, 'num_sanity_val_steps': 0})
+    #cli = LightningCLI(VariableSequenceLengthEncoderDecoderModel, SequenceToSequenceDataModule, seed_everything_default=42, trainer_defaults={'max_epochs': 5, 'num_sanity_val_steps': 0})
+    cli = LightningCLI(InformerEncoderDecoderModel, SequenceToSequenceDataModule, seed_everything_default=42, trainer_defaults={'max_epochs': 5, 'num_sanity_val_steps': 0})

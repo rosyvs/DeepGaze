@@ -38,3 +38,11 @@ Copy processed data to project directory.
 scp -r <path-to-folder> <username>@login.rc.colorado edu:<target-path>    # using a login node
 ```
 
+
+###
+Focus on different tasks to see if it does well on any of them
+
+Temporal vs spatial features:
+
+What features can you predict for spatial features? Use a CNN to predict without the temporal aspect 
+
