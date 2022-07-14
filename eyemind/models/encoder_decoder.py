@@ -1,6 +1,7 @@
 from functools import reduce
 from json import encoder
 from pathlib import Path
+import random
 from turtle import forward
 from typing import Any, List
 from urllib.request import ProxyBasicAuthHandler
@@ -267,11 +268,7 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
         total_loss = 0
         for task in self.hparams.tasks:
             if task == "cl":
-                X1, X2, y_cl = contrastive_batch(batch[0], self.hparams.sequence_length)
-                if torch.cuda.is_available():
-                    X1.cuda()
-                    X2.cuda()
-                    y_cl.cuda()
+                X1, X2, y_cl = self.contrastive_batch(batch[0])
                 enc1 = self.encoder(X1)
                 enc2 = self.encoder(X2)
                 embed = torch.abs(enc1 - enc2)
@@ -297,10 +294,7 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
                 task_metric = self.fi_metric(probs, targets_fi.int())
                 del enc, probs, targets_fi
             elif task == "pc":
-                X_pc, y_pc = predictive_coding_batch(batch[0], self.hparams.sequence_length - self.hparams.pred_length, self.hparams.pred_length, 0)
-                if torch.cuda.is_available():
-                    X_pc.cuda()
-                    y_pc.cuda()
+                X_pc, y_pc = self.predictive_coding_batch(batch[0])
                 #logits = self(X_pc, task).squeeze()
                 enc = self.encoder(X_pc)
                 logits = self.pc_decoder(enc).squeeze()
@@ -334,6 +328,45 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
         res = {"optimizer": optimizer}
         res['lr_scheduler'] = {"scheduler": torch.optim.lr_scheduler.StepLR(optimizer, step_size=max(1,int(self.trainer.max_epochs / 5)), gamma=0.5)}
         return res    
+
+    def predictive_coding_batch(self, X_batch):
+        input_length = self.hparams.sequence_length - self.hparams.pred_length
+        X_seq = X_batch[:,:input_length,:]
+        y_seq = X_batch[:,input_length:input_length+self.hparams.pred_length,:]
+        return X_seq, y_seq
+
+    def contrastive_batch(self, X_batch):
+        n,sl,fs = X_batch.shape
+        x1 = torch.zeros((n, self.hparams.sequence_length, fs), device=self.device)
+        x2 = torch.zeros((n, self.hparams.sequence_length, fs), device=self.device)
+        y = torch.zeros(n, device=self.device)
+        for i in range(n):
+        # get x1
+            try:
+                x1_start = random.randrange(0, sl - self.hparams.sequence_length)
+            except:
+                x1_start = 0
+            x1[i, :, :] = X_batch[i, x1_start:x1_start + self.hparams.sequence_length, :]
+
+            if random.random() > 0.5:
+                # Get x2 from the same sequence
+                j = i
+                y[i] = 1
+            else:
+                # Get x2 from different sequence
+                j = i
+                y[i] = 0
+                while j == i:
+                    j = random.randrange(0, n)
+
+            try:
+                x2_start = random.randrange(0, sl - self.hparams.sequence_length)
+            except:
+                x2_start = 0
+
+            x2[i, :, :] = X_batch[j, x2_start:x2_start + self.hparams.sequence_length, :]
+
+        return x1.float(), x2.float(), y.float()
 
     @staticmethod
     def add_model_specific_args(parent_parser):
