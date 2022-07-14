@@ -212,21 +212,25 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
         self.encoder, fi_decoder = create_encoder_decoder(hidden_dim, use_conv, input_seq_length=sequence_length)
         #self.decoders = {}
         self.decoders = []
-        self.criterions = {}
+        self.criterions = []
         self.num_classes = num_classes
-        self.metrics = {}
+        self.metrics = []
         if "fi" in tasks:
             #self.decoders["fi"] = fi_decoder
             self.fi_decoder = fi_decoder
             self.decoders.append(fi_decoder)
-            self.criterions["fi"] = nn.CrossEntropyLoss(torch.Tensor(class_weights))
-            self.metrics["fi"] = torchmetrics.AUROC(num_classes=num_classes, average="weighted")
+            # self.criterions["fi"] = nn.CrossEntropyLoss(torch.Tensor(class_weights))
+            # self.metrics["fi"] = torchmetrics.AUROC(num_classes=num_classes, average="weighted")
+            self.fi_criterion = nn.CrossEntropyLoss(torch.Tensor(class_weights))
+            self.fi_metric = torchmetrics.AUROC(num_classes=num_classes, average="weighted")
         if "pc" in tasks:
             #self.decoders['pc'] = create_decoder(hidden_dim,output_seq_length=pred_length)
             self.pc_decoder = create_decoder(hidden_dim,output_seq_length=pred_length)
             self.decoders.append(self.pc_decoder)
-            self.criterions["pc"] = RMSELoss()
-            self.metrics["pc"] = torchmetrics.MeanSquaredError()
+            self.pc_criterion = RMSELoss()
+            self.pc_metric = torchmetrics.MeanSquaredError()
+            # self.criterions["pc"] = RMSELoss()
+            # self.metrics["pc"] = torchmetrics.MeanSquaredError()
         if "cl" in tasks:
             cl_input_dim = hidden_dim * 2
             cl_decoder = ae.MLP(input_dim=cl_input_dim,
@@ -235,14 +239,19 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
             #self.decoders["cl"] = cl_decoder
             self.cl_decoder = cl_decoder
             self.decoders.append(self.cl_decoder)
-            self.criterions["cl"] = nn.CrossEntropyLoss()
-            self.metrics["cl"] = torchmetrics.Accuracy(num_classes=num_classes)
+            self.cl_criterion = nn.CrossEntropyLoss()
+            self.cl_metric = torchmetrics.Accuracy(num_classes=num_classes)
+
+            # self.criterions["cl"] = nn.CrossEntropyLoss()
+            # self.metrics["cl"] = torchmetrics.Accuracy(num_classes=num_classes)
         if "rc" in tasks:
             #self.decoders["rc"] = create_decoder(hidden_dim,output_seq_length=sequence_length)
             self.rc_decoder = create_decoder(hidden_dim,output_seq_length=sequence_length)
             self.decoders.append(self.rc_decoder)
-            self.criterions["rc"] = RMSELoss()
-            self.metrics["rc"] = torchmetrics.MeanSquaredError()         
+            self.rc_criterion = RMSELoss()
+            self.rc_metric = torchmetrics.MeanSquaredError()
+            # self.criterions["rc"] = RMSELoss()
+            # self.metrics["rc"] = torchmetrics.MeanSquaredError()         
         self.decoders = nn.ModuleList(self.decoders)
     def forward(self, X, task_name):
         enc = self.encoder(X)
@@ -265,9 +274,11 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
                 #logits = self.decoders["cl"](embed).squeeze()
                 logits = self.cl_decoder(embed).squeeze()
                 y_cl = y_cl.reshape(-1).long()
-                task_loss = self.criterions[task](logits, y_cl)
+                #task_loss = self.criterions[task](logits, y_cl)
+                task_loss = self.cl_criterion(logits, y_cl)
                 probs = self._get_probs(logits)
-                task_metric = self.metrics[task](probs, y_cl.int())
+                #task_metric = self.metrics[task](probs, y_cl.int())
+                task_metric = self.cl_metric(probs, y_cl.int())
                 del X1, X2, y_cl, enc1, enc2, embed, probs
             elif task == "fi":
                 #logits = self(X, task).squeeze().reshape(-1,2)
@@ -275,9 +286,11 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
                 logits = self.fi_decoder(enc).squeeze().reshape(-1,2)
                 #logits = self(X, task).squeeze().reshape(-1,2)
                 targets_fi = y.reshape(-1).long()
-                task_loss = self.criterions[task](logits, targets_fi)
+                #task_loss = self.criterions[task](logits, targets_fi)
+                task_loss = self.fi_criterion(logits, targets_fi)
                 probs = self._get_probs(logits)
-                task_metric = self.metrics[task](probs, targets_fi.int())
+                #task_metric = self.metrics[task](probs, targets_fi.int())
+                task_metric = self.fi_metric(probs, targets_fi.int())
                 del enc, probs, targets_fi
             elif task == "pc":
                 X_pc, y_pc = predictive_coding_batch(batch[0], self.hparams.sequence_length - self.hparams.pred_length, self.hparams.pred_length, 0)
@@ -285,15 +298,19 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
                 enc = self.encoder(X_pc)
                 logits = self.pc_decoder(enc).squeeze()
                 assert(logits.shape == y_pc.shape)
-                task_loss = self.criterions[task](logits, y_pc)
-                task_metric = self.metrics[task](logits, y_pc)
+                # task_loss = self.criterions[task](logits, y_pc)
+                # task_metric = self.metrics[task](logits, y_pc)
+                task_loss = self.pc_criterion(logits, y_pc)
+                task_metric = self.pc_metric(logits, y_pc)
                 del X_pc, y_pc
             elif task == "rc":
                 #logits = self(X, task).squeeze()  
                 enc = self.encoder(X)
                 logits = self.rc_decoder(enc).squeeze()
-                task_loss = self.criterions[task](logits, X)
-                task_metric = self.metrics[task](logits, X)           
+                # task_loss = self.criterions[task](logits, X)
+                # task_metric = self.metrics[task](logits, X) 
+                task_loss = self.rc_criterion(logits, X)
+                task_metric = self.rc_metric(logits, X)               
             else:
                 raise ValueError("Task not recognized.")
             self.log(f"{step_type}_{task}_loss", task_loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
