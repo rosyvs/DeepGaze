@@ -268,6 +268,10 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
         for task in self.hparams.tasks:
             if task == "cl":
                 X1, X2, y_cl = contrastive_batch(batch[0], self.hparams.sequence_length)
+                if torch.cuda.is_available():
+                    X1.cuda()
+                    X2.cuda()
+                    y_cl.cuda()
                 enc1 = self.encoder(X1)
                 enc2 = self.encoder(X2)
                 embed = torch.abs(enc1 - enc2)
@@ -294,6 +298,9 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
                 del enc, probs, targets_fi
             elif task == "pc":
                 X_pc, y_pc = predictive_coding_batch(batch[0], self.hparams.sequence_length - self.hparams.pred_length, self.hparams.pred_length, 0)
+                if torch.cuda.is_available():
+                    X_pc.cuda()
+                    y_pc.cuda()
                 #logits = self(X_pc, task).squeeze()
                 enc = self.encoder(X_pc)
                 logits = self.pc_decoder(enc).squeeze()
