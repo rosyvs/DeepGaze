@@ -1,11 +1,11 @@
 #!/bin/bash
 
 #SBATCH --nodes=1
-#SBATCH --time=04:00:00
+#SBATCH --time=02:00:00
 #SBATCH --partition=sgpu
 #SBATCH --ntasks=1
 #SBATCH --job-name=informer-fix
-#SBATCH --cpus-per-task=4
+#SBATCH --cpus-per-task=1
 #SBATCH --output=informer-fix-exp.%j.out
 
 module load cuda/11.2
@@ -16,4 +16,4 @@ source ~/.bashrc
 cd /projects/$USER/eyemind
 conda activate eyemind
 pip install .
-python3 eyemind/experiments/informer_experiment.py -c experiment_configs/informer_test_config.yml
+python3 eyemind/experiments/informer_experiment.py fit -c experiment_configs/informer_test_config.yml
