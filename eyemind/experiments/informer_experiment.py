@@ -9,5 +9,4 @@ from eyemind.models.transformers import InformerEncoderDecoderModel
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    #cli = LightningCLI(InformerEncoderDecoderModel, BaseSequenceToSequenceDataModule, seed_everything_default=42, trainer_defaults={'max_epochs': 5})
-    cli = LightningCLI(MultiTaskEncoderDecoder, BaseSequenceToSequenceDataModule, seed_everything_default=42, trainer_defaults={'max_epochs': 5})
+    cli = LightningCLI(InformerEncoderDecoderModel, BaseSequenceToSequenceDataModule, seed_everything_default=42, trainer_defaults={'max_epochs': 5})
