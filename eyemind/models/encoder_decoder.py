@@ -210,16 +210,21 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
         if len(tasks) == 0:
             raise ValueError("There must be at least one task. Length of tasks is 0")
         self.encoder, fi_decoder = create_encoder_decoder(hidden_dim, use_conv, input_seq_length=sequence_length)
-        self.decoders = {}
+        #self.decoders = {}
+        self.decoders = []
         self.criterions = {}
         self.num_classes = num_classes
         self.metrics = {}
         if "fi" in tasks:
-            self.decoders["fi"] = fi_decoder
+            #self.decoders["fi"] = fi_decoder
+            self.fi_decoder = fi_decoder
+            self.decoders.append(fi_decoder)
             self.criterions["fi"] = nn.CrossEntropyLoss(torch.Tensor(class_weights))
             self.metrics["fi"] = torchmetrics.AUROC(num_classes=num_classes, average="weighted")
         if "pc" in tasks:
-            self.decoders['pc'] = create_decoder(hidden_dim,output_seq_length=pred_length)
+            #self.decoders['pc'] = create_decoder(hidden_dim,output_seq_length=pred_length)
+            self.pc_decoder = create_decoder(hidden_dim,output_seq_length=pred_length)
+            self.decoders.append(self.pc_decoder)
             self.criterions["pc"] = RMSELoss()
             self.metrics["pc"] = torchmetrics.MeanSquaredError()
         if "cl" in tasks:
@@ -227,14 +232,18 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
             cl_decoder = ae.MLP(input_dim=cl_input_dim,
                                 layers=[128, 2],
                                 batch_norm=True)
-            self.decoders["cl"] = cl_decoder
+            #self.decoders["cl"] = cl_decoder
+            self.cl_decoder = cl_decoder
+            self.decoders.append(self.cl_decoder)
             self.criterions["cl"] = nn.CrossEntropyLoss()
             self.metrics["cl"] = torchmetrics.Accuracy(num_classes=num_classes)
         if "rc" in tasks:
-            self.decoders["rc"] = create_decoder(hidden_dim,output_seq_length=sequence_length)
+            #self.decoders["rc"] = create_decoder(hidden_dim,output_seq_length=sequence_length)
+            self.rc_decoder = create_decoder(hidden_dim,output_seq_length=sequence_length)
+            self.decoders.append(self.rc_decoder)
             self.criterions["rc"] = RMSELoss()
             self.metrics["rc"] = torchmetrics.MeanSquaredError()         
-
+        self.decoders = nn.ModuleList(self.decoders)
     def forward(self, X, task_name):
         enc = self.encoder(X)
         logits = self.decoders[task_name](enc)
@@ -253,28 +262,36 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
                 enc1 = self.encoder(X1)
                 enc2 = self.encoder(X2)
                 embed = torch.abs(enc1 - enc2)
-                logits = self.decoders["cl"](embed).squeeze()
+                #logits = self.decoders["cl"](embed).squeeze()
+                logits = self.cl_decoder(embed).squeeze()
                 y_cl = y_cl.reshape(-1).long()
                 task_loss = self.criterions[task](logits, y_cl)
                 probs = self._get_probs(logits)
                 task_metric = self.metrics[task](probs, y_cl.int())
                 del X1, X2, y_cl, enc1, enc2, embed, probs
             elif task == "fi":
-                logits = self(X, task).squeeze().reshape(-1,2)
+                #logits = self(X, task).squeeze().reshape(-1,2)
+                enc = self.encoder(X)
+                logits = self.fi_decoder(enc).squeeze().reshape(-1,2)
+                #logits = self(X, task).squeeze().reshape(-1,2)
                 targets_fi = y.reshape(-1).long()
                 task_loss = self.criterions[task](logits, targets_fi)
                 probs = self._get_probs(logits)
                 task_metric = self.metrics[task](probs, targets_fi.int())
-                del probs, targets_fi
+                del enc, probs, targets_fi
             elif task == "pc":
                 X_pc, y_pc = predictive_coding_batch(batch[0], self.hparams.sequence_length - self.hparams.pred_length, self.hparams.pred_length, 0)
-                logits = self(X_pc, task).squeeze()
+                #logits = self(X_pc, task).squeeze()
+                enc = self.encoder(X_pc)
+                logits = self.pc_decoder(enc).squeeze()
                 assert(logits.shape == y_pc.shape)
                 task_loss = self.criterions[task](logits, y_pc)
                 task_metric = self.metrics[task](logits, y_pc)
                 del X_pc, y_pc
             elif task == "rc":
-                logits = self(X, task).squeeze()  
+                #logits = self(X, task).squeeze()  
+                enc = self.encoder(X)
+                logits = self.rc_decoder(enc).squeeze()
                 task_loss = self.criterions[task](logits, X)
                 task_metric = self.metrics[task](logits, X)           
             else:
@@ -285,7 +302,8 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
         return total_loss
 
     def configure_optimizers(self):
-        params = [list(m.parameters()) for m in self.decoders.values()]
+        #params = [list(m.parameters()) for m in self.decoders.values()]
+        params = [list(m.parameters()) for m in self.decoders]
         params.append(list(self.encoder.parameters()))
         params = reduce(lambda x,y: x + y, params)
         optimizer = torch.optim.Adam(params, lr=self.hparams.learning_rate)
