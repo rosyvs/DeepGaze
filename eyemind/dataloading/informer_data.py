@@ -161,14 +161,14 @@ def fixation_batch(input_length, label_length, pred_length, X, y, padding=0.):
 
     
 def predictive_coding_batch(X_batch, input_length, pred_length, label_length):
-    total_len = input_length + pred_length
-    X_split = [torch.stack(torch.split(t, total_len, dim=0)[:-1], dim=0) for t in X_batch]
-    X_seq = X_split[:,:input_length,:]
-    y_seq = X_split[:,input_length-label_length:input_length+pred_length,:]
-    print(X_seq.shape, y_seq.shape)
-    X = torch.cat(X_seq, dim=0)
-    y = torch.cat(y_seq, dim=0)
-    return X, y
+    # total_len = input_length + pred_length
+    # X_split = [torch.stack(torch.split(t, total_len, dim=0)[:-1], dim=0) for t in X_batch]
+    X_seq = X_batch[:,:input_length,:]
+    y_seq = X_batch[:,input_length-label_length:input_length+pred_length,:]
+    # print(X_seq.shape, y_seq.shape)
+    # X = torch.cat(X_seq, dim=0)
+    # y = torch.cat(y_seq, dim=0)
+    return X_seq, y_seq
 
 def reconstruction_batch(X_batch, label_length):
     decoder_inp = torch.zeros_like(X_batch)

@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-
+from torchvision.transforms import Normalize
 
 class LimitSequenceLength(object):
     def __init__(self, sequence_length):
@@ -31,3 +31,12 @@ class ToTensor(object):
         pass
     def __call__(self, v):
         return torch.tensor(v).float()
+
+class Standardizer(Normalize):
+
+    def inverse_transform(self, data):
+        
+        if data.shape[-1] != mean.shape[-1]:
+            mean = mean[-1:]
+            std = std[-1:]
+        return (data * std) + mean 

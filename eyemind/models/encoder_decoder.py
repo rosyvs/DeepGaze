@@ -1,3 +1,5 @@
+from functools import reduce
+from json import encoder
 from pathlib import Path
 from turtle import forward
 from typing import Any, List
@@ -8,6 +10,8 @@ import torchmetrics
 from torch import nn
 import torch.nn.functional as F
 import torch
+from eyemind.dataloading.informer_data import contrastive_batch, predictive_coding_batch, reconstruction_batch
+from eyemind.models.loss import RMSELoss
 
 from eyemind.obf.model import ae
 from eyemind.obf.model import creator
@@ -16,6 +20,16 @@ def load_encoder_decoder(pretrained_weights_dirpath, decoder_weights_filename):
     encoder = creator.load_encoder(str(Path(pretrained_weights_dirpath).resolve()))
     decoder = torch.load(str(Path(pretrained_weights_dirpath, decoder_weights_filename).resolve()),map_location=torch.device('cpu'))
     return encoder, decoder
+
+def create_decoder(hidden_dim=128, out_dim=2, output_seq_length=500, backbone_type="gru", nlayers=2):
+    return  ae.RNNDecoder(input_dim=hidden_dim,
+                            latent_dim=hidden_dim,
+                            out_dim=out_dim,
+                            seq_length=output_seq_length,
+                            backbone=backbone_type,
+                            nlayers=nlayers,
+                            batch_norm=True)
+                
 
 def create_encoder_decoder(hidden_dim=128, use_conv=True, conv_dim=32, input_dim=2, out_dim=2, input_seq_length=500, backbone_type="gru", nlayers=2):
     if use_conv:
@@ -146,8 +160,6 @@ class EncoderDecoderModel(LightningModule):
 
 
 class VariableSequenceLengthEncoderDecoderModel(EncoderDecoderModel):
-    # TODO: Using sequence lengths/mask, split X into subsequences that don't include the padding 
-
     def forward(self, X):
         # Performs predictions with sequence length of self.hparams.sequence_length by splitting the sequences
         # X_splits = torch.split(X, self.hparams.sequence_length, dim=1)
@@ -184,6 +196,109 @@ class VariableSequenceLengthEncoderDecoderModel(EncoderDecoderModel):
         parser = parent_parser.add_argument_group("VariableSequenceLengthEncoderDecoderModel")
         parser.add_argument('--learning_rate', type=float, default=0.001)
         parser.add_argument('--sequence_length', type=int, default=250)
+        parser.add_argument('--use_conv', type=bool, default=True)
+        parser.add_argument('--hidden_dim', type=int, default=128)
+        parser.add_argument('--class_weights', type=float, nargs='*', default=[3., 1.])
+        parser.add_argument('--num_classes', type=int, default=2)
+        parser.add_argument('--freeze_encoder', type=bool, default=False)
+        return parser
+
+class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
+    def __init__(self, tasks: List[str]=["fi", "pc", "cl", "rc"], sequence_length: int=250, pred_length: int=100, hidden_dim: int=128, class_weights: List[float]=[3.,1.], num_classes: int=2, use_conv: bool=True, learning_rate: float=1e-3, freeze_encoder: bool=False):
+        super().__init__(sequence_length, hidden_dim, class_weights, num_classes, use_conv, learning_rate, freeze_encoder)
+        self.save_hyperparameters()
+        if len(tasks) == 0:
+            raise ValueError("There must be at least one task. Length of tasks is 0")
+        self.encoder, fi_decoder = create_encoder_decoder(hidden_dim, use_conv, input_seq_length=sequence_length)
+        self.decoders = {}
+        self.criterions = {}
+        self.num_classes = num_classes
+        self.metrics = {}
+        if "fi" in tasks:
+            self.decoders["fi"] = fi_decoder
+            self.criterions["fi"] = nn.CrossEntropyLoss(torch.Tensor(class_weights))
+            self.metrics["fi"] = torchmetrics.AUROC(num_classes=num_classes, average="weighted")
+        if "pc" in tasks:
+            self.decoders['pc'] = create_decoder(hidden_dim,output_seq_length=pred_length)
+            self.criterions["pc"] = RMSELoss()
+            self.metrics["pc"] = torchmetrics.MeanSquaredError()
+        if "cl" in tasks:
+            cl_input_dim = hidden_dim * 2
+            cl_decoder = ae.MLP(input_dim=cl_input_dim,
+                                layers=[128, 2],
+                                batch_norm=True)
+            self.decoders["cl"] = cl_decoder
+            self.criterions["cl"] = nn.CrossEntropyLoss()
+            self.metrics["cl"] = torchmetrics.Accuracy(num_classes=num_classes)
+        if "rc" in tasks:
+            self.decoders["rc"] = create_decoder(hidden_dim,output_seq_length=sequence_length)
+            self.criterions["rc"] = RMSELoss()
+            self.metrics["rc"] = torchmetrics.MeanSquaredError()         
+
+    def forward(self, X, task_name):
+        enc = self.encoder(X)
+        logits = self.decoders[task_name](enc)
+        return logits
+
+    def _step(self, batch, batch_idx, step_type):
+        try:
+            X, y = batch
+        except ValueError as e:
+            print(f"{batch}")
+            raise e
+        total_loss = 0
+        for task in self.hparams.tasks:
+            if task == "cl":
+                X1, X2, y_cl = contrastive_batch(batch[0], self.hparams.sequence_length)
+                enc1 = self.encoder(X1)
+                enc2 = self.encoder(X2)
+                embed = torch.abs(enc1 - enc2)
+                logits = self.decoders["cl"](embed).squeeze()
+                y_cl = y_cl.reshape(-1).long()
+                task_loss = self.criterions[task](logits, y_cl)
+                probs = self._get_probs(logits)
+                task_metric = self.metrics[task](probs, y_cl.int())
+                del X1, X2, y_cl, enc1, enc2, embed, probs
+            elif task == "fi":
+                logits = self(X, task).squeeze().reshape(-1,2)
+                targets_fi = y.reshape(-1).long()
+                task_loss = self.criterions[task](logits, targets_fi)
+                probs = self._get_probs(logits)
+                task_metric = self.metrics[task](probs, targets_fi.int())
+                del probs, targets_fi
+            elif task == "pc":
+                X_pc, y_pc = predictive_coding_batch(batch[0], self.hparams.sequence_length - self.hparams.pred_length, self.hparams.pred_length, 0)
+                logits = self(X_pc, task).squeeze()
+                assert(logits.shape == y_pc.shape)
+                task_loss = self.criterions[task](logits, y_pc)
+                task_metric = self.metrics[task](logits, y_pc)
+                del X_pc, y_pc
+            elif task == "rc":
+                logits = self(X, task).squeeze()  
+                task_loss = self.criterions[task](logits, X)
+                task_metric = self.metrics[task](logits, X)           
+            else:
+                raise ValueError("Task not recognized.")
+            self.log(f"{step_type}_{task}_loss", task_loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+            self.log(f"{step_type}_{task}_metric", task_metric, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+            total_loss += task_loss
+        return total_loss
+
+    def configure_optimizers(self):
+        params = [list(m.parameters()) for m in self.decoders.values()]
+        params.append(list(self.encoder.parameters()))
+        params = reduce(lambda x,y: x + y, params)
+        optimizer = torch.optim.Adam(params, lr=self.hparams.learning_rate)
+        res = {"optimizer": optimizer}
+        res['lr_scheduler'] = {"scheduler": torch.optim.lr_scheduler.StepLR(optimizer, step_size=max(1,int(self.trainer.max_epochs / 5)), gamma=0.5)}
+        return res    
+
+    @staticmethod
+    def add_model_specific_args(parent_parser):
+        parser = parent_parser.add_argument_group("MultiTaskEncoderDecoder")
+        parser.add_argument('--learning_rate', type=float, default=0.001)
+        parser.add_argument('--sequence_length', type=int, default=250)
+        parser.add_argument('--pred_length', type=int, default=100)
         parser.add_argument('--use_conv', type=bool, default=True)
         parser.add_argument('--hidden_dim', type=int, default=128)
         parser.add_argument('--class_weights', type=float, nargs='*', default=[3., 1.])

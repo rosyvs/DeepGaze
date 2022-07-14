@@ -11,7 +11,7 @@ from ray.tune.schedulers import ASHAScheduler, PopulationBasedTraining
 from ray.tune.integration.pytorch_lightning import TuneReportCheckpointCallback
 import yaml
 from eyemind.dataloading.gaze_data import BaseSequenceToSequenceDataModule, SequenceToSequenceDataModule
-from eyemind.models.encoder_decoder import VariableSequenceLengthEncoderDecoderModel
+from eyemind.models.encoder_decoder import MultiTaskEncoderDecoder, VariableSequenceLengthEncoderDecoderModel
 from eyemind.models.transformers import InformerEncoderDecoderModel
 
 name_to_cls = {"trainer": Trainer, "model": VariableSequenceLengthEncoderDecoderModel, "data": SequenceToSequenceDataModule}
@@ -42,6 +42,23 @@ def combine_hyperparameter_config(config, hp_config):
 def train_tune_shared_data(hyperparameter_config, lightning_config, datamodule=None, num_gpus=0):
     pass
 
+def train_tune_multitask(hyperparameter_config, lightning_config, model_cls, num_gpus=0):
+    config = combine_hyperparameter_config(lightning_config, hyperparameter_config)
+    config["trainer"]["gpus"] = math.ceil(num_gpus)
+    logger = TensorBoardLogger(save_dir=tune.get_trial_dir(), name="", version=".")
+    model = MultiTaskEncoderDecoder(**config["model"])
+    datamodule = BaseSequenceToSequenceDataModule(**config["data"])
+    tunecallback = TuneReportCheckpointCallback(
+                    metrics={
+                        "val_loss": "val_loss"
+                        },
+                    filename="checkpoint",
+                    on="validation_end"
+                    )
+    config["trainer"]["logger"] = logger
+    config["trainer"]["callbacks"] = [tunecallback]
+    trainer = Trainer(**config['trainer'])
+    trainer.fit(model, datamodule=datamodule)  
 
 def train_tune(hyperparameter_config, lightning_config, model_cls, num_gpus=0):
     config = combine_hyperparameter_config(lightning_config, hyperparameter_config)
@@ -73,10 +90,14 @@ def tune_seq_hidden(lightning_config, num_samples=1, gpus_per_trial=0, model_cls
     reporter = CLIReporter(parameter_columns=["sequence_length", "hidden_dim"],
                             metric_columns=["val_loss", "val_auroc", "training_iteration"])
 
-    train_fn_with_parameters = tune.with_parameters(train_tune, 
+    train_fn_with_parameters = tune.with_parameters(train_tune_multitask, 
                                                     lightning_config=lightning_config,
                                                     model_cls=model_cls, 
                                                     num_gpus=gpus_per_trial)
+    # train_fn_with_parameters = tune.with_parameters(train_tune, 
+    #                                                 lightning_config=lightning_config,
+    #                                                 model_cls=model_cls, 
+    #                                                 num_gpus=gpus_per_trial)
 
     resources_per_trial = {"cpu": 1, "gpu": gpus_per_trial}
 
@@ -103,6 +124,10 @@ def tune_seq_hidden(lightning_config, num_samples=1, gpus_per_trial=0, model_cls
 def test_train_tune(lightning_config, num_gpus=0):
     hyperparameter_config = {"sequence_length": 500, "hidden_dim": 256}
     train_tune(hyperparameter_config, lightning_config)
+
+def test_train_tune_multitask(lightning_config, model_cls, num_gpus=0):
+    hyperparameter_config = {"sequence_length": 250, "hidden_dim": 256}
+    train_tune_multitask(hyperparameter_config, lightning_config, model_cls)
 
 if __name__ == "__main__":
     parser = ArgumentParser("Tunes hyperparameters with RayTune")
