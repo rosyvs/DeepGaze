@@ -5,7 +5,7 @@ trainer:
   enable_checkpointing: true
   callbacks: null
   default_root_dir: null
-  gradient_clip_val: null
+  gradient_clip_val: 0.5
   gradient_clip_algorithm: null
   process_position: 0
   num_nodes: 1
@@ -23,7 +23,7 @@ trainer:
   check_val_every_n_epoch: 1
   fast_dev_run: false
   accumulate_grad_batches: null
-  max_epochs: 10
+  max_epochs: 50
   min_epochs: null
   max_steps: -1
   min_steps: null
@@ -91,7 +91,7 @@ data:
   test_dir: null
   train_dataset: null
   test_dataset: null
-  sequence_length: 250
+  sequence_length: 500
   num_workers: 4
   batch_size: 16
   pin_memory: true

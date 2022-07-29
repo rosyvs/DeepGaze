@@ -16,4 +16,4 @@ source ~/.bashrc
 cd /projects/$USER/eyemind
 conda activate eyemind
 pip install .
-python3 eyemind/experiments/informer_experiment.py fit -c experiment_configs/informer_test_config.yml
+python3 eyemind/experiments/informer_experiment.py fit -c experiment_configs/informer_test_config.yml --trainer.max_epochs 2 --trainer.progress_bar_refresh_rate null

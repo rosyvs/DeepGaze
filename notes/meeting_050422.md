@@ -79,3 +79,24 @@ Training loss and training AUROC improve: possibly overfitting. Probably need to
 - First sequence only
 - Random Sequence
 - Use the outer folds splits for the outer folds of the fixation identification
+
+
+### Meeting Notes
+Informer experiment:
+Ran only 10 epochs
+Need to normalize inputs
+Look at output attention to see what it is attending to when making predictions
+
+
+MultiTask:
+- How to weight the losses and whether it matters
+- Only did preliminary 5 epochs, need to run for longer and test different hyperparameters
+- Test performance on each task separately
+- Contrastive Tasks: within person across page and across 
+people within page
+- log all losses to same graph
+- take square root RMSE to get visual angle back metric
+- when plotting make a useful x-axis and y-axis so it is more interpretable
+- Figure out how long the OBF paper trains their models for and how much data they have
+- Test single tasks to see how they do without the multitasks
+
