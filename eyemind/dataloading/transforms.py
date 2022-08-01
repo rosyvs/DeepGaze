@@ -1,4 +1,6 @@
+from matplotlib.pyplot import flag
 import numpy as np
+import numpy.ma as ma
 import torch
 from torchvision.transforms import Normalize
 
@@ -32,11 +34,20 @@ class ToTensor(object):
     def __call__(self, v):
         return torch.tensor(v).float()
 
-class Standardizer(Normalize):
+class StandardScaler():
+
+    def __init__(self, mean=[-0.698, -1.940], std=[4.15, 3.286], flag=-180):
+        self.mean = np.array(mean)
+        self.std = np.array(std)
+        self.flag = flag
+    
+    def __call__(self, data):
+        cols = data.shape[-1]
+        assert(cols==len(self.mean))
+        assert(cols==len(self.std))
+        mx = ma.masked_values(data,self.flag)
+        mx_stand = (mx - self.mean) / self.std
+        return mx_stand.filled(self.flag)
 
     def inverse_transform(self, data):
-        
-        if data.shape[-1] != mean.shape[-1]:
-            mean = mean[-1:]
-            std = std[-1:]
-        return (data * std) + mean 
+        pass

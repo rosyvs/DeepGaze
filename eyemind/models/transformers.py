@@ -134,7 +134,7 @@ class InformerEncoderDecoderModel(LightningModule):
         targets = targets.int()
         accuracy = self.accuracy_metric(probs, targets)
         auroc = self.auroc_metric(probs, targets)
-        self.logger.experiment.add_scalars("losses", {f"{step_type}": loss}, self.global_step)        
+        self.logger.experiment.add_scalars("losses", {f"{step_type}": loss}, self.current_epoch)        
         self.log(f"{step_type}_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log(f"{step_type}_accuracy", accuracy, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log(f"{step_type}_auroc", auroc, on_step=False, on_epoch=True, prog_bar=True, logger=True)

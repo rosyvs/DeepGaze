@@ -1,6 +1,8 @@
 from functools import partial
 import random
 from typing import List, Optional, Union
+import numpy as np
+from sklearn.model_selection import train_test_split
 
 import torch
 from eyemind.dataloading.gaze_data import BaseGazeDataModule, BaseSequenceToSequenceDataModule, GroupStratifiedKFoldDataModule, SequenceLabelDataset, SequenceToSequenceDataModule
@@ -51,6 +53,21 @@ class InformerDataModule(BaseSequenceToSequenceDataModule):
         '''
         pass
 
+    def setup(self, stage: Optional[str] = None):
+        if stage in ("fit", "predict", None):
+            dataset = SequenceLabelDataset(self.data_dir, file_mapper=self.file_mapper, label_mapper=self.label_mapper, transform_x=self.x_transforms, transform_y=self.y_transforms, usecols=[2,3], scale=True)
+            if self.load_setup_path:
+                self.load_setup(dataset)
+            else:
+                if self.test_dir:
+                    self.splits = train_test_split(np.arange(len(dataset.files)), test_size=0.2)
+                else:
+                    train_val_splits, test_split = train_test_split(np.arange(len(dataset.files)), test_size=0.1)
+                    train_split, val_split = train_test_split(train_val_splits, test_size=0.2)
+                    self.splits = (train_split, val_split, test_split)
+                    self.test_dataset = Subset(dataset, self.splits[2])
+                self.train_dataset = Subset(dataset, self.splits[0])
+                self.val_dataset = Subset(dataset, self.splits[1])
             
     def train_dataloader(self) -> DataLoader:
         if self.train_fold:

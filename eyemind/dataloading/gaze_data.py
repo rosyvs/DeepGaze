@@ -15,12 +15,12 @@ from torch.utils.data import Dataset, DataLoader, Sampler, Subset
 
 from pytorch_lightning import LightningDataModule
 
-from eyemind.dataloading.transforms import LimitSequenceLength, ToTensor
+from eyemind.dataloading.transforms import LimitSequenceLength, StandardScaler, ToTensor
 from eyemind.preprocessing.fixations import fixation_label_mapper
 
 
 class SequenceLabelDataset(Dataset):
-    def __init__(self, folder_name, file_list=[], file_mapper=None, file_type="csv", transform_x=None, transform_y=None, label_mapper=None, skiprows=1, usecols=[1,2]):
+    def __init__(self, folder_name, file_list=[], file_mapper=None, file_type="csv", transform_x=None, transform_y=None, label_mapper=None, skiprows=1, usecols=[1,2], scale=False):
         '''
         Dataset for large data with multiple csv files.
 
@@ -37,6 +37,7 @@ class SequenceLabelDataset(Dataset):
         self.folder_name = Path(folder_name)
         self.skiprows = skiprows
         self.usecols = usecols
+        self.scale=scale
         # If their is a list passed then use it, else if function then use it, else use all files in folder
         if file_list:
             self.files = file_list
@@ -60,6 +61,9 @@ class SequenceLabelDataset(Dataset):
         filename = self.files[idx]
         filepath = self._get_file_path(filename)
         x_data = np.loadtxt(open(filepath,"rb"),delimiter=",",skiprows=self.skiprows,usecols=self.usecols)
+        if self.scale:
+            scaler = StandardScaler()
+            x_data = scaler(x_data)
         if self.transform_x:
             x_data = self.transform_x(x_data)
         if self.labels:

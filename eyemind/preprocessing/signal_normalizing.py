@@ -62,7 +62,7 @@ def plot_scanpath(df,event,t_lim=None,x_y_lim=None):
     plt.legend()
     name = f'{temp_df["ParticipantID"].iloc[0]}-{event}.csv'
     plt.title(name)
-    plt.show()    
+    plt.show() 
 
 
 def preprocess_data(raw_data_path, output_folder, screen_res=(1920,1080), target_frequency=60, current_frequency=1000, subject_dist=989, NA_FLAG=-180, off_screen_buf=10, label_cols=[],debug=False):
