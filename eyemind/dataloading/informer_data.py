@@ -150,7 +150,7 @@ def informer_collate(sequence_length, pred_length, label_length, batch):
 
     return X, fixation_decoder_inp, fixation_labels, rc_decoder_inp, X_pc, pc_labels, X_cl1, X_cl2, cl_labels
 
-def fixation_batch(input_length, label_length, pred_length, X, y, padding=0.):
+def fixation_batch(input_length, label_length, pred_length, X, y, padding=-1.):
     '''
     Takes variable length sequences, splits them each into 
     subsequences of sequence_length, and returns tensors

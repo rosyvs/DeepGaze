@@ -1,5 +1,6 @@
 from functools import reduce
 from json import encoder
+from multiprocessing.sharedctypes import Value
 from pathlib import Path
 import random
 from turtle import forward
@@ -205,7 +206,7 @@ class VariableSequenceLengthEncoderDecoderModel(EncoderDecoderModel):
         return parser
 
 class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
-    def __init__(self, tasks: List[str]=["fi", "pc", "cl", "rc"], sequence_length: int=250, pred_length: int=100, hidden_dim: int=128, class_weights: List[float]=[3.,1.], num_classes: int=2, use_conv: bool=True, learning_rate: float=1e-3, freeze_encoder: bool=False):
+    def __init__(self, tasks: List[str]=["fi", "pc", "cl", "rc"], sequence_length: int=250, pred_length: int=100, hidden_dim: int=128, class_weights: List[float]=[3.,1.], max_rmse_err: float=70., num_classes: int=2, use_conv: bool=True, learning_rate: float=1e-3, freeze_encoder: bool=False):
         super().__init__(sequence_length, hidden_dim, class_weights, num_classes, use_conv, learning_rate, freeze_encoder)
         self.save_hyperparameters()
         if len(tasks) == 0:
@@ -229,7 +230,7 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
             self.pc_decoder = create_decoder(hidden_dim,output_seq_length=pred_length)
             self.decoders.append(self.pc_decoder)
             self.pc_criterion = RMSELoss()
-            self.pc_metric = torchmetrics.MeanSquaredError()
+            self.pc_metric = torchmetrics.MeanSquaredError(squared=False)
             # self.criterions["pc"] = RMSELoss()
             # self.metrics["pc"] = torchmetrics.MeanSquaredError()
         if "cl" in tasks:
@@ -250,7 +251,7 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
             self.rc_decoder = create_decoder(hidden_dim,output_seq_length=sequence_length)
             self.decoders.append(self.rc_decoder)
             self.rc_criterion = RMSELoss()
-            self.rc_metric = torchmetrics.MeanSquaredError()
+            self.rc_metric = torchmetrics.MeanSquaredError(squared=False)
             # self.criterions["rc"] = RMSELoss()
             # self.metrics["rc"] = torchmetrics.MeanSquaredError()         
         self.decoders = nn.ModuleList(self.decoders)
@@ -261,14 +262,14 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
 
     def _step(self, batch, batch_idx, step_type):
         try:
-            X, y = batch
+            X, fix_y, cl_y = batch
         except ValueError as e:
             print(f"{batch}")
             raise e
         total_loss = 0
         for task in self.hparams.tasks:
             if task == "cl":
-                X1, X2, y_cl = self.contrastive_batch(batch[0])
+                X1, X2, y_cl = self.contrastive_batch(X, cl_y)
                 enc1 = self.encoder(X1)
                 enc2 = self.encoder(X2)
                 embed = torch.abs(enc1 - enc2)
@@ -286,7 +287,7 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
                 enc = self.encoder(X)
                 logits = self.fi_decoder(enc).squeeze().reshape(-1,2)
                 #logits = self(X, task).squeeze().reshape(-1,2)
-                targets_fi = y.reshape(-1).long()
+                targets_fi = fix_y.reshape(-1).long()
                 #task_loss = self.criterions[task](logits, targets_fi)
                 task_loss = self.fi_criterion(logits, targets_fi)
                 probs = self._get_probs(logits)
@@ -301,7 +302,7 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
                 assert(logits.shape == y_pc.shape)
                 # task_loss = self.criterions[task](logits, y_pc)
                 # task_metric = self.metrics[task](logits, y_pc)
-                task_loss = self.pc_criterion(logits, y_pc)
+                task_loss = torch.clamp(self.pc_criterion(logits, y_pc), max=self.hparams.max_rmse_err)
                 task_metric = self.pc_metric(logits, y_pc)
                 del X_pc, y_pc
             elif task == "rc":
@@ -310,7 +311,7 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
                 logits = self.rc_decoder(enc).squeeze()
                 # task_loss = self.criterions[task](logits, X)
                 # task_metric = self.metrics[task](logits, X) 
-                task_loss = self.rc_criterion(logits, X)
+                task_loss = torch.clamp(self.rc_criterion(logits, X), max=self.hparams.max_rmse_err)
                 task_metric = self.rc_metric(logits, X)               
             else:
                 raise ValueError("Task not recognized.")
@@ -336,38 +337,29 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
         y_seq = X_batch[:,input_length:input_length+self.hparams.pred_length,:]
         return X_seq, y_seq
 
-    def contrastive_batch(self, X_batch):
-        n,sl,fs = X_batch.shape
+    def contrastive_batch(self, X_batch, cl_y):
+        n,_,fs = X_batch.shape
         x1 = torch.zeros((n, self.hparams.sequence_length, fs), device=self.device)
         x2 = torch.zeros((n, self.hparams.sequence_length, fs), device=self.device)
-        y = torch.zeros(n, device=self.device)
+        # Random 0 (different scanpath) or 1 (same scanpath)
+        y = torch.randint(low=0, high=2,size=(n,))
         for i in range(n):
-        # get x1
-            try:
-                x1_start = random.randrange(0, sl - self.hparams.sequence_length)
-            except:
-                x1_start = 0
-            x1[i, :, :] = X_batch[i, x1_start:x1_start + self.hparams.sequence_length, :]
-
-            if random.random() > 0.5:
-                # Get x2 from the same sequence
-                j = i
-                y[i] = 1
+            # Pick sequence from different cl_y label
+            if y[i] == 0:
+                # Select sequences with different label
+                X_dif_label = X_batch[cl_y != cl_y[i]]
+                # Set the contrastive sequence to be one of those labels with different sequence
+                x2[i] = X_dif_label[random.randrange(0, X_dif_label.shape[0])]
+            # Choose from same scanpath
+            elif y[i] == 1:
+                # Get indices of X where subsequences in same scanpath
+                indices = torch.arange(n)[cl_y == cl_y[i]]
+                # Exclude own index
+                indices = indices[indices!=i]
+                x2[i] = X_batch[indices[random.randrange(0, indices.shape[0])]]
             else:
-                # Get x2 from different sequence
-                j = i
-                y[i] = 0
-                while j == i:
-                    j = random.randrange(0, n)
-
-            try:
-                x2_start = random.randrange(0, sl - self.hparams.sequence_length)
-            except:
-                x2_start = 0
-
-            x2[i, :, :] = X_batch[j, x2_start:x2_start + self.hparams.sequence_length, :]
-
-        return x1.float(), x2.float(), y.float()
+                raise ValueError("y label can only be 0 or 1 for contrastive learning")
+        return x1, x2, y.float()
 
     @staticmethod
     def add_model_specific_args(parent_parser):

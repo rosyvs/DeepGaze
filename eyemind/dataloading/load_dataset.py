@@ -95,7 +95,7 @@ def collate_fn_pad(batch, sequence_length):
     ## compute mask
     return X_padded, y_padded, X_lengths, y_lengths
 
-def split_collate_fn(sequence_length, batch):
+def split_collate_fn(sequence_length, batch, contrastive=False):
     '''
     Takes variable length sequences, splits them each into 
     subsequences of sequence_length, and returns tensors:
@@ -108,14 +108,17 @@ def split_collate_fn(sequence_length, batch):
         X: Tensor shape (bs, sequence_length, *)
         y: Tensor shape (bs, sequence_length)
     '''
-    X, y = zip(*batch)
+    X, fix_y = zip(*batch)
     # Splits each example into tensors with sequence length and drops last in case it is a different length
     X_splits = [torch.stack(torch.split(t, sequence_length, dim=0)[:-1], dim=0) for t in X]
-    y_splits = [torch.stack(torch.split(t, sequence_length, dim=0)[:-1], dim=0) for t in y]
+    fix_y_splits = [torch.stack(torch.split(t, sequence_length, dim=0)[:-1], dim=0) for t in fix_y]
     
     X = torch.cat(X_splits, dim=0)
-    y = torch.cat(y_splits, dim=0)
-    return X, y
+    fix_y = torch.cat(fix_y_splits, dim=0)
+    if contrastive:
+        cl_y = torch.cat([torch.ones(X_split.shape[0])*i for i, X_split in enumerate(X_splits)], dim=0)
+        return X, fix_y, cl_y
+    return X, fix_y
 
 
 

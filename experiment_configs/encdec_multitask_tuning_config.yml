@@ -4,7 +4,7 @@ trainer:
   enable_checkpointing: true
   callbacks: null
   default_root_dir: null
-  gradient_clip_val: null
+  gradient_clip_val: 0.5
   gradient_clip_algorithm: null
   process_position: 0
   num_nodes: 1
@@ -65,9 +65,9 @@ model:
   - pc
   - cl
   - rc
-  sequence_length: 250
+  sequence_length: 500
   pred_length: 100
-  hidden_dim: 128
+  hidden_dim: 256
   class_weights:
   - 3.0
   - 1.0
@@ -83,8 +83,9 @@ data:
   train_dataset: null
   val_dataset: null
   test_dataset: null
-  sequence_length: 250
+  sequence_length: 500
   num_workers: 4
-  batch_size: 16
+  batch_size: 32
   pin_memory: true
   drop_last: true
+  contrastive: true

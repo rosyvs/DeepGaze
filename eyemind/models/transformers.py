@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchmetrics
-from eyemind.dataloading.informer_data import fixation_batch
+from eyemind.dataloading.informer_data import fixation_batch, predictive_coding_batch
 from eyemind.models.informer.models.model import InformerStack
 
 from eyemind.models.informer.utils.masking import TriangularCausalMask, ProbMask
@@ -91,10 +91,13 @@ class InformerEncoderDecoderModel(LightningModule):
         self.projection = nn.Linear(d_model, c_out, bias=True)
         
     def forward(self, x_enc, x_dec, enc_self_mask=None, dec_self_mask=None, dec_enc_mask=None):
+        #x_enc: (bs, sequence_len,2)
+        #x_dec: (bs, sequence_len)
         enc_out = self.enc_embedding(x_enc)
         enc_out, attns = self.encoder(enc_out, attn_mask=enc_self_mask)
-
+        #print(x_dec[0])
         dec_out = self.dec_embedding(x_dec)
+        #print(dec_out[0])
         dec_out = self.decoder(dec_out, enc_out, x_mask=dec_self_mask, cross_mask=dec_enc_mask)
         dec_out = self.projection(dec_out)
         
@@ -120,15 +123,26 @@ class InformerEncoderDecoderModel(LightningModule):
         except ValueError as e:
             print(f"{batch}")
             raise e
-        # Task 1. Fixation ID
-        fix_decoder_inp, targets = fixation_batch(self.hparams.seq_len, self.hparams.label_len, self.hparams.pred_len, X, fix_y, padding=self.hparams.padding)
+
+        # Predictive Coding:
+        
+        X_pc, Y_pc = predictive_coding_batch(X, self.hparams.seq_len, self.hparams.pred_len, self.hparams.label_len)
         if self.hparams.output_attention:
-            logits = self(X, fix_decoder_inp)[0]
+            logits = self(X_pc, Y_pc)[0]
         else:
-            logits = self(X, fix_decoder_inp)
-        logits = logits.squeeze().reshape(-1,2)
-        targets = targets.reshape(-1).long()
-        loss = self.criterion(logits, targets)
+            logits = self(X_pc, Y_pc)
+        logits = logits.squeeze()
+        task_loss = self.criterion(logits, Y_pc)
+        
+        # Task 1. Fixation ID
+        # fix_decoder_inp, targets = fixation_batch(self.hparams.seq_len, self.hparams.label_len, self.hparams.pred_len, X, fix_y, padding=self.hparams.padding)
+        # if self.hparams.output_attention:
+        #     logits = self(X, fix_decoder_inp)[0]
+        # else:
+        #     logits = self(X, fix_decoder_inp)
+        # logits = logits.squeeze().reshape(-1,2)
+        # targets = targets.reshape(-1).long()
+        # loss = self.criterion(logits, targets)
         preds = self._get_preds(logits)
         probs = self._get_probs(logits)
         targets = targets.int()

@@ -427,7 +427,8 @@ class BaseSequenceToSequenceDataModule(BaseGazeDataModule):
                 num_workers: int = 0,
                 batch_size: int = 8,
                 pin_memory: bool = True,
-                drop_last: bool = True,            
+                drop_last: bool = True,
+                contrastive: bool = False,            
                 ):
         super().__init__()
         self.data_dir = data_dir
@@ -442,7 +443,7 @@ class BaseSequenceToSequenceDataModule(BaseGazeDataModule):
         self.num_workers = num_workers
         self.pin_memory = pin_memory
         self.drop_last = drop_last
-
+        self.contrastive = contrastive
 
     def prepare_data(self):
         '''
@@ -496,7 +497,7 @@ class BaseSequenceToSequenceDataModule(BaseGazeDataModule):
             num_workers=self.num_workers, 
             drop_last=self.drop_last, 
             pin_memory=self.pin_memory,
-            collate_fn=partial(split_collate_fn, self.sequence_length))
+            collate_fn=partial(split_collate_fn, self.sequence_length, contrastive=self.contrastive))
 
     @staticmethod
     def add_datamodule_specific_args(parent_parser):
@@ -507,6 +508,7 @@ class BaseSequenceToSequenceDataModule(BaseGazeDataModule):
         group.add_argument("--batch_size", type=int, default=8)
         group.add_argument("--label_filepath", type=str)
         group.add_argument("--sequence_length", type=int, default=500)
+        #group.add_argument("--contrastive", type=bool, default=False)
         return parent_parser
 
     @property

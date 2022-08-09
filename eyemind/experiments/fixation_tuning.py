@@ -126,7 +126,7 @@ def test_train_tune(lightning_config, num_gpus=0):
     train_tune(hyperparameter_config, lightning_config)
 
 def test_train_tune_multitask(lightning_config, model_cls, num_gpus=0):
-    hyperparameter_config = {"sequence_length": 250, "hidden_dim": 256}
+    hyperparameter_config = {"sequence_length": 500, "hidden_dim": 256}
     train_tune_multitask(hyperparameter_config, lightning_config, model_cls)
 
 if __name__ == "__main__":
@@ -140,4 +140,5 @@ if __name__ == "__main__":
     with open(args.c, 'r') as f:
         lightning_config = yaml.safe_load(f)
     pytorch_lightning.seed_everything(lightning_config["seed_everything"], workers=True)
-    tune_seq_hidden(lightning_config, num_samples=args.num_samples, gpus_per_trial=args.gpus_per_trial, model_cls=args.model_cls, exp_name=args.exp_name)
+    #tune_seq_hidden(lightning_config, num_samples=args.num_samples, gpus_per_trial=args.gpus_per_trial, model_cls=args.model_cls, exp_name=args.exp_name)
+    test_train_tune_multitask(lightning_config, MultiTaskEncoderDecoder, 4)

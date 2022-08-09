@@ -89,4 +89,5 @@ data:
   batch_size: 8
   pin_memory: true
   drop_last: true
+  contrastive: true
 ckpt_path: null
