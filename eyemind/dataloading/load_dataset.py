@@ -116,6 +116,7 @@ def split_collate_fn(sequence_length, batch, contrastive=False):
     X = torch.cat(X_splits, dim=0)
     fix_y = torch.cat(fix_y_splits, dim=0)
     if contrastive:
+        X_cl = 
         cl_y = torch.cat([torch.ones(X_split.shape[0])*i for i, X_split in enumerate(X_splits)], dim=0)
         return X, fix_y, cl_y
     return X, fix_y

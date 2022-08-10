@@ -6,7 +6,7 @@
 #SBATCH --ntasks=1
 #SBATCH --job-name=multitask-test
 #SBATCH --cpus-per-task=4
-#SBATCH --output=informer-test-exp.%j.out
+#SBATCH --output=multitask-test-exp.%j.out
 
 module load cuda/11.2
 module load cudnn/8.1_for_cuda_11.2

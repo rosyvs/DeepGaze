@@ -200,7 +200,7 @@ def contrastive_batch(X_batch, input_length):
     for i in range(n):
     # get x1
         try:
-            x1_start = random.randrange(0, sl - input_length)
+            x1_start = torch.randint(0, sl - input_length)
         except:
             x1_start = 0
         x1[i, :, :] = X_batch[i, x1_start:x1_start + input_length, :]

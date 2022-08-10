@@ -3,6 +3,7 @@ from json import encoder
 from multiprocessing.sharedctypes import Value
 from pathlib import Path
 import random
+from tracemalloc import start
 from turtle import forward
 from typing import Any, List
 from urllib.request import ProxyBasicAuthHandler
@@ -268,7 +269,7 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
             raise e
         total_loss = 0
         for task in self.hparams.tasks:
-            if task == "cl":
+            if task == "cl":                
                 X1, X2, y_cl = self.contrastive_batch(X, cl_y)
                 enc1 = self.encoder(X1)
                 enc2 = self.encoder(X2)
@@ -339,24 +340,26 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
 
     def contrastive_batch(self, X_batch, cl_y):
         n,_,fs = X_batch.shape
-        x1 = torch.zeros((n, self.hparams.sequence_length, fs), device=self.device)
-        x2 = torch.zeros((n, self.hparams.sequence_length, fs), device=self.device)
+        cl_seq_len=self.hparams.sequence_length//2
+        x1 = torch.zeros((n, cl_seq_len, fs), device=self.device)
+        x2 = torch.zeros((n, cl_seq_len, fs), device=self.device)
         # Random 0 (different scanpath) or 1 (same scanpath)
         y = torch.randint(low=0, high=2,size=(n,))
         for i in range(n):
             # Pick sequence from different cl_y label
+            start_ind = random.randrange(0,cl_seq_len)
             if y[i] == 0:
                 # Select sequences with different label
                 X_dif_label = X_batch[cl_y != cl_y[i]]
                 # Set the contrastive sequence to be one of those labels with different sequence
-                x2[i] = X_dif_label[random.randrange(0, X_dif_label.shape[0])]
+                x2[i] = X_dif_label[random.randrange(0, X_dif_label.shape[0]), start_ind:start_ind+cl_seq_len]
             # Choose from same scanpath
             elif y[i] == 1:
                 # Get indices of X where subsequences in same scanpath
                 indices = torch.arange(n)[cl_y == cl_y[i]]
                 # Exclude own index
-                indices = indices[indices!=i]
-                x2[i] = X_batch[indices[random.randrange(0, indices.shape[0])]]
+                #indices = indices[indices!=i]
+                x2[i] = X_batch[indices[random.randrange(0, indices.shape[0])],start_ind:start_ind+cl_seq_len]
             else:
                 raise ValueError("y label can only be 0 or 1 for contrastive learning")
         return x1, x2, y.float()
