@@ -355,4 +355,5 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
         parser.add_argument('--class_weights', type=float, nargs='*', default=[3., 1.])
         parser.add_argument('--num_classes', type=int, default=2)
         parser.add_argument('--freeze_encoder', type=bool, default=False)
+        parser.add_argument('--max_rmse_err', type=float, default=70., help='clamps max rmse loss')
         return parser

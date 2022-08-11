@@ -12,6 +12,7 @@ from eyemind.models.informer.models.encoder import Encoder, EncoderLayer, ConvLa
 from eyemind.models.informer.models.decoder import Decoder, DecoderLayer
 from eyemind.models.informer.models.attn import FullAttention, ProbAttention, AttentionLayer
 from eyemind.models.informer.models.embed import GazeEmbedding
+from eyemind.models.loss import RMSELoss
 
 class InformerEncoderDecoderModel(LightningModule):
     def __init__(self, 
@@ -34,16 +35,16 @@ class InformerEncoderDecoderModel(LightningModule):
                 output_attention: bool=False, 
                 distil: bool=True, 
                 mix: bool=True, 
-                class_weights: List[float]=[3.,1.], 
+                class_weights: List[float]=[3.,1.],
+                max_rmse_err: float=70., 
                 learning_rate: float=1e-3, 
                 freeze_encoder: bool=False):
         super().__init__()
         self.save_hyperparameters()
         # Loss function
-        self.criterion = nn.CrossEntropyLoss(torch.Tensor(class_weights))
+        self.pc_criterion = RMSELoss()
         # Metrics
-        self.auroc_metric = torchmetrics.AUROC(num_classes=c_out, average="weighted")
-        self.accuracy_metric = torchmetrics.Accuracy(num_classes=c_out)        
+        self.pc_metric = torchmetrics.MeanSquaredError(squared=False) 
         # Encoding
         self.enc_embedding = GazeEmbedding(enc_in, d_model, dropout)
         self.dec_embedding = GazeEmbedding(dec_in, d_model, dropout)
@@ -125,15 +126,18 @@ class InformerEncoderDecoderModel(LightningModule):
             raise e
 
         # Predictive Coding:
-        
         X_pc, Y_pc = predictive_coding_batch(X, self.hparams.seq_len, self.hparams.pred_len, self.hparams.label_len)
         if self.hparams.output_attention:
             logits = self(X_pc, Y_pc)[0]
         else:
             logits = self(X_pc, Y_pc)
         logits = logits.squeeze()
-        task_loss = self.criterion(logits, Y_pc)
-
+        assert(logits.shape == Y_pc.shape)
+        task_loss = torch.clamp(self.pc_criterion(logits, Y_pc),max=self.hparams.max_rmse_error)
+        task_metric = self.pc_metric(logits, Y_pc)
+        self.log(f"{step_type}_loss", task_loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log(f"{step_type}_pc_metric", task_metric, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        return task_loss
         # Task 1. Fixation ID
         # fix_decoder_inp, targets = fixation_batch(self.hparams.seq_len, self.hparams.label_len, self.hparams.pred_len, X, fix_y, padding=self.hparams.padding)
         # if self.hparams.output_attention:
@@ -143,16 +147,16 @@ class InformerEncoderDecoderModel(LightningModule):
         # logits = logits.squeeze().reshape(-1,2)
         # targets = targets.reshape(-1).long()
         # loss = self.criterion(logits, targets)
-        preds = self._get_preds(logits)
-        probs = self._get_probs(logits)
-        targets = targets.int()
-        accuracy = self.accuracy_metric(probs, targets)
-        auroc = self.auroc_metric(probs, targets)
-        self.logger.experiment.add_scalars("losses", {f"{step_type}": loss}, self.current_epoch)        
-        self.log(f"{step_type}_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        self.log(f"{step_type}_accuracy", accuracy, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        self.log(f"{step_type}_auroc", auroc, on_step=False, on_epoch=True, prog_bar=True, logger=True)
-        return loss
+        # preds = self._get_preds(logits)
+        # probs = self._get_probs(logits)
+        # targets = targets.int()
+        # accuracy = self.accuracy_metric(probs, targets)
+        # auroc = self.auroc_metric(probs, targets)
+        # self.logger.experiment.add_scalars("losses", {f"{step_type}": loss}, self.current_epoch)        
+        # self.log(f"{step_type}_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        # self.log(f"{step_type}_accuracy", accuracy, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        # self.log(f"{step_type}_auroc", auroc, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        # return loss
 
     def configure_optimizers(self):
         params = self.decoder.parameters() if self.hparams.freeze_encoder else list(self.encoder.parameters()) + list(self.decoder.parameters())
@@ -201,4 +205,5 @@ class InformerEncoderDecoderModel(LightningModule):
         parser.add_argument('--output_attention', action='store_true', help='whether to output attention in ecoder')
         parser.add_argument('--class_weights', type=float, nargs='*', default=[3., 1.])
         parser.add_argument('--freeze_encoder', type=bool, default=False)
+        parser.add_argument('--max_rmse_err', type=float, default=70., help='clamps max rmse loss')
         return parser

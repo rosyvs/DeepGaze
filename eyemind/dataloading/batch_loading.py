@@ -70,6 +70,22 @@ def multitask_collate_fn(sequence_length, batch, contrastive=False):
         return X_fix, fix_y, X1, X2, y
     return X_fix, fix_y
 
+def random_collate_fn(sequence_length, batch,  min_seq=1.0, max_seq=1.0):
+    X, fix_y = zip(*batch)
+    bs = len(X)
+    fs = X[0].shape[-1]
+    if min_seq != max_seq:
+        sequence_length = random.randrange(int(min_seq*sequence_length), int(max_seq*sequence_length))
+    X_batched = torch.zeros((bs,sequence_length,fs))
+    fix_y_batched = torch.zeros((bs, sequence_length))
+    for i in range(bs):
+        full_sl = X[i].shape[0]
+        start_ind = random.randrange(0,full_sl-sequence_length)
+        end_ind = start_ind + sequence_length 
+        X_batched[i] = X[i][start_ind:end_ind,:]
+        fix_y_batched[i] = fix_y[i][start_ind:end_ind]
+    return X_batched, fix_y_batched
+    
 def random_multitask_collate_fn(sequence_length, batch, min_seq=1.0, max_seq=1.0):
     """
     Takes variable length scanpaths and selects a random part of sequence length and batches them
