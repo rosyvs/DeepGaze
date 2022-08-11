@@ -1,19 +1,14 @@
 from functools import reduce
-from json import encoder
-from multiprocessing.sharedctypes import Value
 from pathlib import Path
 import random
-from tracemalloc import start
-from turtle import forward
-from typing import Any, List
-from urllib.request import ProxyBasicAuthHandler
+from typing import List
+
 from pytorch_lightning import LightningModule
-from sklearn.linear_model import LogisticRegression
 import torchmetrics
 from torch import nn
 import torch.nn.functional as F
 import torch
-from eyemind.dataloading.informer_data import contrastive_batch, predictive_coding_batch, reconstruction_batch
+from eyemind.dataloading.batch_loading import contrastive_batch, predictive_coding_batch, reconstruction_batch
 from eyemind.models.loss import RMSELoss
 
 from eyemind.obf.model import ae
@@ -263,55 +258,41 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
 
     def _step(self, batch, batch_idx, step_type):
         try:
-            X, fix_y, cl_y = batch
+            X, fix_y, X1, X2, cl_y = batch
         except ValueError as e:
             print(f"{batch}")
             raise e
         total_loss = 0
         for task in self.hparams.tasks:
             if task == "cl":                
-                X1, X2, y_cl = self.contrastive_batch(X, cl_y)
                 enc1 = self.encoder(X1)
                 enc2 = self.encoder(X2)
                 embed = torch.abs(enc1 - enc2)
-                #logits = self.decoders["cl"](embed).squeeze()
                 logits = self.cl_decoder(embed).squeeze()
-                y_cl = y_cl.reshape(-1).long()
-                #task_loss = self.criterions[task](logits, y_cl)
-                task_loss = self.cl_criterion(logits, y_cl)
+                cl_y = cl_y.reshape(-1).long()
+                task_loss = self.cl_criterion(logits, cl_y)
                 probs = self._get_probs(logits)
-                #task_metric = self.metrics[task](probs, y_cl.int())
-                task_metric = self.cl_metric(probs, y_cl.int())
-                del X1, X2, y_cl, enc1, enc2, embed, probs
+                task_metric = self.cl_metric(probs, cl_y.int())
+                del X1, X2, cl_y, enc1, enc2, embed, probs
             elif task == "fi":
-                #logits = self(X, task).squeeze().reshape(-1,2)
                 enc = self.encoder(X)
                 logits = self.fi_decoder(enc).squeeze().reshape(-1,2)
-                #logits = self(X, task).squeeze().reshape(-1,2)
                 targets_fi = fix_y.reshape(-1).long()
-                #task_loss = self.criterions[task](logits, targets_fi)
                 task_loss = self.fi_criterion(logits, targets_fi)
                 probs = self._get_probs(logits)
-                #task_metric = self.metrics[task](probs, targets_fi.int())
                 task_metric = self.fi_metric(probs, targets_fi.int())
                 del enc, probs, targets_fi
             elif task == "pc":
                 X_pc, y_pc = self.predictive_coding_batch(batch[0])
-                #logits = self(X_pc, task).squeeze()
                 enc = self.encoder(X_pc)
                 logits = self.pc_decoder(enc).squeeze()
                 assert(logits.shape == y_pc.shape)
-                # task_loss = self.criterions[task](logits, y_pc)
-                # task_metric = self.metrics[task](logits, y_pc)
                 task_loss = torch.clamp(self.pc_criterion(logits, y_pc), max=self.hparams.max_rmse_err)
                 task_metric = self.pc_metric(logits, y_pc)
                 del X_pc, y_pc
             elif task == "rc":
-                #logits = self(X, task).squeeze()  
                 enc = self.encoder(X)
                 logits = self.rc_decoder(enc).squeeze()
-                # task_loss = self.criterions[task](logits, X)
-                # task_metric = self.metrics[task](logits, X) 
                 task_loss = torch.clamp(self.rc_criterion(logits, X), max=self.hparams.max_rmse_err)
                 task_metric = self.rc_metric(logits, X)               
             else:
@@ -323,7 +304,6 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
         return total_loss
 
     def configure_optimizers(self):
-        #params = [list(m.parameters()) for m in self.decoders.values()]
         params = [list(m.parameters()) for m in self.decoders]
         params.append(list(self.encoder.parameters()))
         params = reduce(lambda x,y: x + y, params)

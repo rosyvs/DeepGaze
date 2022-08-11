@@ -8,8 +8,8 @@ from typing import Any, Callable, List, Optional, Union
 import pandas as pd
 from sklearn.model_selection import train_test_split
 import yaml
-from eyemind.dataloading.load_dataset import filter_files_by_seqlen, get_filenames_for_dataset, get_label_df, get_label_mapper, get_stratified_group_splits, limit_sequence_len, load_file_folds, split_collate_fn, write_splits
-
+from eyemind.dataloading.load_dataset import filter_files_by_seqlen, get_filenames_for_dataset, get_label_df, get_label_mapper, get_stratified_group_splits, limit_sequence_len, load_file_folds, write_splits
+from eyemind.dataloading.batch_loading import multitask_collate_fn, split_collate_fn
 import torchvision.transforms as T
 from torch.utils.data import Dataset, DataLoader, Sampler, Subset
 
@@ -497,7 +497,7 @@ class BaseSequenceToSequenceDataModule(BaseGazeDataModule):
             num_workers=self.num_workers, 
             drop_last=self.drop_last, 
             pin_memory=self.pin_memory,
-            collate_fn=partial(split_collate_fn, self.sequence_length, contrastive=self.contrastive))
+            collate_fn=partial(multitask_collate_fn, self.sequence_length, contrastive=self.contrastive))
 
     @staticmethod
     def add_datamodule_specific_args(parent_parser):

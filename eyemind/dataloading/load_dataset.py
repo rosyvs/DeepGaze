@@ -1,8 +1,6 @@
-from fileinput import filename
 from functools import partial
 from pathlib import Path
 import random
-from tempfile import TemporaryFile
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import StratifiedGroupKFold
@@ -75,52 +73,6 @@ def get_label_df(label_path):
     label_df = pd.read_csv(label_path)
     label_df = create_filename_col(label_df)
     return label_df
-
-# TODO: Write collate function which will return padded batch, sequence lengths, mask
-def collate_fn_pad(batch, sequence_length):
-    '''
-    Pads batch of variable length
-
-    note: it converts things ToTensor manually here since the ToTensor transform
-    assume it takes in images rather than arbitrary tensors.
-    '''
-    X, y = zip(*batch)
-    X_lengths = torch.tensor([ t.shape[0] for t in X ])
-    y_lengths = torch.tensor([ t.shape[0] for t in y ])
-    ## padd
-    X_padded = torch.nn.utils.rnn.pad_sequence(X, batch_first=True, padding_value=-181.)
-    y_padded = torch.nn.utils.rnn.pad_sequence(y, batch_first=True, padding_value=-181.)
-    # Split
-    torch.split(X_padded, sequence_length, )
-    ## compute mask
-    return X_padded, y_padded, X_lengths, y_lengths
-
-def split_collate_fn(sequence_length, batch, contrastive=False):
-    '''
-    Takes variable length sequences, splits them each into 
-    subsequences of sequence_length, and returns tensors:
-    
-    Args:
-        batch: List[Tuples(Tensor(X), Tensor(y))] Contains a list of the returned items from dataset
-        sequence_length: int lengths of the subsequences
-
-    Returns:
-        X: Tensor shape (bs, sequence_length, *)
-        y: Tensor shape (bs, sequence_length)
-    '''
-    X, fix_y = zip(*batch)
-    # Splits each example into tensors with sequence length and drops last in case it is a different length
-    X_splits = [torch.stack(torch.split(t, sequence_length, dim=0)[:-1], dim=0) for t in X]
-    fix_y_splits = [torch.stack(torch.split(t, sequence_length, dim=0)[:-1], dim=0) for t in fix_y]
-    
-    X = torch.cat(X_splits, dim=0)
-    fix_y = torch.cat(fix_y_splits, dim=0)
-    if contrastive:
-        cl_y = torch.cat([torch.ones(X_split.shape[0])*i for i, X_split in enumerate(X_splits)], dim=0)
-        return X, fix_y, cl_y
-    return X, fix_y
-
-
 
 
 # What is a good method for choosing the sequence length?

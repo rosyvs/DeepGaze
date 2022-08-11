@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchmetrics
-from eyemind.dataloading.informer_data import fixation_batch, predictive_coding_batch
+from eyemind.dataloading.batch_loading import fixation_batch, predictive_coding_batch
 from eyemind.models.informer.models.model import InformerStack
 
 from eyemind.models.informer.utils.masking import TriangularCausalMask, ProbMask
@@ -133,7 +133,7 @@ class InformerEncoderDecoderModel(LightningModule):
             logits = self(X_pc, Y_pc)
         logits = logits.squeeze()
         task_loss = self.criterion(logits, Y_pc)
-        
+
         # Task 1. Fixation ID
         # fix_decoder_inp, targets = fixation_batch(self.hparams.seq_len, self.hparams.label_len, self.hparams.pred_len, X, fix_y, padding=self.hparams.padding)
         # if self.hparams.output_attention:
