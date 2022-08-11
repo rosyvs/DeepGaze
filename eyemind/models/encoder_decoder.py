@@ -258,14 +258,14 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
 
     def _step(self, batch, batch_idx, step_type):
         try:
-            X, fix_y, X1, X2, cl_y = batch
+            X, fix_y, X2, cl_y = batch
         except ValueError as e:
             print(f"{batch}")
             raise e
         total_loss = 0
         for task in self.hparams.tasks:
-            if task == "cl":                
-                enc1 = self.encoder(X1)
+            if task == "cl":
+                enc1 = self.encoder(X)
                 enc2 = self.encoder(X2)
                 embed = torch.abs(enc1 - enc2)
                 logits = self.cl_decoder(embed).squeeze()
@@ -273,7 +273,7 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
                 task_loss = self.cl_criterion(logits, cl_y)
                 probs = self._get_probs(logits)
                 task_metric = self.cl_metric(probs, cl_y.int())
-                del X1, X2, cl_y, enc1, enc2, embed, probs
+                del X2, cl_y, enc1, enc2, embed, probs
             elif task == "fi":
                 enc = self.encoder(X)
                 logits = self.fi_decoder(enc).squeeze().reshape(-1,2)

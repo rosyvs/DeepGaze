@@ -70,7 +70,38 @@ def multitask_collate_fn(sequence_length, batch, contrastive=False):
         return X_fix, fix_y, X1, X2, y
     return X_fix, fix_y
 
-    
+def random_multitask_collate_fn(sequence_length, batch, min_seq=1.0, max_seq=1.0):
+    """
+    Takes variable length scanpaths and selects a random part of sequence length and batches them
+    """
+    X, fix_y = zip(*batch)
+    bs = len(X)
+    fs = X[0].shape[-1]
+    if min_seq != max_seq:
+        sequence_length = random.randrange(int(min_seq*sequence_length), int(max_seq*sequence_length))
+    X_batched = torch.zeros((bs,sequence_length,fs))
+    fix_y_batched = torch.zeros((bs, sequence_length))
+    X2_batched = torch.zeros((bs,sequence_length,fs))
+    cl_y_batched = torch.randint(0,2,(bs,))
+    for i in range(bs):
+        full_sl = X[i].shape[0]
+        start_ind = random.randrange(0,full_sl-sequence_length)
+        end_ind = start_ind + sequence_length 
+        X_batched[i] = X[i][start_ind:end_ind,:]
+        fix_y_batched[i] = fix_y[i][start_ind:end_ind]
+
+        start_ind = random.randrange(0,full_sl-sequence_length)
+        end_ind = start_ind + sequence_length
+        if cl_y_batched[i] == 0:
+            j = i
+            while j == i:
+                j = random.randrange(0,bs)
+            X2_batched[i] = X[j][start_ind:end_ind,:]
+        else:
+            X2_batched[i] = X[i][start_ind:end_ind,:]
+    return X_batched, fix_y_batched, X2_batched, cl_y_batched.float()
+
+
 def predictive_coding_batch(X_batch, input_length, pred_length, label_length):
     X_seq = X_batch[:,:input_length,:]
     y_seq = X_batch[:,input_length-label_length:input_length+pred_length,:]
@@ -80,6 +111,10 @@ def reconstruction_batch(X_batch, label_length):
     decoder_inp = torch.zeros_like(X_batch)
     decoder_inp[:,:label_length,:] = X_batch[:,:label_length,:]
     return decoder_inp
+
+def cl_batch(X, sequence_length):
+    pass
+
 
 def contrastive_batch(X, sequence_length, sub_length=(0.4,0.7)):
     n = len(X)
