@@ -83,7 +83,7 @@ data:
   train_dataset: null
   val_dataset: null
   test_dataset: null
-  input_sequence_length: 500
+  sequence_length: 500
   num_workers: 4
   batch_size: 32
   pin_memory: true
