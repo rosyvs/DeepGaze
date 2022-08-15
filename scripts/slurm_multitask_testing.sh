@@ -2,7 +2,7 @@
 
 #SBATCH --nodes=1
 #SBATCH --time=10:00:00
-#SBATCH --partition=sgpu
+#SBATCH --partition=aa100
 #SBATCH --ntasks=1
 #SBATCH --job-name=multitask-test
 #SBATCH --cpus-per-task=4
