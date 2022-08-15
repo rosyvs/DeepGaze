@@ -1,9 +1,10 @@
 #!/bin/bash
 
 #SBATCH --nodes=1
-#SBATCH --time=10:00:00
+#SBATCH --time=2:00:00
 #SBATCH --partition=aa100
 #SBATCH --ntasks=1
+#SBATCH --gres=gpu:2
 #SBATCH --job-name=multitask-test
 #SBATCH --cpus-per-task=4
 #SBATCH --output=multitask-test-exp.%j.out
