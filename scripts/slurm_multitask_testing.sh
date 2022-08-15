@@ -16,4 +16,4 @@ source ~/.bashrc
 cd /projects/$USER/eyemind
 conda activate eyemind
 pip install .
-python3 eyemind/experiments/informer_experiment.py fit -c experiment_configs/encdec_multitask_tuning_config.yml --trainer.max_epochs 50
+python3 eyemind/experiments/multitask_experiment.py fit -c experiment_configs/encdec_multitask_config.yml --trainer.max_epochs 5
