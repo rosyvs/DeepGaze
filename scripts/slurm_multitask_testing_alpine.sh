@@ -5,12 +5,12 @@
 #SBATCH --partition=aa100
 #SBATCH --ntasks=1
 #SBATCH --gres=gpu:2
-#SBATCH --job-name=multitask-test
+#SBATCH --job-name=multitask-test-alpine
 #SBATCH --cpus-per-task=4
-#SBATCH --output=multitask-test-exp.%j.out
+#SBATCH --output=multitask-test-alpine-exp.%j.out
 
 module load cuda/11.2
-module load cudnn/8.1_for_cuda_11.2
+module load cudnn/8.1
 
 # Run script
 source ~/.bashrc
