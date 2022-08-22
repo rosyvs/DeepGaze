@@ -105,15 +105,17 @@ def random_multitask_collate_fn(sequence_length, batch, min_seq=1.0, max_seq=1.0
         end_ind = start_ind + sequence_length 
         X_batched[i] = X[i][start_ind:end_ind,:]
         fix_y_batched[i] = fix_y[i][start_ind:end_ind]
-
-        start_ind = random.randrange(0,full_sl-sequence_length)
-        end_ind = start_ind + sequence_length
         if cl_y_batched[i] == 0:
             j = i
             while j == i:
                 j = random.randrange(0,bs)
+            full_sl = X[j].shape[0]
+            start_ind = random.randrange(0,full_sl-sequence_length)
+            end_ind = start_ind + sequence_length
             X2_batched[i] = X[j][start_ind:end_ind,:]
         else:
+            start_ind = random.randrange(0,full_sl-sequence_length)
+            end_ind = start_ind + sequence_length
             X2_batched[i] = X[i][start_ind:end_ind,:]
     return X_batched, fix_y_batched, X2_batched, cl_y_batched.float()
 

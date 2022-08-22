@@ -89,3 +89,4 @@ data:
   pin_memory: true
   drop_last: true
   contrastive: true
+  min_scanpath_length: 1000

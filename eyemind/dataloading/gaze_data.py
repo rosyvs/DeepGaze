@@ -428,7 +428,8 @@ class BaseSequenceToSequenceDataModule(BaseGazeDataModule):
                 batch_size: int = 8,
                 pin_memory: bool = True,
                 drop_last: bool = True,
-                contrastive: bool = False,            
+                contrastive: bool = False,
+                min_scanpath_length: int = 500,            
                 ):
         super().__init__()
         self.data_dir = data_dir
@@ -444,6 +445,7 @@ class BaseSequenceToSequenceDataModule(BaseGazeDataModule):
         self.pin_memory = pin_memory
         self.drop_last = drop_last
         self.contrastive = contrastive
+        self.min_scanpath_length = min_scanpath_length
 
     def prepare_data(self):
         '''
@@ -508,7 +510,8 @@ class BaseSequenceToSequenceDataModule(BaseGazeDataModule):
         group.add_argument("--batch_size", type=int, default=8)
         group.add_argument("--label_filepath", type=str)
         group.add_argument("--sequence_length", type=int, default=500)
-        #group.add_argument("--contrastive", type=bool, default=False)
+        group.add_argument("--contrastive", type=bool, default=False)
+        group.add_argument("--min_scanpath_length", type=int, default=500)
         return parent_parser
 
     @property
@@ -525,7 +528,7 @@ class BaseSequenceToSequenceDataModule(BaseGazeDataModule):
     
     @property
     def file_mapper(self):
-        return partial(filter_files_by_seqlen, self.label_df)   
+        return partial(filter_files_by_seqlen, self.label_df, min_sequence_length=self.min_scanpath_length)
 
 class SequenceToSequenceDataModule(GroupStratifiedKFoldDataModule, BaseGazeDataModule):
 
