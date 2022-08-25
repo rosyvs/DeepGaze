@@ -62,11 +62,11 @@ trainer:
   terminate_on_nan: null
 model:
   enc_in: 2
-  dec_in: 1
+  dec_in: 2
   c_out: 2
-  seq_len: 250
+  seq_len: 500
   label_len: 100
-  pred_len: 150
+  pred_len: 100
   padding: 0
   factor: 5
   d_model: 256
@@ -85,15 +85,18 @@ model:
   - 1.0
   learning_rate: 0.001
   freeze_encoder: false
+  max_rmse_err: 70.
 data:
   data_dir: /Users/rickgentry/emotive_lab/eyemind/data/processed/fixation
   label_filepath: /Users/rickgentry/emotive_lab/eyemind/data/processed/EML1_pageLevel_with_filename_seq.csv
   test_dir: null
   train_dataset: null
+  val_dataset: null
   test_dataset: null
-  sequence_length: 250
+  sequence_length: 500
   num_workers: 0
-  batch_size: 8
+  batch_size: 64
   pin_memory: true
   drop_last: true
+  min_scanpath_length: 500
 ckpt_path: null

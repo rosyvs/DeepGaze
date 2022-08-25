@@ -22,6 +22,7 @@ class InformerDataModule(BaseSequenceToSequenceDataModule):
                 load_setup_path: Optional[str] = None,
                 test_dir: Optional[str] = None,
                 train_dataset: Optional[Dataset] = None,
+                val_dataset: Optional[Dataset] = None,
                 test_dataset: Optional[Dataset] = None,
                 train_fold: Optional[Dataset] = None,
                 val_fold: Optional[Dataset] = None,
@@ -31,19 +32,26 @@ class InformerDataModule(BaseSequenceToSequenceDataModule):
                 num_workers: int = 0,
                 batch_size: int = 8,
                 pin_memory: bool = True,
-                drop_last: bool = True,            
+                drop_last: bool = True,
+                min_scanpath_length: int = 500,
                 ):
         super().__init__(data_dir,
                         label_filepath,
                         load_setup_path,
                         test_dir,
                         train_dataset,
+                        val_dataset,
                         test_dataset,
                         sequence_length,
                         num_workers,
                         batch_size,
                         pin_memory,
-                        drop_last)
+                        drop_last,
+                        False,
+                        min_scanpath_length
+                        )
+        self.train_fold = train_fold
+        self.val_fold = val_fold
         self.pred_length = pred_length
         self.label_length = label_length
 
@@ -77,7 +85,10 @@ class InformerDataModule(BaseSequenceToSequenceDataModule):
             return self.get_dataloader(self.train_dataset)
 
     def val_dataloader(self) -> Union[DataLoader, List[DataLoader]]:
-        return self.get_dataloader(self.val_fold)
+        if self.val_fold:
+            return self.get_dataloader(self.val_fold)
+        else:
+            return self.get_dataloader(self.val_dataset)
 
     def predict_dataloader(self) -> DataLoader:
         if self.test_dataset:
@@ -97,7 +108,7 @@ class InformerDataModule(BaseSequenceToSequenceDataModule):
             num_workers=self.num_workers, 
             drop_last=self.drop_last, 
             pin_memory=self.pin_memory,
-            collate_fn=partial(split_collate_fn, self.sequence_length))
+            collate_fn=partial(random_collate_fn, self.sequence_length))
     
     @staticmethod
     def add_datamodule_specific_args(parent_parser):
@@ -108,6 +119,7 @@ class InformerDataModule(BaseSequenceToSequenceDataModule):
         group.add_argument("--batch_size", type=int, default=8)
         group.add_argument("--label_filepath", type=str)
         group.add_argument("--sequence_length", type=int, default=250)
+        group.add_argument("--min_scanpath_length", type=int, default=500)
         return parent_parser
 
     @property
@@ -124,7 +136,7 @@ class InformerDataModule(BaseSequenceToSequenceDataModule):
     
     @property
     def file_mapper(self):
-        return partial(filter_files_by_seqlen, self.label_df)
+        return partial(filter_files_by_seqlen, self.label_df, min_sequence_length=self.min_scanpath_length)
 
 def informer_collate(sequence_length, pred_length, label_length, batch):
     '''

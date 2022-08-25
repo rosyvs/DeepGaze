@@ -16,5 +16,6 @@ module load cudnn/8.1
 source /projects/$USER/.bashrc_alpine
 cd /projects/$USER/eyemind
 conda activate eyemind
-pip install .[cuda112] --use-feature=in-tree-build
+pip install . --use-feature=in-tree-build
+pip install torch torchvision --extra-index-url https://download.pytorch.org/whl/cu113 --use-feature=in-tree-build
 python3 eyemind/experiments/multitask_experiment.py fit -c experiment_configs/encdec_multitask_config.yml --trainer.max_epochs 5

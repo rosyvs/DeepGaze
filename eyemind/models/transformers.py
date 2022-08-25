@@ -133,8 +133,10 @@ class InformerEncoderDecoderModel(LightningModule):
             logits = self(X_pc, Y_pc)
         logits = logits.squeeze()
         assert(logits.shape == Y_pc.shape)
-        task_loss = torch.clamp(self.pc_criterion(logits, Y_pc),max=self.hparams.max_rmse_error)
-        task_metric = self.pc_metric(logits, Y_pc)
+        mask = Y_pc > -180
+        #task_loss = torch.clamp(self.pc_criterion(logits, Y_pc),max=self.hparams.max_rmse_err)
+        task_loss = self.pc_criterion(logits[mask], Y_pc[mask])
+        task_metric = self.pc_metric(logits[mask], Y_pc[mask])
         self.log(f"{step_type}_loss", task_loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log(f"{step_type}_pc_metric", task_metric, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         return task_loss
