@@ -287,14 +287,20 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
                 enc = self.encoder(X_pc)
                 logits = self.pc_decoder(enc).squeeze()
                 assert(logits.shape == y_pc.shape)
-                task_loss = torch.clamp(self.pc_criterion(logits, y_pc), max=self.hparams.max_rmse_err)
-                task_metric = self.pc_metric(logits, y_pc)
+                mask = y_pc > -180
+                task_loss = self.pc_criterion(logits[mask], y_pc[mask])
+                task_metric = self.pc_metric(logits[mask], y_pc[mask])
+                #task_loss = torch.clamp(self.pc_criterion(logits, y_pc), max=self.hparams.max_rmse_err)
+                #task_metric = self.pc_metric(logits, y_pc)
                 del X_pc, y_pc
             elif task == "rc":
                 enc = self.encoder(X)
                 logits = self.rc_decoder(enc).squeeze()
-                task_loss = torch.clamp(self.rc_criterion(logits, X), max=self.hparams.max_rmse_err)
-                task_metric = self.rc_metric(logits, X)               
+                mask = X > -180
+                task_loss = self.pc_criterion(logits[mask], X[mask])
+                task_metric = self.pc_metric(logits[mask], X[mask])
+                #task_loss = torch.clamp(self.rc_criterion(logits, X), max=self.hparams.max_rmse_err)
+                #task_metric = self.rc_metric(logits, X)               
             else:
                 raise ValueError("Task not recognized.")
             self.log(f"{step_type}_{task}_loss", task_loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
