@@ -50,4 +50,15 @@ class StandardScaler():
         return mx_stand.filled(self.flag)
 
     def inverse_transform(self, data):
-        pass
+        # tensors
+        if isinstance(data, torch.Tensor):
+            mask = data == self.flag
+            data = data * torch.tensor(self.std) + torch.tensor(self.mean)
+            data[mask] = self.flag
+            return data
+        elif isinstance(data, np.ndarray):
+            mx = ma.masked_values(data, self.flag)
+            mx_scaled = mx*self.std + self.mean
+            return mx_scaled.filled(self.flag)
+        else:
+            raise TypeError("Data should be a torch tensor or a numpy array")

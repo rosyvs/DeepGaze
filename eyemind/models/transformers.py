@@ -5,6 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchmetrics
 from eyemind.dataloading.batch_loading import fixation_batch, predictive_coding_batch
+from ..dataloading.transforms import StandardScaler
 from eyemind.models.informer.models.model import InformerStack
 
 from eyemind.models.informer.utils.masking import TriangularCausalMask, ProbMask
@@ -41,6 +42,8 @@ class InformerEncoderDecoderModel(LightningModule):
                 freeze_encoder: bool=False):
         super().__init__()
         self.save_hyperparameters()
+        # Scaler
+        self.scaler = StandardScaler()
         # Loss function
         self.pc_criterion = RMSELoss()
         # Metrics
@@ -136,6 +139,8 @@ class InformerEncoderDecoderModel(LightningModule):
         mask = Y_pc > -180
         #task_loss = torch.clamp(self.pc_criterion(logits, Y_pc),max=self.hparams.max_rmse_err)
         task_loss = self.pc_criterion(logits[mask], Y_pc[mask])
+        logits = self.scaler.inverse_transform(logits)
+        Y_pc = self.scaler.inverse_transform(Y_pc)
         task_metric = self.pc_metric(logits[mask], Y_pc[mask])
         self.log(f"{step_type}_loss", task_loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log(f"{step_type}_pc_metric", task_metric, on_step=True, on_epoch=True, prog_bar=True, logger=True)
