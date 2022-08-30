@@ -53,7 +53,7 @@ class StandardScaler():
         # tensors
         if isinstance(data, torch.Tensor):
             mask = data == self.flag
-            data = data * torch.tensor(self.std) + torch.tensor(self.mean)
+            data = data * torch.tensor(self.std, device=data.device) + torch.tensor(self.mean, device=data.device)
             data[mask] = self.flag
             return data
         elif isinstance(data, np.ndarray):
