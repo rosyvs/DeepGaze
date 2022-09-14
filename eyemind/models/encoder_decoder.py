@@ -66,7 +66,8 @@ class EncoderDecoderModel(LightningModule):
         # Saves hyperparameters (init args)
         self.save_hyperparameters()
         self.encoder, self.decoder = create_encoder_decoder(hidden_dim, use_conv, input_seq_length=sequence_length)
-        self.criterion = nn.CrossEntropyLoss(torch.Tensor(class_weights))
+        #self.criterion = nn.CrossEntropyLoss(torch.tensor(class_weights) / torch.tensor(class_weights).sum())
+        self.criterion = nn.CrossEntropyLoss()
         self.num_classes = num_classes
         self.auroc_metric = torchmetrics.AUROC(num_classes=num_classes, average="weighted")
         self.accuracy_metric = torchmetrics.Accuracy(num_classes=num_classes)
@@ -141,7 +142,7 @@ class EncoderDecoderModel(LightningModule):
             probs = torch.sigmoid(logits)
             preds = (probs > threshold).float()
         elif self.num_classes > 1:
-            preds = torch.argmax(logits, dim=1)
+            preds = torch.argmax(logits, dim=-1)
         return preds
         
     @staticmethod
@@ -174,20 +175,36 @@ class VariableSequenceLengthEncoderDecoderModel(EncoderDecoderModel):
         except ValueError as e:
             print(f"{batch}")
             raise e
+        # TODO: check if there is a way to not do backprop: maybe just return loss = 0 
         logits = self(X).squeeze()
         logits = logits.reshape(-1, 2)
         y = y.reshape(-1).long()
-        loss = self.criterion(logits, y)
+        #loss = self.criterion(logits, y)
+        loss = self.fixation_loss(logits, y)
+        # if batch_idx == 1:
+        #     preds = self._get_preds(logits)
+        #     print(preds.sum(), y.sum())
         preds = self._get_preds(logits)
         probs = self._get_probs(logits)
         y = y.int()
         accuracy = self.accuracy_metric(probs, y)
         auroc = self.auroc_metric(probs, y)
         self.logger.experiment.add_scalars("losses", {f"{step_type}": loss}, self.global_step)        
+        self.log(f"{step_type}_fixations_fraction", {"predicted": preds.float().mean(), "gt": y.float().mean()}, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log(f"{step_type}_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log(f"{step_type}_accuracy", accuracy, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log(f"{step_type}_auroc", auroc, on_step=False, on_epoch=True, prog_bar=True, logger=True)
         return loss
+
+    def fixation_loss(self, logits, targets):
+        sac_idx = targets == 0
+        sac_loss = self.criterion(logits[sac_idx], targets[sac_idx])
+        fix_idx = torch.where(targets == 1)[0]
+        fix_idx_rand = fix_idx[torch.randint(len(fix_idx), (len(sac_idx),))]
+        fix_loss = self.criterion(logits[fix_idx_rand], targets[fix_idx_rand])
+        sac_loss = sac_loss if not torch.isnan(sac_loss) else 0
+        fix_loss = fix_loss if not torch.isnan(fix_loss) else 0        
+        return sac_loss + fix_loss
 
     @staticmethod
     def add_model_specific_args(parent_parser):
@@ -251,11 +268,45 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
             # self.criterions["rc"] = RMSELoss()
             # self.metrics["rc"] = torchmetrics.MeanSquaredError()         
         self.decoders = nn.ModuleList(self.decoders)
+
     def forward(self, X, task_name):
         enc = self.encoder(X)
         logits = self.decoders[task_name](enc)
         return logits
 
+    def predict_step(self, batch, batch_idx):
+        X, fix_y, X2, cl_y = batch
+        task_predictions = {}
+        for task in self.hparams.tasks:
+            if task == "cl":
+                enc1 = self.encoder(X)
+                enc2 = self.encoder(X2)
+                embed = torch.abs(enc1 - enc2)
+                logits = self.cl_decoder(embed).squeeze()
+                preds = self._get_preds(logits)
+                task_predictions["cl"] = preds
+                del X2, enc1, enc2, embed, preds
+            elif task == "fi":
+                enc = self.encoder(X)
+                logits = self.fi_decoder(enc).squeeze()
+                preds = self._get_preds(logits)
+                task_predictions["fi"] = preds
+                del enc
+            elif task == "pc":
+                X_pc, y_pc = self.predictive_coding_batch(batch[0])
+                enc = self.encoder(X_pc)
+                logits = self.pc_decoder(enc).squeeze()
+                assert(logits.shape == y_pc.shape)
+                task_predictions["pc"] = logits
+                del X_pc, y_pc
+            elif task == "rc":
+                enc = self.encoder(X)
+                logits = self.rc_decoder(enc).squeeze()
+                task_predictions["rc"] = logits    
+            else:
+                raise ValueError("Task not recognized.")
+        return task_predictions
+               
     def _step(self, batch, batch_idx, step_type):
         try:
             X, fix_y, X2, cl_y = batch
