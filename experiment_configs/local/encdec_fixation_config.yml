@@ -64,10 +64,10 @@ model:
   - fi
   sequence_length: 500
   pred_length: 100
-  hidden_dim: 256
+  hidden_dim: 1024
   class_weights:
-  - 3.0
-  - 1.0
+  - 2.43
+  - 0.63
   num_classes: 2
   use_conv: true
   learning_rate: 0.001

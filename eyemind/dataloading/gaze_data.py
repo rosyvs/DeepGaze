@@ -493,13 +493,17 @@ class BaseSequenceToSequenceDataModule(BaseGazeDataModule):
         return self.get_dataloader(self.test_dataset)
 
     def get_dataloader(self, dataset: Dataset):
+        if self.contrastive:
+            collate_fn = random_multitask_collate_fn
+        else:
+            collate_fn = random_collate_fn
         return DataLoader(
             dataset, 
             batch_size=self.batch_size, 
             num_workers=self.num_workers, 
             drop_last=self.drop_last, 
             pin_memory=self.pin_memory,
-            collate_fn=partial(random_collate_fn, self.sequence_length))
+            collate_fn=partial(collate_fn, self.sequence_length))
 
     @staticmethod
     def add_datamodule_specific_args(parent_parser):

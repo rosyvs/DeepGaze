@@ -1,6 +1,22 @@
 from pathlib import Path
 import pandas as pd
 
+def avg_fixation_len(fixations):
+    i = 0
+    fix_lens = []
+    while i < len(fixations):
+        if fixations[i]:
+            j = i
+            while j < len(fixations) and fixations[j]:
+                j+=1
+            fix_lens.append(j - i)
+            i = j
+        else: 
+            i+= 1
+    if len(fix_lens) == 0:
+        return 500, 0
+    return sum(fix_lens) / len(fix_lens), len(fix_lens)
+
 
 def fixation_label_mapper(folder, files):
     labels = []

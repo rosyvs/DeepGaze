@@ -66,8 +66,8 @@ class EncoderDecoderModel(LightningModule):
         # Saves hyperparameters (init args)
         self.save_hyperparameters()
         self.encoder, self.decoder = create_encoder_decoder(hidden_dim, use_conv, input_seq_length=sequence_length)
-        #self.criterion = nn.CrossEntropyLoss(torch.tensor(class_weights) / torch.tensor(class_weights).sum())
-        self.criterion = nn.CrossEntropyLoss()
+        self.criterion = nn.CrossEntropyLoss(torch.tensor(class_weights) / torch.tensor(class_weights).sum())
+        #self.criterion = nn.CrossEntropyLoss()
         self.num_classes = num_classes
         self.auroc_metric = torchmetrics.AUROC(num_classes=num_classes, average="weighted")
         self.accuracy_metric = torchmetrics.Accuracy(num_classes=num_classes)
@@ -179,8 +179,8 @@ class VariableSequenceLengthEncoderDecoderModel(EncoderDecoderModel):
         logits = self(X).squeeze()
         logits = logits.reshape(-1, 2)
         y = y.reshape(-1).long()
-        #loss = self.criterion(logits, y)
-        loss = self.fixation_loss(logits, y)
+        loss = self.criterion(logits, y)
+        #loss = self.fixation_loss(logits, y)
         # if batch_idx == 1:
         #     preds = self._get_preds(logits)
         #     print(preds.sum(), y.sum())
@@ -273,6 +273,33 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
         enc = self.encoder(X)
         logits = self.decoders[task_name](enc)
         return logits
+
+    def predict_task(self, batch, task):
+        X, fix_y, X2, cl_y = batch
+        if task == "cl":
+            enc1 = self.encoder(X)
+            enc2 = self.encoder(X2)
+            embed = torch.abs(enc1 - enc2)
+            logits = self.cl_decoder(embed).squeeze()
+            preds = self._get_preds(logits)
+            targets = cl_y
+        elif task == "fi":
+            enc = self.encoder(X)
+            logits = self.fi_decoder(enc).squeeze()
+            preds = self._get_preds(logits)
+            targets = fix_y
+        elif task == "pc":
+            X_pc, y_pc = self.predictive_coding_batch(batch[0])
+            enc = self.encoder(X_pc)
+            logits = self.pc_decoder(enc).squeeze()
+            targets = y_pc
+        elif task == "rc":
+            enc = self.encoder(X)
+            logits = self.rc_decoder(enc).squeeze()
+            targets = X
+        else:
+            raise ValueError("Task not recognized.")        
+        return preds, targets
 
     def predict_step(self, batch, batch_idx):
         X, fix_y, X2, cl_y = batch

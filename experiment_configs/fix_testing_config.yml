@@ -23,7 +23,7 @@ trainer:
   check_val_every_n_epoch: 1
   fast_dev_run: false
   accumulate_grad_batches: null
-  max_epochs: 50
+  max_epochs: 200
   min_epochs: null
   max_steps: -1
   min_steps: null
@@ -61,11 +61,11 @@ trainer:
   stochastic_weight_avg: false
   terminate_on_nan: null
 model:
-  sequence_length: 100
-  hidden_dim: 128
+  sequence_length: 500
+  hidden_dim: 1024
   class_weights:
-  - 3.5
-  - 1.
+  - 2.43
+  - 0.63
   num_classes: 2
   learning_rate: 0.001
   freeze_encoder: false
@@ -76,7 +76,7 @@ data:
   test_dir: null
   train_dataset: null
   test_dataset: null
-  sequence_length: 100
+  sequence_length: 500
   num_workers: 4
   batch_size: 64
   pin_memory: true
