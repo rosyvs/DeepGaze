@@ -61,7 +61,7 @@ trainer:
   stochastic_weight_avg: false
   terminate_on_nan: null
 model:
-  sequence_length: 500
+  sequence_length: 100
   hidden_dim: 1024
   class_weights:
   - 2.43
@@ -76,8 +76,8 @@ data:
   test_dir: null
   train_dataset: null
   test_dataset: null
-  sequence_length: 500
+  sequence_length: 100
   num_workers: 4
-  batch_size: 64
+  batch_size: 128
   pin_memory: true
   drop_last: true
