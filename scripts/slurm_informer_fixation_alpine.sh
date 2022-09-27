@@ -4,10 +4,10 @@
 #SBATCH --time=10:00:00
 #SBATCH --partition=aa100
 #SBATCH --ntasks=1
-#SBATCH --gres=gpu:4
-#SBATCH --job-name=multitask-test-alpine
+#SBATCH --gres=gpu:3
+#SBATCH --job-name=informer-fixation-alpine
 #SBATCH --cpus-per-task=4
-#SBATCH --output=multitask-test-alpine-exp.%j.out
+#SBATCH --output=informer-fixation-alpine-exp.%j.out
 
 module load cudnn/8.1
 module load cuda/11.3

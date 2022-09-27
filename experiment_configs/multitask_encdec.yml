@@ -32,7 +32,7 @@ trainer:
   val_check_interval: null
   log_every_n_steps: 10
   accelerator: gpu
-  strategy: ddp_find_unused_parameters_false
+  strategy: null
   sync_batchnorm: false
   precision: 32
   enable_model_summary: true
