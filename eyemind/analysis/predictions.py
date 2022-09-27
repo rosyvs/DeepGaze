@@ -6,12 +6,12 @@ import torch
 def load_model_from_checkpoint(model_cls, checkpoint_path):
     return model_cls.load_from_checkpoint(checkpoint_path)
 
-def get_dataloader(config_path, data_base_dir="/Users/rickgentry/emotive_lab/eyemind/data", label_filepath="processed/EML1_pageLevel_with_filename_seq.csv", data_dir="processed/fixation"):
+def get_dataloader(config_path, dm_cls=BaseSequenceToSequenceDataModule, data_base_dir="/Users/rickgentry/emotive_lab/eyemind/data", label_filepath="processed/EML1_pageLevel_with_filename_seq.csv", data_dir="processed/fixation"):
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
     config["data"]["data_dir"] = str(Path(data_base_dir, data_dir).resolve())
     config["data"]["label_filepath"] = str(Path(data_base_dir, label_filepath).resolve())
-    dm = BaseSequenceToSequenceDataModule(**config['data'])
+    dm = dm_cls(**config['data'])
     dm.setup()
     return dm.predict_dataloader()
 

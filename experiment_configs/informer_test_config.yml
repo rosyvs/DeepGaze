@@ -23,7 +23,7 @@ trainer:
   check_val_every_n_epoch: 1
   fast_dev_run: false
   accumulate_grad_batches: null
-  max_epochs: 50
+  max_epochs: 200
   min_epochs: null
   max_steps: -1
   min_steps: null
@@ -69,7 +69,7 @@ model:
   pred_len: 100
   padding: 0
   factor: 5
-  d_model: 256
+  d_model: 512
   n_heads: 8
   e_layers: 3
   d_layers: 2
@@ -78,11 +78,11 @@ model:
   attn: prob
   activation: gelu
   output_attention: false
-  distil: true
+  distil: false
   mix: true
   class_weights:
-  - 3.0
-  - 1.0
+  - 2.43
+  - 0.63
   learning_rate: 0.001
   freeze_encoder: false
 data:
@@ -92,7 +92,7 @@ data:
   train_dataset: null
   test_dataset: null
   sequence_length: 500
-  num_workers: 4
+  num_workers: 8
   batch_size: 64
   pin_memory: true
   drop_last: true

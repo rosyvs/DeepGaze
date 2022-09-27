@@ -88,23 +88,24 @@ def viz_pred_code(inputs, outcomes, preds, title):
 
   # The input sequence
   plt.plot(list(range(n1)),
-           inputs[0, :, 0].cpu().numpy(),
+           inputs[0, :, 0].detach().cpu().numpy(),
            label="x",
            color="orange")
   plt.plot(list(range(n1)),
-           inputs[0, :, 1].cpu().numpy(),
+           inputs[0, :, 1].detach().cpu().numpy(),
            label="y",
            color="blue")
+  plt.ylim([-10, 10])
 
   # The acutal sequence
   plt.scatter(list(range(n1, n1 + n2)),
-              outcomes[0, :, 0].cpu().numpy(),
+              outcomes[0, :, 0].detach().cpu().numpy(),
               marker=".",
               alpha=0.5,
               label="x next",
               color="orange")
   plt.scatter(list(range(n1, n1 + n2)),
-              outcomes[0, :, 1].cpu().numpy(),
+              outcomes[0, :, 1].detach().cpu().numpy(),
               marker=".",
               alpha=0.5,
               label="y next",
@@ -144,25 +145,25 @@ def viz_recon(inputs, recons, title):
 
   # The input sequence
   plt.plot(list(range(n1)),
-           inputs[0, :, 0].cpu().numpy(),
+           inputs[0, :, 0].detach().cpu().numpy(),
            label="x",
            color="orange",
            alpha=0.8)
   plt.plot(list(range(n1)),
-           inputs[0, :, 1].cpu().numpy(),
+           inputs[0, :, 1].detach().cpu().numpy(),
            label="y",
            color="blue",
            alpha=0.8)
 
   # The re-construction sequence
   plt.plot(list(range(n1)),
-           recons[0, :n1, 0].cpu().numpy(),
+           recons[0, :n1, 0].detach().cpu().numpy(),
            '--',
            label="x'",
            color="orange",
            alpha=0.8)
   plt.plot(list(range(n1)),
-           recons[0, :n1, 1].cpu().numpy(),
+           recons[0, :n1, 1].detach().cpu().numpy(),
            '--',
            label="y'",
            color="blue",
