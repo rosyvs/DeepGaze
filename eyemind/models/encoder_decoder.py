@@ -382,7 +382,7 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
             else:
                 raise ValueError("Task not recognized.")
             self.log(f"{step_type}_{task}_loss", task_loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-            self.log(f"{step_type}_{task}_metric", task_metric, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+            self.log(f"{step_type}_{task}_metric", task_metric, on_step=False, on_epoch=True, prog_bar=True, logger=True)
             total_loss += task_loss
         self.log(f"{step_type}_loss", total_loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         return total_loss

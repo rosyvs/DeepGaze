@@ -284,7 +284,8 @@ class BaseGazeDataModule(LightningDataModule, ABC):
             dataset, 
             batch_size=self.batch_size, 
             num_workers=self.num_workers, 
-            drop_last=self.drop_last, 
+            drop_last=self.drop_last,
+            persistent_workers=True, 
             pin_memory=self.pin_memory)
 
     @property 
