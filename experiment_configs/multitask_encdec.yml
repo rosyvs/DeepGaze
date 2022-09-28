@@ -78,7 +78,7 @@ data:
   test_dataset: null
   sequence_length: 500
   num_workers: 4
-  batch_size: 128
+  batch_size: 64
   pin_memory: true
   drop_last: true
   contrastive: true
