@@ -2,13 +2,11 @@
 seed_everything: 42
 trainer:
   logger: true
-  checkpoint_callback: null
   enable_checkpointing: true
   callbacks: null
   default_root_dir: null
-  gradient_clip_val: 0.5
+  gradient_clip_val: null
   gradient_clip_algorithm: null
-  process_position: 0
   num_nodes: 1
   num_processes: null
   devices: null
@@ -16,8 +14,6 @@ trainer:
   auto_select_gpus: false
   tpu_cores: null
   ipus: null
-  log_gpu_memory: null
-  progress_bar_refresh_rate: 0
   enable_progress_bar: true
   overfit_batches: 0.0
   track_grad_norm: -1
@@ -34,33 +30,28 @@ trainer:
   limit_test_batches: null
   limit_predict_batches: null
   val_check_interval: null
-  flush_logs_every_n_steps: null
-  log_every_n_steps: 30
+  log_every_n_steps: 50
   accelerator: gpu
   strategy: null
   sync_batchnorm: false
   precision: 32
   enable_model_summary: true
-  weights_summary: top
   weights_save_path: null
   num_sanity_val_steps: 2
   resume_from_checkpoint: null
   profiler: null
   benchmark: null
-  deterministic: false
+  deterministic: null
   reload_dataloaders_every_n_epochs: 0
   auto_lr_find: false
   replace_sampler_ddp: true
   detect_anomaly: false
   auto_scale_batch_size: false
-  prepare_data_per_node: null
   plugins: null
   amp_backend: native
   amp_level: null
   move_metrics_to_cpu: false
   multiple_trainloader_mode: max_size_cycle
-  stochastic_weight_avg: false
-  terminate_on_nan: null
 model:
   enc_in: 2
   factor: 5
@@ -73,11 +64,11 @@ model:
   activation: gelu
   output_attention: false
   distil: true
-  learning_rate: 0.0001
-  encoder_ckpt: /Users/rickgentry/emotive_lab/eyemind/lightning_logs/informer_fix_pc_500seq_120epochs/checkpoints/epoch=120-step=2057.ckpt
-  freeze_encoder: false
+  learning_rate: 0.001
+  encoder_ckpt: /projects/rige3027/eyemind/lightning_logs/informer_fix_pc_500seq_120epochs/checkpoints/epoch=120-step=2057.ckpt
+  freeze_encoder: true
 data:
-  data_dir: /projects/rige3027/eyemind/data/processed/fixation
+  data_dir: /projects/rige3027/eyemind/data/processed/output
   label_filepath: /projects/rige3027/eyemind/data/processed/EML1_pageLevel_with_filename_seq.csv
   label_col: Rote_X
   load_setup_path: null
@@ -88,8 +79,7 @@ data:
   val_fold: null
   sequence_length: 500
   num_workers: 4
-  batch_size: 64
+  batch_size: 16
   pin_memory: true
   drop_last: true
   scale: true
-ckpt_path: null

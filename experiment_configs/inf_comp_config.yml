@@ -79,7 +79,7 @@ data:
   val_fold: null
   sequence_length: 500
   num_workers: 4
-  batch_size: 64
+  batch_size: 16
   pin_memory: true
   drop_last: true
   scale: true
