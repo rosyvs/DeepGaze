@@ -65,7 +65,7 @@ model:
   output_attention: false
   distil: true
   learning_rate: 0.0001
-  encoder_ckpt: /Users/rickgentry/emotive_lab/eyemind/lightning_logs/informer_fix_pc_500seq_120epochs/checkpoints/epoch=120-step=2057.ckpt
+  encoder_ckpt: /projects/rige3027/eyemind/lightning_logs/informer_fix_pc_500seq_120epochs/checkpoints/epoch=120-step=2057.ckpt
   freeze_encoder: false
 data:
   data_dir: /projects/rige3027/eyemind/data/processed/fixation
