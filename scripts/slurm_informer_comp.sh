@@ -19,4 +19,4 @@ cd /projects/$USER/eyemind
 conda activate pya100
 pip install .
 pip install torch==1.12.0+cu113 torchvision==0.13.0+cu113 -f https://download.pytorch.org/whl/torch_stable.html
-python3 eyemind/experiments/informer_experiment.py fit -c experiment_configs/informer_comp_config.yml
+python3 eyemind/experiments/comprehension_experiment.py fit -c experiment_configs/informer_comp_config.yml
