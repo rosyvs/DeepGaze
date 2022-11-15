@@ -4,4 +4,4 @@ from eyemind.dataloading.informer_data import InformerDataModule
 
 
 if __name__ == "__main__":
-    cli = LightningCLI(InformerEncoderFixationModel, InformerDataModule, seed_everything_default=42)
+    cli = LightningCLI(InformerEncoderDecoderModel, InformerDataModule, seed_everything_default=42)

@@ -13,7 +13,7 @@ def plot_figures(preds, targets):
             ax.step(np.arange(len(preds[0])),targets[j * i].numpy(), preds[j * i].numpy())
     plt.show()
 
-def viz_predictive_coding(inputs, preds, title):
+def viz_coding(inputs, preds, title):
   """
   
   Args:
@@ -50,5 +50,7 @@ def viz_predictive_coding(inputs, preds, title):
               color="green")
 
   plt.title(title)
+  plt.xlabel("Time Steps (500 steps ~ 8.5s)")
+  plt.ylabel("Visual Angle (screen center is (0,0))")
   plt.legend()
   plt.show()

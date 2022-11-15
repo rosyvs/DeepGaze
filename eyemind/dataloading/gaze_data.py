@@ -323,7 +323,8 @@ class SequenceToLabelDataModule(GroupStratifiedNestedCVDataModule, BaseGazeDataM
                 num_workers: int = 0,
                 batch_size: int = 8,
                 pin_memory: bool = True,
-                drop_last: bool = True,            
+                drop_last: bool = True,
+                scale: bool = False,          
                 ):
         super().__init__()
         self.data_dir = data_dir
@@ -340,6 +341,7 @@ class SequenceToLabelDataModule(GroupStratifiedNestedCVDataModule, BaseGazeDataM
         self.num_workers = num_workers
         self.pin_memory = pin_memory
         self.drop_last = drop_last
+        self.scale = scale
 
 
     def prepare_data(self):
@@ -350,16 +352,20 @@ class SequenceToLabelDataModule(GroupStratifiedNestedCVDataModule, BaseGazeDataM
 
     def setup(self, stage: Optional[str] = None):
         if stage in ("fit", "predict", None):
-            dataset = SequenceLabelDataset(self.data_dir, file_mapper=self.file_mapper, label_mapper=self.label_mapper, transform_x=self.x_transforms, transform_y=self.y_transforms)
+            dataset = SequenceLabelDataset(self.data_dir, file_mapper=self.file_mapper, label_mapper=self.label_mapper, transform_x=self.x_transforms, transform_y=self.y_transforms, scale=self.scale)
             if self.load_setup_path:
                 self.load_setup(dataset)
             else:
                 if self.test_dir:
                     self.train_dataset = dataset
                 else:
-                    splits = train_test_split(np.arange(len(dataset.files)), dataset.labels, test_size=0.15, stratify=dataset.labels)
-                    self.train_dataset = Subset(dataset, splits[0])
-                    self.test_dataset = Subset(dataset, splits[1])
+                    train_val_splits, test_split = train_test_split(np.arange(len(dataset.files)), test_size=0.1)
+                    train_split, val_split = train_test_split(train_val_splits, test_size=0.2)
+                    self.splits = (train_split, val_split, test_split)
+                    self.test_dataset = Subset(dataset, self.splits[2])
+                self.train_dataset = Subset(dataset, self.splits[0])
+                self.val_fold = Subset(dataset, self.splits[1])
+  
         elif stage == "test":
             if self.test_dir:
                 self.test_dataset = SequenceLabelDataset(dir, file_mapper=self.file_mapper, label_mapper=self.label_mapper, transform_x=self.x_transforms, transform_y=self.y_transforms)
@@ -396,6 +402,7 @@ class SequenceToLabelDataModule(GroupStratifiedNestedCVDataModule, BaseGazeDataM
         group.add_argument("--label_filepath", type=str)
         group.add_argument("--label_col", type=str)
         group.add_argument("--sequence_length", type=int, default=500)
+        group.add_argument("--scale", action='store_true')
         return parent_parser
 
     @property
