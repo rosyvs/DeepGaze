@@ -1,3 +1,4 @@
+from functools import reduce
 from typing import Any, List
 from pytorch_lightning import LightningModule
 import torch
@@ -36,6 +37,7 @@ class InformerEncoder(nn.Module):
         # Encoder
         self.enc_embedding = GazeEmbedding(enc_in, d_model, dropout)
         Attn = ProbAttention if attn=='prob' else FullAttention
+
         self.encoder = Encoder(
             [
                 EncoderLayer(
@@ -54,13 +56,59 @@ class InformerEncoder(nn.Module):
             ] if distil else None,
             norm_layer=torch.nn.LayerNorm(d_model)
         )
-    def forward(self, x_enc, enc_self_mask=None, ):
+    def forward(self, x_enc, enc_self_mask=None):
         enc_out = self.enc_embedding(x_enc)
         enc_out, attns = self.encoder(enc_out, attn_mask=enc_self_mask)
         if self.output_attention:
             return enc_out, attns
         else:
             return enc_out
+
+class InformerDecoder(nn.Module):
+    def __init__(self,                 
+                dec_in: int=1, 
+                c_out: int=2, 
+                factor: int=5, 
+                d_model: int=512, 
+                n_heads: int=8, 
+                d_layers: int=2, 
+                d_ff: int=512, 
+                dropout: float=0.05, 
+                attn: str='prob', 
+                activation: str='gelu', 
+                mix: bool=True,
+                ):
+        super().__init__()
+        Attn = ProbAttention if attn=='prob' else FullAttention
+
+        self.dec_embedding = GazeEmbedding(dec_in, d_model, dropout)
+
+        self.decoder = Decoder(
+            [
+                DecoderLayer(
+                    AttentionLayer(Attn(True, factor, attention_dropout=dropout, output_attention=False), 
+                                d_model, n_heads, mix=mix),
+                    AttentionLayer(FullAttention(False, factor, attention_dropout=dropout, output_attention=False), 
+                                d_model, n_heads, mix=False),
+                    d_model,
+                    d_ff,
+                    dropout=dropout,
+                    activation=activation,
+                )
+                for l in range(d_layers)
+            ],
+            norm_layer=torch.nn.LayerNorm(d_model)
+        )
+        self.projection = nn.Linear(d_model, c_out, bias=True)
+
+    def forward(self, enc_out, x_dec, dec_self_mask=None, dec_enc_mask=None, pred_len=0):
+        dec_out = self.dec_embedding(x_dec)
+        dec_out = self.decoder(dec_out, enc_out, x_mask=dec_self_mask, cross_mask=dec_enc_mask)
+        dec_out = self.projection(dec_out)
+        if pred_len:
+            return dec_out[:, -pred_len:]
+        else:                     
+            return dec_out
 
 class InformerEncoderDecoderModel(LightningModule):
     def __init__(self, 
@@ -495,112 +543,51 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
         # Encoder
         self.encoder = InformerEncoder(enc_in, factor, d_model, n_heads, e_layers, d_ff, dropout, attn, activation, output_attention, distil)
         # Decoders, metrics, and criterions for each task
+        decoders = []
         if "fi" in tasks:
-            #self.decoders["fi"] = fi_decoder
-            self.fi_decoder = fi_decoder
-            self.decoders.append(fi_decoder)
-            # self.criterions["fi"] = nn.CrossEntropyLoss(torch.Tensor(class_weights))
-            # self.metrics["fi"] = torchmetrics.AUROC(num_classes=num_classes, average="weighted")
+            self.fi_decoder = nn.Linear(d_model, c_out, bias=True)
+            decoders.append(self.fi_decoder)
             self.fi_criterion = nn.CrossEntropyLoss(torch.Tensor(class_weights))
-            self.fi_metric = torchmetrics.AUROC(num_classes=num_classes, average="weighted")
+            #self.fi_criterion = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor(class_weights))
+            self.fi_metric = torchmetrics.AveragePrecision(num_classes=c_out)
         if "pc" in tasks:
-            #self.decoders['pc'] = create_decoder(hidden_dim,output_seq_length=pred_length)
-            self.pc_decoder = create_decoder(hidden_dim,output_seq_length=pred_length)
-            self.decoders.append(self.pc_decoder)
+            self.pc_decoder = InformerDecoder(dec_in, c_out, factor, d_model, n_heads, d_layers, d_ff, dropout, attn, activation, mix)
+            decoders.append(self.pc_decoder)
             self.pc_criterion = RMSELoss()
             self.pc_metric = torchmetrics.MeanSquaredError(squared=False)
-            # self.criterions["pc"] = RMSELoss()
-            # self.metrics["pc"] = torchmetrics.MeanSquaredError()
         if "cl" in tasks:
-            cl_input_dim = hidden_dim * 2
-            cl_decoder = ae.MLP(input_dim=cl_input_dim,
-                                layers=[128, 2],
+            #cl_input_dim = hidden_dim * 2
+            self.cl_decoder = ae.MLP(input_dim=d_model,
+                                layers=[128, c_out],
+                                activation="relu",
                                 batch_norm=True)
-            #self.decoders["cl"] = cl_decoder
-            self.cl_decoder = cl_decoder
-            self.decoders.append(self.cl_decoder)
+            decoders.append(self.cl_decoder)
             self.cl_criterion = nn.CrossEntropyLoss()
-            self.cl_metric = torchmetrics.Accuracy(num_classes=num_classes)
+            self.cl_metric = torchmetrics.Accuracy(num_classes=c_out)
 
             # self.criterions["cl"] = nn.CrossEntropyLoss()
             # self.metrics["cl"] = torchmetrics.Accuracy(num_classes=num_classes)
         if "rc" in tasks:
             #self.decoders["rc"] = create_decoder(hidden_dim,output_seq_length=sequence_length)
-            self.rc_decoder = create_decoder(hidden_dim,output_seq_length=sequence_length)
-            self.decoders.append(self.rc_decoder)
+            self.rc_decoder = InformerDecoder(dec_in, c_out, factor, d_model, n_heads, d_layers, d_ff, dropout, attn, activation, mix)
+            decoders.append(self.rc_decoder)
             self.rc_criterion = RMSELoss()
             self.rc_metric = torchmetrics.MeanSquaredError(squared=False)
             # self.criterions["rc"] = RMSELoss()
             # self.metrics["rc"] = torchmetrics.MeanSquaredError()         
-        self.decoders = nn.ModuleList(self.decoders)
-
-        # Loss function
-        self.pc_criterion = RMSELoss()
-        # Metrics
-        self.pc_metric = torchmetrics.MeanSquaredError(squared=False) 
-        # Encoding
-        self.enc_embedding = GazeEmbedding(enc_in, d_model, dropout)
-        self.dec_embedding = GazeEmbedding(dec_in, d_model, dropout)
-        # Attention
-        Attn = ProbAttention if attn=='prob' else FullAttention
-        # Encoder
-
-        self.encoder = Encoder(
-            [
-                EncoderLayer(
-                    AttentionLayer(Attn(False, factor, attention_dropout=dropout, output_attention=output_attention), 
-                                d_model, n_heads, mix=False),
-                    d_model,
-                    d_ff,
-                    dropout=dropout,
-                    activation=activation
-                ) for l in range(e_layers)
-            ],
-            [
-                ConvLayer(
-                    d_model
-                ) for l in range(e_layers-1)
-            ] if distil else None,
-            norm_layer=torch.nn.LayerNorm(d_model)
-        )
-        # Decoder
-        self.decoder = Decoder(
-            [
-                DecoderLayer(
-                    AttentionLayer(Attn(True, factor, attention_dropout=dropout, output_attention=False), 
-                                d_model, n_heads, mix=mix),
-                    AttentionLayer(FullAttention(False, factor, attention_dropout=dropout, output_attention=False), 
-                                d_model, n_heads, mix=False),
-                    d_model,
-                    d_ff,
-                    dropout=dropout,
-                    activation=activation,
-                )
-                for l in range(d_layers)
-            ],
-            norm_layer=torch.nn.LayerNorm(d_model)
-        )
-        # self.end_conv1 = nn.Conv1d(in_channels=label_len+out_len, out_channels=out_len, kernel_size=1, bias=True)
-        # self.end_conv2 = nn.Conv1d(in_channels=d_model, out_channels=c_out, kernel_size=1, bias=True)
-        self.projection = nn.Linear(d_model, c_out, bias=True)
+        self.decoders = nn.ModuleList(decoders)
         
     def forward(self, x_enc, x_dec, enc_self_mask=None, dec_self_mask=None, dec_enc_mask=None):
         #x_enc: (bs, sequence_len,2)
         #x_dec: (bs, sequence_len)
-        enc_out = self.enc_embedding(x_enc)
-        enc_out, attns = self.encoder(enc_out, attn_mask=enc_self_mask)
-        #print(x_dec[0])
-        dec_out = self.dec_embedding(x_dec)
-        #print(dec_out[0])
-        dec_out = self.decoder(dec_out, enc_out, x_mask=dec_self_mask, cross_mask=dec_enc_mask)
-        dec_out = self.projection(dec_out)
-        
-        # dec_out = self.end_conv1(dec_out)
-        # dec_out = self.end_conv2(dec_out.transpose(2,1)).transpose(1,2)
         if self.hparams.output_attention:
-            return dec_out[:,-self.hparams.pred_len:,:], attns
+            enc_out, attns = self.encoder(x_enc, enc_self_mask)
+            dec_out = self.decoder(enc_out, x_dec, dec_self_mask, dec_enc_mask)
+            return dec_out, attns
         else:
-            return dec_out[:,-self.hparams.pred_len:,:] # [B, L, D]
+            enc_out = self.encoder(x_enc, enc_self_mask)
+            dec_out = self.decoder(enc_out, x_dec, dec_self_mask, dec_enc_mask)
+            return dec_out
 
     def training_step(self, batch, batch_idx):
         return self._step(batch, batch_idx, step_type="train")
@@ -613,50 +600,68 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
 
     def _step(self, batch, batch_idx, step_type):
         try:
-            X, fix_y = batch
+            X, fix_y, X2, cl_y = batch
         except ValueError as e:
             print(f"{batch}")
             raise e
-
-        # Predictive Coding:
-        X_pc, Y_pc = predictive_coding_batch(X, self.hparams.seq_len, self.hparams.pred_len, self.hparams.label_len)
-        if self.hparams.output_attention:
-            logits = self(X_pc, Y_pc)[0]
-        else:
-            logits = self(X_pc, Y_pc)
-        logits = logits.squeeze()
-        assert(logits.shape == Y_pc.shape)
-        mask = Y_pc > -180
-        #task_loss = torch.clamp(self.pc_criterion(logits, Y_pc),max=self.hparams.max_rmse_err)
-        task_loss = self.pc_criterion(logits[mask], Y_pc[mask])
-        logits = self.scaler.inverse_transform(logits)
-        Y_pc = self.scaler.inverse_transform(Y_pc)
-        task_metric = self.pc_metric(logits[mask], Y_pc[mask])
-        self.log(f"{step_type}_loss", task_loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        self.log(f"{step_type}_pc_metric", task_metric, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        return task_loss
-        # Task 1. Fixation ID
-        # fix_decoder_inp, targets = fixation_batch(self.hparams.seq_len, self.hparams.label_len, self.hparams.pred_len, X, fix_y, padding=self.hparams.padding)
-        # if self.hparams.output_attention:
-        #     logits = self(X, fix_decoder_inp)[0]
-        # else:
-        #     logits = self(X, fix_decoder_inp)
-        # logits = logits.squeeze().reshape(-1,2)
-        # targets = targets.reshape(-1).long()
-        # loss = self.criterion(logits, targets)
-        # preds = self._get_preds(logits)
-        # probs = self._get_probs(logits)
-        # targets = targets.int()
-        # accuracy = self.accuracy_metric(probs, targets)
-        # auroc = self.auroc_metric(probs, targets)
-        # self.logger.experiment.add_scalars("losses", {f"{step_type}": loss}, self.current_epoch)        
-        # self.log(f"{step_type}_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        # self.log(f"{step_type}_accuracy", accuracy, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        # self.log(f"{step_type}_auroc", auroc, on_step=False, on_epoch=True, prog_bar=True, logger=True)
-        # return loss
+        total_loss = 0
+        for task in self.hparams.tasks:
+            if task == "cl":
+                enc1 = self.encoder(X)
+                enc1 = enc1.mean(dim=1)
+                enc2 = self.encoder(X2)
+                enc2 = enc2.mean(dim=1)
+                embed = torch.abs(enc1 - enc2)
+                logits = self.cl_decoder(embed).squeeze()
+                cl_y = cl_y.reshape(-1).long()
+                task_loss = self.cl_criterion(logits, cl_y)
+                probs = self._get_probs(logits)
+                task_metric = self.cl_metric(probs, cl_y.int())
+                del X2, cl_y, enc1, enc2, embed, probs
+            elif task == "fi":
+                enc = self.encoder(X)
+                logits = self.fi_decoder(enc).squeeze().reshape(-1,2)
+                targets_fi = fix_y.reshape(-1).long()
+                task_loss = self.fi_criterion(logits, targets_fi)
+                probs = self._get_probs(logits)
+                task_metric = self.fi_metric(probs, targets_fi.int())
+                del enc, probs, targets_fi, fix_y
+            elif task == "pc":
+                X_pc, y_pc = predictive_coding_batch(X, self.hparams.seq_len, self.hparams.pred_len, self.hparams.label_len)
+                enc = self.encoder(X_pc)
+                logits = self.pc_decoder(enc, y_pc, pred_len=self.hparams.pred_len).squeeze()[0] if self.hparams.output_attention else self.pc_decoder(enc, y_pc, pred_len=self.hparams.pred_len).squeeze()
+                assert(logits.shape == y_pc.shape)
+                mask = y_pc > -180
+                task_loss = self.pc_criterion(logits[mask], y_pc[mask])
+                logits = self.scaler.inverse_transform(logits)
+                y_pc = self.scaler.inverse_transform(y_pc)
+                task_metric = self.pc_metric(logits[mask], y_pc[mask])
+                #task_loss = torch.clamp(self.pc_criterion(logits, y_pc), max=self.hparams.max_rmse_err)
+                #task_metric = self.pc_metric(logits, y_pc)
+                del X_pc, y_pc
+            elif task == "rc":
+                enc = self.encoder(X)
+                logits = self.rc_decoder(enc, X).squeeze()
+                mask = X > -180
+                task_loss = self.pc_criterion(logits[mask], X[mask])
+                logits = self.scaler.inverse_transform(logits)
+                y_rc = self.scaler.inverse_transform(X)
+                task_metric = self.pc_metric(logits[mask], y_rc[mask])
+                #task_loss = torch.clamp(self.rc_criterion(logits, X), max=self.hparams.max_rmse_err)
+                #task_metric = self.rc_metric(logits, X)
+                del y_rc               
+            else:
+                raise ValueError("Task not recognized.")
+            self.log(f"{step_type}_{task}_loss", task_loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+            self.log(f"{step_type}_{task}_metric", task_metric, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+            total_loss += task_loss
+        self.log(f"{step_type}_loss", total_loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        return total_loss
 
     def configure_optimizers(self):
-        params = self.decoder.parameters() if self.hparams.freeze_encoder else list(self.encoder.parameters()) + list(self.decoder.parameters())
+        params = [list(m.parameters()) for m in self.decoders]
+        params.append(list(self.encoder.parameters()))
+        params = reduce(lambda x,y: x + y, params)
         optimizer = torch.optim.Adam(params, lr=self.hparams.learning_rate)
         res = {"optimizer": optimizer}
         res['lr_scheduler'] = {"scheduler": torch.optim.lr_scheduler.StepLR(optimizer, step_size=max(1,int(self.trainer.max_epochs / 5)), gamma=0.5)}
@@ -679,7 +684,7 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
         
     @staticmethod
     def add_model_specific_args(parent_parser):
-        parser = parent_parser.add_argument_group("InformerEncoderDecoderModel")
+        parser = parent_parser.add_argument_group("InformerMultiTaskModel")
         parser.add_argument('--learning_rate', type=float, default=0.001)
         parser.add_argument('--sequence_length', type=int, default=250)
         parser.add_argument('--label_len', type=int, default=100, help='start token length of Informer decoder')
@@ -701,8 +706,8 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
         parser.add_argument('--activation', type=str, default='gelu',help='activation')
         parser.add_argument('--output_attention', action='store_true', help='whether to output attention in ecoder')
         parser.add_argument('--class_weights', type=float, nargs='*', default=[3., 1.])
+        parser.add_argument('--tasks', type=str, nargs='*', default=["fi", "cl", "rc", "pc"])
         parser.add_argument('--freeze_encoder', type=bool, default=False)
-        parser.add_argument('--max_rmse_err', type=float, default=70., help='clamps max rmse loss')
         return parser
     
 class InformerClassifierModel(LightningModule):

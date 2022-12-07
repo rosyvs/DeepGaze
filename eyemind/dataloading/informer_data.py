@@ -34,6 +34,7 @@ class InformerDataModule(BaseSequenceToSequenceDataModule):
                 pin_memory: bool = True,
                 drop_last: bool = True,
                 min_scanpath_length: int = 500,
+                contrastive: bool = False,
                 ):
         super().__init__(data_dir,
                         label_filepath,
@@ -48,12 +49,13 @@ class InformerDataModule(BaseSequenceToSequenceDataModule):
                         pin_memory,
                         drop_last,
                         False,
-                        min_scanpath_length
+                        min_scanpath_length,
                         )
         self.train_fold = train_fold
         self.val_fold = val_fold
         self.pred_length = pred_length
         self.label_length = label_length
+        self.contrastive = contrastive
 
 
     def prepare_data(self):
@@ -102,13 +104,17 @@ class InformerDataModule(BaseSequenceToSequenceDataModule):
         return self.get_dataloader(self.test_dataset)
 
     def get_dataloader(self, dataset: Dataset):
+        if self.contrastive:
+            collate_fn = random_multitask_collate_fn
+        else:
+            collate_fn = random_collate_fn
         return DataLoader(
             dataset, 
             batch_size=self.batch_size, 
             num_workers=self.num_workers, 
             drop_last=self.drop_last, 
             pin_memory=self.pin_memory,
-            collate_fn=partial(random_collate_fn, self.sequence_length))
+            collate_fn=partial(collate_fn, self.sequence_length))
     
     @staticmethod
     def add_datamodule_specific_args(parent_parser):
@@ -120,6 +126,7 @@ class InformerDataModule(BaseSequenceToSequenceDataModule):
         group.add_argument("--label_filepath", type=str)
         group.add_argument("--sequence_length", type=int, default=250)
         group.add_argument("--min_scanpath_length", type=int, default=500)
+        group.add_argument("--contrastive", type=bool, default=False)
         return parent_parser
 
     @property
