@@ -14,7 +14,7 @@ from eyemind.dataloading.transforms import ToTensor
 from eyemind.preprocessing.fixations import fixation_label_mapper
 
 
-class InformerDataModule(BaseSequenceToSequenceDataModule):
+class InformerDataModule(BaseSequenceToSequenceDataModule, GroupStratifiedKFoldDataModule):
 
     def __init__(self,
                 data_dir: str,

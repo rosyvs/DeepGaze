@@ -1,9 +1,14 @@
 # pytorch_lightning==1.7.6
 seed_everything: 42
+fold_number: 0
+split_filepath: /Users/rickgentry/emotive_lab/eyemind/data_splits/Rote_X/folds_rote_x.yml
 trainer:
   logger: true
   enable_checkpointing: true
-  callbacks: null
+  callbacks: 
+    - class_path: pytorch_lightning.callbacks.ModelCheckpoint
+      init_args:
+        monitor: val_loss
   default_root_dir: null
   gradient_clip_val: 0.5
   gradient_clip_algorithm: null

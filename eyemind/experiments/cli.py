@@ -28,4 +28,8 @@ class GazeLightningCLI(LightningCLI):
         return trainer
     
         
-    
+class FoldsLightningCLI(LightningCLI):
+    def add_arguments_to_parser(self, parser: LightningArgumentParser) -> None:
+        parser.add_argument("--fold_number", type=int, default=4)
+        parser.add_argument("--split_filepath", type=str, default="")
+
