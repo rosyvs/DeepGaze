@@ -1,3 +1,5 @@
+#!/bin/bash
+
 #SBATCH --time=12:00:00
 #SBATCH --partition=sgpu
 #SBATCH --ntasks=1
