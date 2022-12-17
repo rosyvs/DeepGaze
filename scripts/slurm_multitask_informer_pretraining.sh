@@ -5,9 +5,9 @@
 #SBATCH --partition=aa100
 #SBATCH --ntasks=1
 #SBATCH --gres=gpu:3
-#SBATCH --job-name=multitask-informer-pretraining
+#SBATCH --job-name=multitask-informer-pretraining-fold0
 #SBATCH --cpus-per-task=4
-#SBATCH --output=multitask-informer-pretraining-exp.%j.out
+#SBATCH --output=multitask-informer-pretraining-exp-fold0.%j.out
 
 module load cudnn/8.1
 module load cuda/11.3
