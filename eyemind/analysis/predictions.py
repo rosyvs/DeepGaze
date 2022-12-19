@@ -6,9 +6,13 @@ import torch
 def load_model_from_checkpoint(model_cls, checkpoint_path):
     return model_cls.load_from_checkpoint(checkpoint_path)
 
+# def get_encoder_from_checkpoint(model_cls, checkpoint_path):
+#     full_model = model_cls.load_from_checkpoint(checkpoint_path)
+#     return full_model.enc_embedding, full_model.encoder
+
 def get_encoder_from_checkpoint(model_cls, checkpoint_path):
     full_model = model_cls.load_from_checkpoint(checkpoint_path)
-    return full_model.enc_embedding, full_model.encoder
+    return full_model.encoder
 
 def get_dataloader(config_path, dm_cls=BaseSequenceToSequenceDataModule, data_base_dir="/Users/rickgentry/emotive_lab/eyemind/data", label_filepath="processed/EML1_pageLevel_with_filename_seq.csv", data_dir="processed/fixation"):
     with open(config_path, "r") as f:

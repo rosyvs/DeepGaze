@@ -737,7 +737,8 @@ class InformerClassifierModel(LightningModule):
         self.accuracy_metric = torchmetrics.Accuracy()
         # Encoding
         if encoder_ckpt:
-            self.enc_embedding, self.encoder = get_encoder_from_checkpoint(InformerEncoderFixationModel, encoder_ckpt)
+            #self.enc_embedding, self.encoder = get_encoder_from_checkpoint(InformerMultiTaskEncoderDecoder, encoder_ckpt)
+            self.encoder = get_encoder_from_checkpoint(InformerMultiTaskEncoderDecoder, encoder_ckpt)
         else:
             self.enc_embedding = GazeEmbedding(enc_in, d_model, dropout)
             #self.dec_embedding = GazeEmbedding(dec_in, d_model, dropout)
@@ -766,16 +767,17 @@ class InformerClassifierModel(LightningModule):
         self.classifier_head = ae.MLP(input_dim=d_model, layers=[64,1], activation="relu")
 
         if freeze_encoder:
-            self.enc_embedding.requires_grad_(False)
+            #self.enc_embedding.requires_grad_(False)
             self.encoder.requires_grad_(False)
 
     def forward(self, x_enc, enc_self_mask=None):
-        enc_out = self.enc_embedding(x_enc)
-        enc_out, attns = self.encoder(enc_out, attn_mask=enc_self_mask)
+        #enc_out = self.enc_embedding(x_enc)
+        enc_out = self.encoder(x_enc, enc_self_mask)
         dec_in = torch.mean(enc_out, 1)
         dec_out = self.classifier_head(dec_in)
         if self.hparams.output_attention:
-            return dec_out, attns
+            #return dec_out, attns
+            return dec_out
         else:
             return dec_out
             
