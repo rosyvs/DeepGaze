@@ -16,5 +16,5 @@ module load cuda/11.3
 source /projects/$USER/.bashrc_alpine
 cd /projects/$USER/eyemind
 conda activate pya100
-echo $1
+echo Fold: $1
 python3 eyemind/experiments/multitask_informer_pretraining.py -c experiment_configs/multitask_informer_pretraining_folds.yml --fold_number $1

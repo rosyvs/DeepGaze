@@ -1,7 +1,7 @@
 # pytorch_lightning==1.7.6
 seed_everything: 42
 fold_number: 2
-split_filepath: /projects/rige3027/eyemind/data_splits/Rote_X/folds_rote_x.yml
+split_filepath: /projects/rige3027/eyemind/data_splits/4fold_participant.yml
 trainer:
   logger: true
   enable_checkpointing: true
@@ -9,6 +9,7 @@ trainer:
     - class_path: pytorch_lightning.callbacks.ModelCheckpoint
       init_args:
         monitor: val_loss
+        save_last: true
   default_root_dir: null
   gradient_clip_val: 0.5
   gradient_clip_algorithm: null
@@ -74,7 +75,7 @@ model:
   freeze_encoder: true
 data:
   data_dir: /projects/rige3027/eyemind/data/processed/output
-  label_filepath: /projects/rige3027/eyemind/data/processed/EML1_pageLevel_with_filename_seq.csv
+  label_filepath: /projects/rige3027/eyemind/data/processed/EML1_pageLevel_with_filename_seq_nodups.csv
   label_col: Rote_X
   load_setup_path: null
   test_dir: null

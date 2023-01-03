@@ -1,7 +1,7 @@
 # pytorch_lightning==1.7.6
 seed_everything: 42
 fold_number: 2
-split_filepath: /Users/rickgentry/emotive_lab/eyemind/data_splits/Rote_X/folds_rote_x.yml
+split_filepath: /Users/rickgentry/emotive_lab/eyemind/data_splits/4fold_participant.yml
 trainer:
   logger: true
   enable_checkpointing: true
@@ -70,11 +70,10 @@ model:
   output_attention: false
   distil: false
   learning_rate: 0.001
-  encoder_ckpt: /Users/rickgentry/emotive_lab/eyemind/lightning_logs/multitask_informer_pretraining_fold2_seq500/checkpoints/epoch=177-step=1958.ckpt
-  freeze_encoder: true
+  encoder_ckpt: /Users/rickgentry/emotive_lab/eyemind/lightning_logs/multitask_informer_pretraining_seq500_newfolds/fold0/checkpoints/epoch=97-step=3626.ckpt
 data:
   data_dir: /Users/rickgentry/emotive_lab/eyemind/data/processed/output
-  label_filepath: /Users/rickgentry/emotive_lab/eyemind/data/processed/EML1_pageLevel_with_filename_seq.csv
+  label_filepath: /Users/rickgentry/emotive_lab/eyemind/data/processed/EML1_pageLevel_with_filename_seq_nodups.csv
   label_col: Rote_X
   load_setup_path: null
   test_dir: null
