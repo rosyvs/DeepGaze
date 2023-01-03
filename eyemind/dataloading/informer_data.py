@@ -5,7 +5,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 
 import torch
-from eyemind.dataloading.gaze_data import BaseGazeDataModule, BaseSequenceToSequenceDataModule, GroupStratifiedKFoldDataModule, SequenceLabelDataset, SequenceToSequenceDataModule
+from eyemind.dataloading.gaze_data import BaseGazeDataModule, BaseSequenceToSequenceDataModule, GroupStratifiedKFoldDataModule, ParticipantKFoldDataModule, SequenceLabelDataset, SequenceToSequenceDataModule
 from torch.utils.data import Dataset, DataLoader, Subset
 
 from eyemind.dataloading.load_dataset import filter_files_by_seqlen, get_label_df
@@ -14,7 +14,7 @@ from eyemind.dataloading.transforms import ToTensor
 from eyemind.preprocessing.fixations import fixation_label_mapper
 
 
-class InformerDataModule(BaseSequenceToSequenceDataModule, GroupStratifiedKFoldDataModule):
+class InformerDataModule(BaseSequenceToSequenceDataModule, ParticipantKFoldDataModule):
 
     def __init__(self,
                 data_dir: str,

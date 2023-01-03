@@ -3,7 +3,7 @@ from pathlib import Path
 import random
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import StratifiedGroupKFold
+from sklearn.model_selection import GroupKFold, StratifiedGroupKFold
 from sklearn.preprocessing import LabelEncoder
 import torch
 # from eyemind.dataloading.gaze_data import GazeDataModule
@@ -101,6 +101,23 @@ def get_samplers():
 #     gkf = StratifiedGroupKFold(folds)
 #     splits = gkf.split(X, y, groups)
 #     return splits
+
+# Implement splitting without stratification
+def get_participant_splits(files, label_df, id_col="filename", group_col="ParticipantID", folds=4, seed=None):
+    enc = LabelEncoder()
+    files = [f.split(".")[0] for f in files]
+    files_partids = [f.split("-")[0] for f in files]
+    #label_df = label_df[label_df[id_col].isin(files)]
+    #groups = enc.fit_transform(label_df[group_col].values)
+    groups = enc.fit_transform(files_partids)
+    #y = label_df[label_col]
+    if seed:
+        gkf = GroupKFold(folds, shuffle=True, random_state=seed)
+    else:
+        gkf = GroupKFold(folds)
+    #splits = gkf.split(label_df,y,groups=groups)
+    splits = gkf.split(files,groups=groups)
+    return splits
 
 def get_stratified_group_splits(files, label_df, label_col, id_col="filename", group_col="ParticipantID", folds=4, seed=None):
     enc = LabelEncoder()

@@ -8,7 +8,7 @@ from typing import Any, Callable, List, Optional, Union
 import pandas as pd
 from sklearn.model_selection import train_test_split
 import yaml
-from eyemind.dataloading.load_dataset import filter_files_by_seqlen, get_filenames_for_dataset, get_label_df, get_label_mapper, get_stratified_group_splits, limit_sequence_len, load_file_folds, write_splits
+from eyemind.dataloading.load_dataset import filter_files_by_seqlen, get_filenames_for_dataset, get_label_df, get_label_mapper, get_participant_splits, get_stratified_group_splits, limit_sequence_len, load_file_folds, write_splits
 from eyemind.dataloading.batch_loading import multitask_collate_fn, random_collate_fn, random_multitask_collate_fn, split_collate_fn
 import torchvision.transforms as T
 from torch.utils.data import Dataset, DataLoader, Sampler, Subset
@@ -197,6 +197,30 @@ class GroupStratifiedKFoldDataModule(BaseKFoldDataModule):
             
         else:
             raise ValueError
+
+class ParticipantKFoldDataModule(BaseKFoldDataModule):
+    def setup_fold_index(self, fold_index: int) -> None:
+        train_indices, val_indices = self.splits[fold_index]
+        self.train_fold = Subset(self.train_dataset.dataset, train_indices)
+        self.val_fold = Subset(self.train_dataset.dataset, val_indices)
+
+    def setup_folds(self, num_folds: int) -> None:
+        self.num_folds = num_folds
+        train_indices = self.train_dataset.indices
+        train_files, train_labels = self.train_dataset.dataset.get_files_from_indices(train_indices), self.train_dataset.dataset.get_labels_from_indices(train_indices)
+        if num_folds == 1:
+            split_list = train_test_split(train_indices, test_size=0.15)
+            self.splits = [(split_list[i], split_list[i+1]) for i in range(0, len(split_list)-1)]
+        elif num_folds > 1:
+            splits = []
+            for split in get_participant_splits(train_files, self.label_df, folds=num_folds):
+                train_split = [train_indices[ind] for ind in split[0]]
+                val_split = [train_indices[ind] for ind in split[1]]
+                splits.append((train_split, val_split))
+            self.splits = splits
+            
+        else:
+            raise ValueError   
             
 class GroupStratifiedNestedCVDataModule(GroupStratifiedKFoldDataModule):
 
