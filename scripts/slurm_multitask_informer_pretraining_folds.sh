@@ -1,6 +1,5 @@
 #!/bin/bash
 
-#SBATCH --nodes=4
 #SBATCH --time=12:00:00
 #SBATCH --partition=aa100
 #SBATCH --ntasks-per-node=1
