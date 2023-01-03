@@ -18,4 +18,4 @@ source /projects/$USER/.bashrc_alpine
 cd /projects/$USER/eyemind
 conda activate pya100
 echo Fold: $2
-python3 eyemind/experiments/multitask_informer_comp.py -c experiment_configs/multitask_informer_comp.yml --fold_number $1 --model.encoder_ckpt $2
+python3 eyemind/experiments/multitask_informer_comp.py -c experiment_configs/cluster/multitask_informer_comp.yml --fold_number $1 --model.encoder_ckpt $2
