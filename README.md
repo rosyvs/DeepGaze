@@ -40,11 +40,34 @@ pip install torch==1.11.0+cu113 torchvision==0.12.0+cu113 -f https://download.py
 scp -r <path-to-folder> <username>@login.rc.colorado edu:<target-path>
 ```
 
+## Project Structure
 
-###
-Focus on different tasks to see if it does well on any of them
 
-Temporal vs spatial features:
+```
+   
+   EYEMIND
+   ├── data  ## Base directory for all data
+   │   ├── processed ## Used for the data that has gone through preprocessing
+   ├── data_splits ## Contains splits of data for different cross validation strategies
+   │   └── 4fold_participant.yml ## 4 fold split of train, val by participant id
+   ├── experiment_configs ## Lightning config files containing parameters for running experiments
+   │   └── cluster ## For running on the cluster
+   │   └── local ## For running on your local machine   
+   ├── eyemind  ## Main python package
+   │   └── analysis ## Utilities for visualizing outputs (fixations, etc...)
+   │   └── dataloading ## Pytorch datasets, dataloaders, and pytorch-lightning datamodules
+   │   └── experiments ## Entrypoints that have clis that run training, validation, testing
+   │   └── models ## Contains pytorch-lightning LightningModules that have code for running the RNN and informer models (encoderdecoders for multitask and classifiers for comprehension)
+   │   └── obf ## From Oculomotor Behavior Framework paper (not used for much)
+   │   └── preprocessing ## Python scripts that output processed data. Shouldn't need to be run again.
+   │   └── trainer ## Specialized loops for pytorch-lightning (not used in usual process)
+   ├── scripts ## Bash and python scripts to run slurm jobs on the cluster   
+   ├── .gitignore
+   ├── LICENSE.txt
+   ├── MANIFEST.in
+   ├── README.md
+   ├── setup.cfg
+   ├── pyproject.toml
+   └── 
 
-What features can you predict for spatial features? Use a CNN to predict without the temporal aspect 
-
+```
