@@ -71,3 +71,4 @@ scp -r <path-to-folder> <username>@login.rc.colorado edu:<target-path>
    └── 
 
 ```
+
