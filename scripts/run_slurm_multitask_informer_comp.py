@@ -10,6 +10,7 @@ def main(args):
         else:
             ckpt_path = str(next(ckpt_dirpath.glob('epoch*.ckpt')))
         cmd = f"sbatch {args.slurm_script} {i} {ckpt_path} {args.label_col}"
+        print(cmd)
         cmd_list = cmd.split(" ")
         result = subprocess.run(cmd_list, capture_output=True, text=True, check=True)
         print("stdout:", result.stdout)
