@@ -20,9 +20,9 @@ conda activate pya100
 echo "Fold: $1"
 echo "Encoder Checkpoint: $2"
 echo "Label Column: $3"
-version="informer_${3}"
-sub_dir="fold${1}"
+name="informer_${3}"
+version="fold${1}"
+echo $name
 echo $version
-echo $sub_dir
 
-python3 eyemind/experiments/multitask_informer_comp.py -c experiment_configs/cluster/multitask_informer_comp.yml --fold_number $1 --model.encoder_ckpt $2 --data.label_col $3 --trainer.logger.init_args.version ${version} --trainer.logger.init_args.sub_dir ${sub_dir}
+python3 eyemind/experiments/multitask_informer_comp.py -c experiment_configs/cluster/multitask_informer_comp.yml --fold_number $1 --model.encoder_ckpt $2 --data.label_col $3 --trainer.logger.init_args.name ${name} --trainer.logger.init_args.version ${version}
