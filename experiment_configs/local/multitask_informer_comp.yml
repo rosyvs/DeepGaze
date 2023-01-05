@@ -3,7 +3,12 @@ seed_everything: 42
 fold_number: 2
 split_filepath: /Users/rickgentry/emotive_lab/eyemind/data_splits/4fold_participant.yml
 trainer:
-  logger: true
+  logger:
+    class_path: pytorch_lightning.loggers.TensorBoardLogger
+    init_args:
+      save_dir: /Users/rickgentry/emotive_lab/eyemind
+      version: informer_rotex
+      sub_dir: fold2
   enable_checkpointing: true
   callbacks: 
     - class_path: pytorch_lightning.callbacks.ModelCheckpoint
