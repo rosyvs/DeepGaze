@@ -1,18 +1,26 @@
 import argparse
 import subprocess
+from pathlib import Path
 
 def main(args):
-    cmd = f"sbatch {args.slurm_script} {args.fold_num} {args.ckpt_path} {args.label_col}"
-    cmd_list = cmd.split(" ")
-    result = subprocess.run(cmd_list, capture_output=True, text=True, check=True)
-    print("stdout:", result.stdout)
-    print("stderr:", result.stderr)
+    for i in range(args.num_folds):
+        ckpt_dirpath = Path(args.base_dir, f"fold{i}", "checkpoints")
+        if args.last_ckpt:
+            ckpt_path = str(next(ckpt_dirpath.glob('last*.ckpt')))
+        else:
+            ckpt_path = str(next(ckpt_dirpath.glob('epoch*.ckpt')))
+        cmd = f"sbatch {args.slurm_script} {i} {ckpt_path} {args.label_col}"
+        cmd_list = cmd.split(" ")
+        result = subprocess.run(cmd_list, capture_output=True, text=True, check=True)
+        print("stdout:", result.stdout)
+        print("stderr:", result.stderr)
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-s", "--slurm_script", required=True, help="Path to the slurm script to run")
-    parser.add_argument("-f", "--fold_num", required=True, help="What fold number to run")
-    parser.add_argument("-p", "--ckpt_path", required=True, help="encoder_ckpt path")
+    parser.add_argument("-f", "--num_folds", required=True, type=int, help="Number of folds to run")
+    parser.add_argument("-d", "--base_dir", required=True, help="encoder_ckpt base directory path")
+    parser.add_argument("--last_ckpt", action='store_true', help="If you want to use the last checkpoint instead of the best saved one")
     parser.add_argument("-l", "--label_col", default="Rote_X" ,help="Comprehension label column name")
     args = parser.parse_args()
     main(args)
