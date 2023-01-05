@@ -6,12 +6,12 @@ trainer:
   logger:
     class_path: pytorch_lightning.loggers.TensorBoardLogger
     init_args:
-      save_dir: /Users/rickgentry/emotive_lab/eyemind
-      version: informer_rotex
-      sub_dir: fold2
+      save_dir: /Users/rickgentry/emotive_lab/eyemind/lightning_logs
+      name: informer_rotex
+      version: fold2
   enable_checkpointing: true
   callbacks: 
-    - class_path: pytorch_lightning.callbacks.ModelCheckpoint
+    - class_path: ModelCheckpoint
       init_args:
         monitor: val_loss
   default_root_dir: null

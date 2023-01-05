@@ -6,9 +6,9 @@ trainer:
   logger:
     class_path: pytorch_lightning.loggers.TensorBoardLogger
     init_args:
-      save_dir: /projects/rige3027/eyemind
-      version: informer_rotex
-      sub_dir: fold2
+      save_dir: /projects/rige3027/eyemind/lightning_logs
+      name: informer_rotex
+      version: fold2
   enable_checkpointing: true
   callbacks: 
     - class_path: pytorch_lightning.callbacks.ModelCheckpoint
