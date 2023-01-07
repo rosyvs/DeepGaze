@@ -20,6 +20,8 @@ echo "Fold: $1"
 echo "Seed: $2"
 name="informer_pretraining_seed${2}"
 version="fold${1}"
+split_filepath="/projects/rige3027/eyemind/data_splits/4fold_particpant/seed${2}.yml"
 echo $name
 echo $version
-python3 eyemind/experiments/multitask_informer_pretraining.py -c experiment_configs/cluster/multitask_informer_pretraining_folds.yml --fold_number $1 --seed_everything $2 --trainer.logger.init_args.name ${name} --trainer.logger.init_args.version ${version}
+echo $split_filepath
+python3 eyemind/experiments/multitask_informer_pretraining.py -c experiment_configs/cluster/multitask_informer_pretraining_folds.yml --fold_number $1 --seed_everything $2 --split_filepath ${split_filepath} --trainer.logger.init_args.name ${name} --trainer.logger.init_args.version ${version}
