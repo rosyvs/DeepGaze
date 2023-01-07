@@ -4,7 +4,12 @@ fold_number: 0
 split_filepath: /projects/rige3027/eyemind/data_splits/4fold_particpant/seed42.yml
 num_folds: 4
 trainer:
-  logger: true
+  logger:
+    class_path: pytorch_lightning.loggers.TensorBoardLogger
+    init_args:
+      save_dir: /projects/rige3027/eyemind/lightning_logs
+      name: informer_pretraining
+      version: fold2
   enable_checkpointing: true
   callbacks: 
     - class_path: pytorch_lightning.callbacks.ModelCheckpoint
