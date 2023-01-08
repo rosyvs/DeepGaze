@@ -20,7 +20,7 @@ echo "Fold: $1"
 echo "Seed: $2"
 name="informer_pretraining_seed${2}"
 version="fold${1}"
-split_filepath="/projects/rige3027/eyemind/data_splits/4fold_particpant/seed${2}.yml"
+split_filepath="/projects/rige3027/eyemind/data_splits/4fold_participant/seed${2}.yml"
 echo $name
 echo $version
 echo $split_filepath
