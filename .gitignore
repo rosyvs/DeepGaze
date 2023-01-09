@@ -1,9 +1,8 @@
 data/*
-results/*
 **__pycache__
 **.DS_Store
 trained_models/*
-results/*
+notes
 **.egg-info
 **logs
 .vscode
@@ -11,3 +10,4 @@ OBF/
 **command_args*
 **ray_results
 **notes
+notes/*
