@@ -72,3 +72,44 @@ scp -r <path-to-folder> <username>@login.rc.colorado edu:<target-path>
 
 ```
 
+## Experiments
+
+### Running an experiment locally
+
+1. Use a current experiment script or create a new python script in eyemind/experiments that will act as your cli
+
+2. Update the config file which specifies hyperparameters for splitting the data, running the training, the model, and the data loading
+
+3. If you want to override specific hyperparameters in the config file you can specify them when running the python script. (This is useful when running on cluster with slurm)
+
+Example: To run pretraining with the informer model use: 
+```
+python eyemind/experiments/multitask_informer_pretraining.py -c experiment_configs/local/multitask_informer_pretraining.yml --num_folds 4 --seed_everything 25 --split_filepath /Users/rickgentry/emotive_lab/eyemind/data_splits/4fold_participant/seed25.yml
+```
+
+This runs the script multitask_informer_pretraining.yml using the config file multitask_informer_pretraining.yml and overrides a few of the parameters. This allows you not to have to create a ton of config files when trying to run different fold splits.  The python script will split the data into folds, save the splits to a file,instantiate the trainer, model, and datamodule then run the training process.
+
+If you want to see the options that the script can be run with you can run:
+
+```
+python eyemind/experiments/multitask_informer_pretraining.py --help 
+```
+
+### Running an experiment on the Alpine Cluster
+
+1. Use a current slurm job script or create a new one under the scripts/ folder
+
+Example:
+ To run pretraining with the informer model do the following:
+
+```
+python scripts/run_slurm_multitask_informer_pretrain.py -s scripts/slurm_multitask_informer_pretraining_onefold.sh -f 4 --seed 22
+```
+ This will run the slurm job script 4 times, one for each fold, "slurm_multitask_informer_pretraining_onefold.sh" with the random seed equal to 22. 
+
+ The slurm job script ends up running the python script shown in the local experiment (multitask_informer_pretraining.py):
+ ```
+ python3 eyemind/experiments/multitask_informer_pretraining.py -c experiment_configs/cluster/multitask_informer_pretraining_folds.yml --fold_number $1 --seed_everything $2 --split_filepath ${split_filepath} --trainer.logger.init_args.name ${name} --trainer.logger.init_args.version ${version}
+ ```
+
+ It passes the fold number it is currently running and overrides the directories for the logs and splits.
