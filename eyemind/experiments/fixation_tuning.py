@@ -116,9 +116,9 @@ def tune_seq_hidden(lightning_config, num_samples=1, gpus_per_trial=0, model_cls
     # TODO: Save the encoder of the best checkpoint
     '''
     import torch
-    ckpt_dir = "/Users/rickgentry/emotive_lab/eyemind/ray_results/fixation_tuning/train_tune_c2ac0_00001_1_hidden_dim=256,sequence_length=250_2022-05-31_16-41-19/checkpoint_epoch=39-step=11160/checkpoint"
+    ckpt_dir = "./ray_results/fixation_tuning/train_tune_c2ac0_00001_1_hidden_dim=256,sequence_length=250_2022-05-31_16-41-19/checkpoint_epoch=39-step=11160/checkpoint"
     model = VariableSequenceLengthEncoderDecoderModel.load_from_checkpoint(ckpt_dir)
-    torch.save(model.encoder.state_dict(), "/Users/rickgentry/emotive_lab/eyemind/pretrained_models/encoder_fixation_tuning_seq=250_hidden_dim=256.pt")
+    torch.save(model.encoder.state_dict(), "./pretrained_models/encoder_fixation_tuning_seq=250_hidden_dim=256.pt")
     '''
     
 def test_train_tune(lightning_config, num_gpus=0):

@@ -21,6 +21,7 @@ def avg_fixation_len(fixations):
 def fixation_label_mapper(folder, files):
     labels = []
     for f in files:
+        print(Path(folder,f).resolve()) # TODO: remove
         df = pd.read_csv(str(Path(folder,f).resolve()))
         label_array = df['fixation_label'].to_numpy(float)
         labels.append(label_array)
@@ -58,8 +59,8 @@ def preprocess_fixation(fixation_folder_path, full_data_path, output_path):
                 labeled_df.to_csv(Path(output_path, group_name),index=False)
 
 def main():
-    #print(label_fixations("/Users/rickgentry/emotive_lab/eyemind/data/raw/sample", "EML1_003.csv", pd.read_csv("/Users/rickgentry/emotive_lab/eyemind/data/fixation/EML1_003.csv")).head())
-    preprocess_fixation("/Users/rickgentry/emotive_lab/eyemind/data/fixation", "/Users/rickgentry/emotive_lab/eyemind/data/processed/output", "/Users/rickgentry/emotive_lab/eyemind/data/processed/fixation")
+    #print(label_fixations("./data/raw/sample", "EML1_003.csv", pd.read_csv("./data/fixation/EML1_003.csv")).head())
+    preprocess_fixation("./data/fixation", "./data/processed/output", "./data/processed/fixation")
     
 
 if __name__ =="__main__":

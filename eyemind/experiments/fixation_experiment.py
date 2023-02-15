@@ -93,7 +93,7 @@ def find_lr():
     pytorch_lightning.seed_everything(seed, workers=True)    
     
     # Data Module Creation
-    data_folder = Path("/Users/rickgentry/emotive_lab/eyemind/data/processed/fixation")
+    data_folder = Path("./data/processed/fixation")
     sequence_len = 500
     lim_seq_len = partial(limit_sequence_len, sequence_len=sequence_len, random_part=False)
     limit_labels = partial(limit_label_seq, sequence_length=sequence_len)
@@ -109,7 +109,7 @@ def find_lr():
     train_dl, val_dl = get_dataloaders_from_split(dm, train_split, test_split)
 
     # Model
-    pre_trained_weights_dir = Path("/Users/rickgentry/emotive_lab/eyemind/OBF/pre_weights/sample_weights")
+    pre_trained_weights_dir = Path("./OBF/pre_weights/sample_weights")
     encoder = creator.load_encoder(str(pre_trained_weights_dir.resolve()))
     fi_decoder = torch.load(str(Path(pre_trained_weights_dir, "fi_1633040995_gru.pt").resolve()),map_location=torch.device('cpu'))
     class_weights = torch.tensor([3.86, 0.26])
@@ -130,7 +130,7 @@ def train_from_scratch(use_conv=True, tune=False):
     seed = 42
     pytorch_lightning.seed_everything(seed, workers=True)
     # Data Module Creation
-    data_folder = Path("/Users/rickgentry/emotive_lab/eyemind/data/processed/fixation")
+    data_folder = Path("./data/processed/fixation")
     sequence_len = 500
     lim_seq_len = partial(limit_sequence_len, sequence_len=sequence_len, random_part=False)
     limit_labels = partial(limit_label_seq, sequence_length=sequence_len)

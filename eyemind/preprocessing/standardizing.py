@@ -12,4 +12,4 @@ def get_stats(dir, flag=-180):
     return mean, std
 
 if __name__ == "__main__":
-    print(get_stats("/Users/rickgentry/emotive_lab/eyemind/data/processed/fixation"))
+    print(get_stats("./data/processed/fixation"))

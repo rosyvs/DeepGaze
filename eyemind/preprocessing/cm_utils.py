@@ -117,15 +117,15 @@ def test_process_raw_data(out_filename=""):
 #         dd.to_csv(data_df,out_filename)
 
 def test_process_sham_data(out_filepath=""):
-    folder = Path("/Users/rickgentry/emotive_lab/eyemind/data/preprocessed/shamnosham_output")
+    folder = Path("./data/preprocessed/shamnosham_output")
     df = process_sham_data(folder)
     if out_filepath:
         df.to_csv(out_filepath,index=False)
 
 if __name__ == "__main__":
     #test_preprocess_raw_data(Path("/Users/rickgentry/emotive_lab/common-models-redesign/eyemind_data/combined/scanpaths-*.csv"))
-    df = process_sham_data(Path("/Users/rickgentry/emotive_lab/eyemind/data/preprocessed/shamnosham_output"))
-    #test_process_sham_data(out_filepath=Path("/Users/rickgentry/emotive_lab/eyemind/data/processed", "shamnosham.csv"))
+    df = process_sham_data(Path("./data/preprocessed/shamnosham_output"))
+    #test_process_sham_data(out_filepath=Path("./data/processed", "shamnosham.csv"))
     groups = get_subject_groups(df)
     gkf = GroupKFold(4)
     X = df["scanpath"].to_numpy()

@@ -65,11 +65,11 @@ model:
   output_attention: false
   distil: true
   learning_rate: 0.001
-  encoder_ckpt: /Users/rickgentry/emotive_lab/eyemind/lightning_logs/informer_fix_pc_500seq_120epochs/checkpoints/epoch=120-step=2057.ckpt
+  encoder_ckpt: ./lightning_logs/informer_fix_pc_500seq_120epochs/checkpoints/epoch=120-step=2057.ckpt
   freeze_encoder: false
 data:
-  data_dir: /Users/rickgentry/emotive_lab/eyemind/data/processed/output
-  label_filepath: /Users/rickgentry/emotive_lab/eyemind/data/processed/EML1_pageLevel_with_filename_seq.csv
+  data_dir: ./data/processed/output
+  label_filepath: ./data/processed/EML1_pageLevel_with_filename_seq.csv
   label_col: Rote_X
   load_setup_path: null
   test_dir: null

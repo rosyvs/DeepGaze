@@ -102,7 +102,7 @@ def preprocess_data(raw_data_path, output_folder, screen_res=(1920,1080), target
 
 def main():
     print("Calling main")
-    data_folder = Path("/Users/rickgentry/emotive_lab/eyemind/data/")
+    data_folder = Path("./data/")
     preprocess_data(Path(data_folder,"raw/sample"), Path(data_folder,"processed/output"))
 
 if __name__ == "__main__":

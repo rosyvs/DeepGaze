@@ -63,7 +63,7 @@ trainer:
 model:
   max_encoder_sequence_length: 250
   encoder_hidden_dim: 256
-  encoder_weights_path: /Users/rickgentry/emotive_lab/eyemind/pretrained_models/encoder_fixation_tuning_seq=250_hidden_dim=256.pt
+  encoder_weights_path: ./pretrained_models/encoder_fixation_tuning_seq=250_hidden_dim=256.pt
   classifier_hidden_layers:
   - 256
   - 512
@@ -74,8 +74,8 @@ model:
   dropout: 0.5
   freeze_encoder: true
 data:
-  data_dir: /Users/rickgentry/emotive_lab/eyemind/data/processed/output
-  label_filepath: /Users/rickgentry/emotive_lab/eyemind/data/processed/EML1_pageLevel_with_filename_seq.csv
+  data_dir: ./data/processed/output
+  label_filepath: ./data/processed/EML1_pageLevel_with_filename_seq.csv
   label_col: Rote_X
   test_dir: null
   train_dataset: null

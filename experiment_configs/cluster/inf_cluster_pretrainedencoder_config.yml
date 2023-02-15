@@ -63,7 +63,7 @@ trainer:
 model:
   max_encoder_sequence_length: 250
   encoder_hidden_dim: 128
-  encoder_weights_path: /Users/rickgentry/emotive_lab/eyemind/OBF/pre_weights/sample_weights
+  encoder_weights_path: ./OBF/pre_weights/sample_weights
   classifier_hidden_layers:
   - 256
   - 512

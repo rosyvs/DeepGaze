@@ -84,7 +84,7 @@ scp -r <path-to-folder> <username>@login.rc.colorado edu:<target-path>
 
 Example: To run pretraining with the informer model use: 
 ```
-python eyemind/experiments/multitask_informer_pretraining.py -c experiment_configs/local/multitask_informer_pretraining.yml --num_folds 4 --seed_everything 25 --split_filepath /Users/rickgentry/emotive_lab/eyemind/data_splits/4fold_participant/seed25.yml
+python eyemind/experiments/multitask_informer_pretraining.py -c experiment_configs/local/multitask_informer_pretraining.yml --num_folds 4 --seed_everything 25 --split_filepath ./data_splits/4fold_participant/seed25.yml
 ```
 
 This runs the script multitask_informer_pretraining.yml using the config file multitask_informer_pretraining.yml and overrides a few of the parameters. This allows you not to have to create a ton of config files when trying to run different fold splits.  The python script will split the data into folds, save the splits to a file,instantiate the trainer, model, and datamodule then run the training process.
