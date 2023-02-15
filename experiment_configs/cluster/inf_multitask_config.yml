@@ -83,8 +83,8 @@ model:
   learning_rate: 0.001
   freeze_encoder: false
 data:
-  data_dir: /projects/rige3027/eyemind/data/processed/fixation
-  label_filepath: /projects/rige3027/eyemind/data/processed/EML1_pageLevel_with_filename_seq.csv
+  data_dir: ./data/processed/fixation
+  label_filepath: ./data/processed/EML1_pageLevel_with_filename_seq.csv
   load_setup_path: null
   test_dir: null
   train_dataset: null
