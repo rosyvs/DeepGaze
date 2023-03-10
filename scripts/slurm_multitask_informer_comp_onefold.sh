@@ -9,6 +9,9 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --output=multitask-informer-comp-exp-fold.%j.out
 
+echo "running multitask_informer_comp.py"
+
+module purge
 module load cudnn/8.1
 module load cuda/11.3
 
@@ -16,6 +19,7 @@ module load cuda/11.3
 # Run script
 source /projects/$USER/.bashrc_alpine
 cd /projects/$USER/DeepGaze
+conda init bash
 conda activate dg
 echo "Fold: $1"
 echo "Encoder Checkpoint: $2"

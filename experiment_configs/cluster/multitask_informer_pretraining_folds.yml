@@ -9,7 +9,7 @@ trainer:
     init_args:
       save_dir: ./lightning_logs
       name: informer_pretraining
-      version: fold2 # TODO:
+      version: foldx # TODO: I think this and prev line gets overridden in the call to multitask_infrmer_comp in slurm_,,,_onefold.sh
   enable_checkpointing: true
   callbacks: 
     - class_path: pytorch_lightning.callbacks.ModelCheckpoint
