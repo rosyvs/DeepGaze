@@ -17,7 +17,7 @@ module load cuda/11.3
 
 
 # Run script
-source /projects/$USER/.bashrc_alpine
+source ~/.bashrc
 cd /projects/$USER/DeepGaze
 conda init bash
 conda activate dg

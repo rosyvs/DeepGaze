@@ -14,7 +14,7 @@ module load parallel
 
 
 # Run script
-source /projects/$USER/.bashrc_alpine
+source ~/.bashrc
 cd /projects/$USER/DeepGaze
 conda activate dg
 pip install .
