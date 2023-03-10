@@ -13,7 +13,7 @@ module load cudnn/8.1_for_cuda_11.2
 
 # Run script
 source ~/.bashrc
-cd /projects/$USER/eyemind
+cd /projects/$USER/DeepGaze
 conda activate eyemind
 pip install .
 python3 eyemind/experiments/fixation_tuning.py -c experiment_configs/fix_hyperparam_tuning_config.yml --gpus_per_trial 1 --exp_name fixation_tuning

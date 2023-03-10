@@ -13,7 +13,7 @@ module load cudnn/8.1_for_cuda_11.2
 
 # Run script
 source ~/.bashrc
-cd /projects/$USER/eyemind
+cd /projects/$USER/DeepGaze
 conda activate eyemind
 pip install .
 python3 eyemind/experiments/informer_experiment.py fit -c experiment_configs/informer_test_config.yml

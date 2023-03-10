@@ -14,8 +14,8 @@ module load cuda/11.3
 
 # Run script
 source /projects/$USER/.bashrc_alpine
-cd /projects/$USER/eyemind
-conda activate pya100
+cd /projects/$USER/DeepGaze
+conda activate dg
 echo "Fold: $1"
 echo "Seed: $2"
 name="informer_pretraining_seed${2}"

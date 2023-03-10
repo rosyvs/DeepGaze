@@ -15,8 +15,8 @@ module load cuda/11.3
 
 # Run script
 source /projects/$USER/.bashrc_alpine
-cd /projects/$USER/eyemind
-conda activate pya100
+cd /projects/$USER/DeepGaze
+conda activate dg
 pip install .
 pip install torch==1.12.0+cu113 torchvision==0.13.0+cu113 -f https://download.pytorch.org/whl/torch_stable.html
 python3 eyemind/experiments/informer_experiment.py fit -c experiment_configs/informer_test_config.yml

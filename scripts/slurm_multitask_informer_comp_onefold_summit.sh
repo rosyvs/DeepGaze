@@ -12,7 +12,7 @@ module load cudnn/8.1_for_cuda_11.2
 
 # Run script
 source ~/.bashrc
-cd /projects/$USER/eyemind
+cd /projects/$USER/DeepGaze
 conda activate eyemind
 pip install .
 echo "Fold: $1"

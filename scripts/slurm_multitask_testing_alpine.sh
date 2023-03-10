@@ -8,15 +8,17 @@
 #SBATCH --job-name=multitask-test-alpine
 #SBATCH --cpus-per-task=4
 #SBATCH --output=multitask-test-alpine-exp.%j.out
-
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=roso8920@colorado.edu
+ß
 module load cudnn/8.1
 module load cuda/11.3
 
 
 # Run script
 source /projects/$USER/.bashrc_alpine
-cd /projects/$USER/eyemind
-conda activate pya100
+cd /projects/$USER/DeepGaze/
+conda activate dg
 pip install .
 pip install torch==1.11.0+cu113 torchvision==0.12.0+cu113 -f https://download.pytorch.org/whl/torch_stable.html
 python3 eyemind/experiments/multitask_experiment.py fit -c experiment_configs/encdec_multitask_config.yml --trainer.max_epochs 5

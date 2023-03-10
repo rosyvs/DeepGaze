@@ -15,8 +15,8 @@ module load cuda/11.3
 
 # Run script
 source /projects/$USER/.bashrc_alpine
-cd /projects/$USER/eyemind
-conda activate pya100
+cd /projects/$USER/DeepGaze
+conda activate dg
 echo "Fold: $1"
 echo "Encoder Checkpoint: $2"
 echo "Label Column: $3"
