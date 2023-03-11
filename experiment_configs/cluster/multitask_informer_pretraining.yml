@@ -3,12 +3,12 @@ seed_everything: 42
 fold_number: 0
 split_filepath: ./data_splits/Rote_X/folds_rote_x.yml
 trainer:
-logger:
-    class_path: pytorch_lightning.loggers.TensorBoardLogger
-    init_args:
-      save_dir: ./lightning_logs
-      name: informer_pretraining
-      version: fold2 
+  logger:
+      class_path: pytorch_lightning.loggers.TensorBoardLogger
+      init_args:
+        save_dir: ./lightning_logs
+        name: informer_pretraining
+        version: fold2 
   enable_checkpointing: true
   callbacks: 
     - class_path: pytorch_lightning.callbacks.ModelCheckpoint

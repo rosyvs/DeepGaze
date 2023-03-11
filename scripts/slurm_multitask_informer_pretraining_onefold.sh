@@ -8,7 +8,10 @@
 #SBATCH --job-name=multitask-informer-pretraining-fold-%j
 #SBATCH --cpus-per-task=4
 #SBATCH --output=multitask-informer-pretraining-exp-fold.%j.out
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=roso8920@colorado.edu
 
+module purge
 module load cudnn/8.1
 module load cuda/11.3
 

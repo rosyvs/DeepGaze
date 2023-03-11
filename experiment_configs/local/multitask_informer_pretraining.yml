@@ -5,11 +5,11 @@ num_folds: 4
 split_filepath: ./data_splits/4fold_participant.yml
 trainer:
   logger: True # TODO replace this w tensorboard for local
-    # class_path: pytorch_lightning.loggers.TensorBoardLogger
-    # init_args:
-    # save_dir: ./lightning_logs
-    # name: informer_pretraining
-    # version: local 
+    class_path: pytorch_lightning.loggers.TensorBoardLogger
+    init_args:
+      save_dir: ./lightning_logs
+      name: informer_pretraining
+      version: local 
   enable_checkpointing: true
   callbacks: 
     - class_path: pytorch_lightning.callbacks.ModelCheckpoint
