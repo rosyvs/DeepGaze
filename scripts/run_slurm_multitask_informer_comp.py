@@ -2,6 +2,9 @@ import argparse
 import subprocess
 from pathlib import Path
 
+# This python script automates running a slurm bash script for each fold. 
+# Run this with -s slurm_multitask_informer_comp_onefold.sh
+
 def main(args):
     for i in range(args.num_folds):
         ckpt_dirpath = Path(args.base_dir, f"fold{i}", "checkpoints")
