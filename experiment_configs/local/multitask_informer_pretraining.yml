@@ -1,10 +1,10 @@
 # pytorch_lightning==1.7.6
-seed_everything: 42
+seed_everything: 303
 fold_number: 0
 num_folds: 4
 split_filepath: ./data_splits/4fold_participant.yml
 trainer:
-  logger: True # TODO replace this w tensorboard for local
+  logger:
     class_path: pytorch_lightning.loggers.TensorBoardLogger
     init_args:
       save_dir: ./lightning_logs
