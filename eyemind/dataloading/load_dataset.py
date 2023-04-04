@@ -6,7 +6,7 @@ import pandas as pd
 from sklearn.model_selection import GroupKFold, StratifiedGroupKFold
 from sklearn.preprocessing import LabelEncoder
 import torch
-# from .eyemind.dataloading.gaze_data import GazeDataModule
+# from eyemind.dataloading.gaze_data import GazeDataModule
 from torch.utils.data import SubsetRandomSampler
 import yaml
 
