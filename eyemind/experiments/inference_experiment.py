@@ -10,11 +10,11 @@ import pytorch_lightning
 from pytorch_lightning.utilities.cli import LightningCLI
 from sklearn.model_selection import train_test_split
 from torch import seed
-from eyemind.dataloading.gaze_data import GazeDataModule, SequenceToLabelDataModule
-from eyemind.dataloading.load_dataset import get_filenames_for_dataset, get_stratified_group_splits
-from eyemind.experiments.cli import GazeLightningCLI
-from eyemind.experiments.experimenter import Experiment
-from eyemind.models.classifier import EncoderClassifierModel, EncoderClassifierMultiSequenceModel
+from .eyemind.dataloading.gaze_data import GazeDataModule, SequenceToLabelDataModule
+from .eyemind.dataloading.load_dataset import get_filenames_for_dataset, get_stratified_group_splits
+from .eyemind.experiments.cli import GazeLightningCLI
+from .eyemind.experiments.experimenter import Experiment
+from .eyemind.models.classifier import EncoderClassifierModel, EncoderClassifierMultiSequenceModel
 
 # Have to add path to enable torch.load to work since they saved it weirdly
 import sys

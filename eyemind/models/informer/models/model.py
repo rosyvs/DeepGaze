@@ -2,10 +2,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from eyemind.models.informer.models.encoder import Encoder, EncoderLayer, ConvLayer, EncoderStack
-from eyemind.models.informer.models.decoder import Decoder, DecoderLayer
-from eyemind.models.informer.models.attn import FullAttention, ProbAttention, AttentionLayer
-from eyemind.models.informer.models.embed import DataEmbedding
+from .eyemind.models.informer.models.encoder import Encoder, EncoderLayer, ConvLayer, EncoderStack
+from .eyemind.models.informer.models.decoder import Decoder, DecoderLayer
+from .eyemind.models.informer.models.attn import FullAttention, ProbAttention, AttentionLayer
+from .eyemind.models.informer.models.embed import DataEmbedding
 
 class Informer(nn.Module):
     def __init__(self, enc_in, dec_in, c_out, seq_len, label_len, out_len, 

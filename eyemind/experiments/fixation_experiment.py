@@ -11,21 +11,21 @@ from pytorch_lightning.loggers import TensorBoardLogger
 from torch.utils.data import SubsetRandomSampler
 import torch
 from torch import nn
-from eyemind.dataloading.gaze_data import BaseSequenceToSequenceDataModule, GazeDataModule, SequenceToSequenceDataModule
-from eyemind.experiments.cli import GazeLightningCLI
-from eyemind.experiments.experimenter import BaseExperiment
-from eyemind.models.transformers import InformerEncoderDecoderModel
-from eyemind.preprocessing.fixations import fixation_label_mapper
-from eyemind.dataloading.load_dataset import limit_sequence_len
-from eyemind.models.encoder_decoder import EncoderDecoderModel, VariableSequenceLengthEncoderDecoderModel
+from .eyemind.dataloading.gaze_data import BaseSequenceToSequenceDataModule, GazeDataModule, SequenceToSequenceDataModule
+from .eyemind.experiments.cli import GazeLightningCLI
+from .eyemind.experiments.experimenter import BaseExperiment
+from .eyemind.models.transformers import InformerEncoderDecoderModel
+from .eyemind.preprocessing.fixations import fixation_label_mapper
+from .eyemind.dataloading.load_dataset import limit_sequence_len
+from .eyemind.models.encoder_decoder import EncoderDecoderModel, VariableSequenceLengthEncoderDecoderModel
 from sklearn.model_selection import train_test_split
 from pytorch_lightning.callbacks import LearningRateMonitor
 # Have to add path to enable torch.load to work since they saved it weirdly
 import sys
 sys.path.append(str(Path("../obf").resolve()))
 
-from eyemind.obf.model import ae
-from eyemind.obf.model import creator
+from .eyemind.obf.model import ae
+from .eyemind.obf.model import creator
 
 def limit_label_seq(y_data, sequence_length, pad_token=-1.):
     if len(y_data) > sequence_length:

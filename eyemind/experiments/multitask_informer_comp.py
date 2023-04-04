@@ -1,8 +1,8 @@
 from pytorch_lightning.utilities.cli import LightningCLI
-from eyemind.dataloading.gaze_data import SequenceToLabelDataModule
-from eyemind.models.transformers import InformerClassifierModel, InformerEncoderDecoderModel, InformerEncoderFixationModel, InformerMultiTaskEncoderDecoder
-from eyemind.dataloading.informer_data import InformerDataModule
-from eyemind.experiments.cli import FoldsLightningCLI
+from .eyemind.dataloading.gaze_data import SequenceToLabelDataModule
+from .eyemind.models.transformers import InformerClassifierModel, InformerEncoderDecoderModel, InformerEncoderFixationModel, InformerMultiTaskEncoderDecoder
+from .eyemind.dataloading.informer_data import InformerDataModule
+from .eyemind.experiments.cli import FoldsLightningCLI
 
 
 if __name__ == "__main__":

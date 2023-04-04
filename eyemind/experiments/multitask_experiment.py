@@ -1,7 +1,7 @@
 from pytorch_lightning.utilities.cli import LightningCLI
-from eyemind.dataloading.gaze_data import BaseSequenceToSequenceDataModule
+from .eyemind.dataloading.gaze_data import BaseSequenceToSequenceDataModule
 
-from eyemind.models.encoder_decoder import MultiTaskEncoderDecoder
+from .eyemind.models.encoder_decoder import MultiTaskEncoderDecoder
 
 
 if __name__ == "__main__":

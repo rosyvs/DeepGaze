@@ -1,6 +1,6 @@
 import yaml
 from pathlib import Path
-from eyemind.dataloading.gaze_data import BaseSequenceToSequenceDataModule
+from .eyemind.dataloading.gaze_data import BaseSequenceToSequenceDataModule
 import torch
 
 def load_model_from_checkpoint(model_cls, checkpoint_path):
