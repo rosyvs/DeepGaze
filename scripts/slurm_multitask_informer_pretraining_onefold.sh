@@ -12,8 +12,8 @@
 #SBATCH --mail-user=roso8920@colorado.edu
 
 module purge
-# module --ignore-cache load cudnn/8.1
-module load cuda/11.3
+module load cudnn/8.2
+module load cuda/11.4
 
 # Run script
 source ~/.bashrc
@@ -21,6 +21,7 @@ cd /projects/$USER/DeepGaze
 
 conda init bash
 conda activate dg
+pip install .
 
 echo "Fold: $1"
 echo "Seed: $2"
