@@ -14,7 +14,7 @@ module load cudnn/8.1_for_cuda_11.2
 source ~/.bashrc
 cd /projects/$USER/DeepGaze
 conda activate eyemind
-pip install .
+# pip install .
 echo "Fold: $1"
 echo "Encoder Checkpoint: $2"
 echo "Label Column: $3"

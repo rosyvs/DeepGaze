@@ -17,7 +17,7 @@ module load parallel
 source ~/.bashrc
 cd /projects/$USER/DeepGaze
 conda activate dg
-pip install .
+# pip install .
 pip install torch==1.11.0+cu113 torchvision==0.12.0+cu113 -f https://download.pytorch.org/whl/torch_stable.html
 #parallel -P $SLURM_NODES srun  -n 1 --exclusive python3 eyemind/experiments/multitask_informer_pretraining.py ::: {0..3}
 srun  -n 1 -c 1 --exclusive python3 eyemind/experiments/multitask_informer_pretraining.py -c experiment_configs/multitask_informer_pretraining_folds.yml --fold_number 0 &

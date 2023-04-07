@@ -15,5 +15,5 @@ module load cudnn/8.1_for_cuda_11.2
 source ~/.bashrc
 cd /projects/$USER/DeepGaze
 conda activate eyemind
-pip install .
+# pip install .
 python3 eyemind/experiments/fixation_tuning.py -c experiment_configs/encdec_multitask_tuning_config.yml --gpus_per_trial 1 --exp_name multitask_tuning

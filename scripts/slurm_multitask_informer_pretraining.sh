@@ -19,6 +19,6 @@ module load cuda/11.3
 source ~/.bashrc
 cd /projects/$USER/DeepGaze
 conda activate dg
-pip install .
+# pip install .
 pip install torch==1.11.0+cu113 torchvision==0.12.0+cu113 -f https://download.pytorch.org/whl/torch_stable.html
 python3 eyemind/experiments/multitask_informer_pretraining.py -c experiment_configs/cluster/multitask_informer_pretraining.yml --fold_number 0
