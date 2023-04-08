@@ -10,9 +10,9 @@ from ray.tune import CLIReporter
 from ray.tune.schedulers import ASHAScheduler, PopulationBasedTraining
 from ray.tune.integration.pytorch_lightning import TuneReportCheckpointCallback
 import yaml
-from eyemind.dataloading.gaze_data import BaseSequenceToSequenceDataModule, SequenceToSequenceDataModule
-from eyemind.models.encoder_decoder import MultiTaskEncoderDecoder, VariableSequenceLengthEncoderDecoderModel
-from eyemind.models.transformers import InformerEncoderDecoderModel
+from .eyemind.dataloading.gaze_data import BaseSequenceToSequenceDataModule, SequenceToSequenceDataModule
+from .eyemind.models.encoder_decoder import MultiTaskEncoderDecoder, VariableSequenceLengthEncoderDecoderModel
+from .eyemind.models.transformers import InformerEncoderDecoderModel
 
 name_to_cls = {"trainer": Trainer, "model": VariableSequenceLengthEncoderDecoderModel, "data": SequenceToSequenceDataModule}
 

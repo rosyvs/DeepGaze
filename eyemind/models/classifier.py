@@ -6,8 +6,8 @@ from torch import nn
 import torch.nn.functional as F
 import torch
 
-from eyemind.obf.model import ae
-from eyemind.obf.model import creator
+from .eyemind.obf.model import ae
+from .eyemind.obf.model import creator
 
 def create_encoder(hidden_dim=128, backbone_type='gru', nlayers=2, conv_dim=32,input_dim=2,use_conv=True):
     if use_conv:

@@ -10,12 +10,12 @@ from pytorch_lightning.loggers import TensorBoardLogger
 from torch.utils.data import SubsetRandomSampler
 import torch
 from torch import nn
-from eyemind.dataloading.gaze_data import GazeDataModule
-from eyemind.experiments.experimenter import BaseExperiment, Experiment
-from eyemind.experiments.fixation_experiment import limit_label_seq
-from eyemind.preprocessing.fixations import fixation_label_mapper
-from eyemind.dataloading.load_dataset import limit_sequence_len
-from eyemind.models.encoder_decoder import EncoderDecoderModel, load_encoder_decoder, create_encoder_decoder
+from .eyemind.dataloading.gaze_data import GazeDataModule
+from .eyemind.experiments.experimenter import BaseExperiment, Experiment
+from .eyemind.experiments.fixation_experiment import limit_label_seq
+from .eyemind.preprocessing.fixations import fixation_label_mapper
+from .eyemind.dataloading.load_dataset import limit_sequence_len
+from .eyemind.models.encoder_decoder import EncoderDecoderModel, load_encoder_decoder, create_encoder_decoder
 from sklearn.model_selection import train_test_split
 from pytorch_lightning.callbacks import LearningRateMonitor
 from sklearn.model_selection import KFold
@@ -23,8 +23,8 @@ from sklearn.model_selection import KFold
 import sys
 sys.path.append(str(Path("../obf").resolve()))
 
-from eyemind.obf.model import ae
-from eyemind.obf.model import creator
+from .eyemind.obf.model import ae
+from .eyemind.obf.model import creator
 
 def convert_to_float_tensor(data):
     return torch.tensor(data).float()
