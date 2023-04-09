@@ -5,12 +5,12 @@ import torch
 from pathlib import Path
 from torch.utils.data import SubsetRandomSampler
 
-from .eyemind.dataloading.gaze_data import GazeDataModule
-from .eyemind.dataloading.load_dataset import get_label_df, get_stratified_group_splits, limit_sequence_len
-#from .eyemind.experiments.fixation_experiment import setup_data_module
-from .eyemind.models.classifier import EncoderClassifierModel
-from .eyemind.obf.model import ae
-from .eyemind.obf.model import creator
+from eyemind.dataloading.gaze_data import GazeDataModule
+from eyemind.dataloading.load_dataset import get_label_df, get_stratified_group_splits, limit_sequence_len
+#from eyemind.experiments.fixation_experiment import setup_data_module
+from eyemind.models.classifier import EncoderClassifierModel
+from eyemind.obf.model import ae
+from eyemind.obf.model import creator
 
 class BaseExperiment():
 

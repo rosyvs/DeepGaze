@@ -5,18 +5,18 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchmetrics
-from .eyemind.analysis.predictions import get_encoder_from_checkpoint
-from .eyemind.dataloading.batch_loading import fixation_batch, predictive_coding_batch
-from .eyemind.obf.model import ae
+from eyemind.analysis.predictions import get_encoder_from_checkpoint
+from eyemind.dataloading.batch_loading import fixation_batch, predictive_coding_batch
+from eyemind.obf.model import ae
 from ..dataloading.transforms import StandardScaler
-from .eyemind.models.informer.models.model import InformerStack
+from eyemind.models.informer.models.model import InformerStack
 
-from .eyemind.models.informer.utils.masking import TriangularCausalMask, ProbMask
-from .eyemind.models.informer.models.encoder import Encoder, EncoderLayer, ConvLayer, EncoderStack
-from .eyemind.models.informer.models.decoder import Decoder, DecoderLayer
-from .eyemind.models.informer.models.attn import FullAttention, ProbAttention, AttentionLayer
-from .eyemind.models.informer.models.embed import GazeEmbedding
-from .eyemind.models.loss import RMSELoss
+from eyemind.models.informer.utils.masking import TriangularCausalMask, ProbMask
+from eyemind.models.informer.models.encoder import Encoder, EncoderLayer, ConvLayer, EncoderStack
+from eyemind.models.informer.models.decoder import Decoder, DecoderLayer
+from eyemind.models.informer.models.attn import FullAttention, ProbAttention, AttentionLayer
+from eyemind.models.informer.models.embed import GazeEmbedding
+from eyemind.models.loss import RMSELoss
 
 class InformerEncoder(nn.Module):
     def __init__(self,

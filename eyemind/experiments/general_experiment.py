@@ -1,12 +1,12 @@
 from argparse import ArgumentParser
 from pytorch_lightning import Trainer
 from pytorch_lightning.utilities.cli import LightningCLI
-from .eyemind.dataloading.gaze_data import BaseGazeDataModule, BaseSequenceToSequenceDataModule, SequenceToLabelDataModule
-from .eyemind.dataloading.informer_data import InformerDataModule
-from .eyemind.experiments.cli import GazeLightningCLI
-from .eyemind.models.encoder_decoder import EncoderDecoderModel, MultiTaskEncoderDecoder, VariableSequenceLengthEncoderDecoderModel
+from eyemind.dataloading.gaze_data import BaseGazeDataModule, BaseSequenceToSequenceDataModule, SequenceToLabelDataModule
+from eyemind.dataloading.informer_data import InformerDataModule
+from eyemind.experiments.cli import GazeLightningCLI
+from eyemind.models.encoder_decoder import EncoderDecoderModel, MultiTaskEncoderDecoder, VariableSequenceLengthEncoderDecoderModel
 
-from .eyemind.models.transformers import InformerEncoderDecoderModel
+from eyemind.models.transformers import InformerEncoderDecoderModel
 
 model_name_map = {"MultiTaskEncoderDecoder": MultiTaskEncoderDecoder, 
                 "InformerEncoderDecoderModel": InformerEncoderDecoderModel, 

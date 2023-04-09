@@ -10,8 +10,8 @@ from ray.tune import CLIReporter
 from ray.tune.schedulers import ASHAScheduler
 from ray.tune.integration.pytorch_lightning import TuneReportCheckpointCallback
 import yaml
-from .eyemind.dataloading.gaze_data import SequenceToLabelDataModule
-from .eyemind.models.classifier import EncoderClassifierModel, EncoderClassifierMultiSequenceModel
+from eyemind.dataloading.gaze_data import SequenceToLabelDataModule
+from eyemind.models.classifier import EncoderClassifierModel, EncoderClassifierMultiSequenceModel
 import ray
 
 name_to_cls = {"trainer": Trainer, "model": EncoderClassifierMultiSequenceModel, "data": SequenceToLabelDataModule}

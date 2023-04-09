@@ -8,11 +8,11 @@ import torchmetrics
 from torch import nn
 import torch.nn.functional as F
 import torch
-from .eyemind.dataloading.batch_loading import contrastive_batch, predictive_coding_batch, reconstruction_batch
-from .eyemind.models.loss import RMSELoss
+from eyemind.dataloading.batch_loading import contrastive_batch, predictive_coding_batch, reconstruction_batch
+from eyemind.models.loss import RMSELoss
 
-from .eyemind.obf.model import ae
-from .eyemind.obf.model import creator
+from eyemind.obf.model import ae
+from eyemind.obf.model import creator
 
 def load_encoder_decoder(pretrained_weights_dirpath, decoder_weights_filename):
     encoder = creator.load_encoder(str(Path(pretrained_weights_dirpath).resolve()))

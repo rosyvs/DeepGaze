@@ -13,7 +13,7 @@ from pytorch_lightning.loops.fit_loop import FitLoop
 from pytorch_lightning.trainer.states import TrainerFn
 import yaml
 
-from .eyemind.dataloading.gaze_data import BaseKFoldDataModule
+from eyemind.dataloading.gaze_data import BaseKFoldDataModule
 
 
 class KFoldLoop(Loop):
