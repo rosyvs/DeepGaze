@@ -31,3 +31,5 @@ if __name__=="__main__":
     parser.add_argument("-l", "--label_col", default="Rote_X" ,help="Comprehension label column name")
     args = parser.parse_args()
     main(args)
+
+        # note that last_ckpt might not work if resuming after an OOM crash caused during checkpoint saving
