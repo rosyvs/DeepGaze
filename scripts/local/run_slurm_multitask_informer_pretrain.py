@@ -10,7 +10,7 @@ def main(args):
             ckpt_path = str(next(ckpt_dirpath.glob('last*.ckpt')))
         else:
             ckpt_path = ""
-        cmd = f"sbatch {args.slurm_script} {i} {args.seed} {ckpt_path}"
+        cmd = f"{args.slurm_script} {i} {args.seed} {ckpt_path}"
         print(cmd)
         cmd_list = cmd.split(" ")
         result = subprocess.run(cmd_list, capture_output=True, text=True, check=True)
