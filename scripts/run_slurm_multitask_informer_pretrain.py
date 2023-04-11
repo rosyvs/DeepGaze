@@ -13,7 +13,7 @@ def main(args):
                 ckpt_path = str(next(ckpt_dirpath.glob('last*.ckpt')))
             else: # get most recent checkpoint
                 files=ckpt_dirpath.glob('epoch*.ckpt')
-                latest_file = max([list(files)], key=lambda item: item.stat().st_ctime)
+                latest_file = max(list(files), key=lambda item: item.stat().st_ctime)
                 ckpt_path = str(latest_file)    
         else:
             ckpt_path = "" 
