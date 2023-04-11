@@ -103,9 +103,9 @@ Example:
  To run pretraining with the informer model do the following:
 
 ```
-python scripts/run_slurm_multitask_informer_pretrain.py -s scripts/slurm_multitask_informer_pretraining_onefold.sh -f 4 --seed 22
+python scripts/run_slurm_multitask_informer_pretrain.py -s scripts/slurm_multitask_informer_pretraining_template.sh -f 4 --seed 22
 ```
- This will run the slurm job script 4 times, one for each fold, "slurm_multitask_informer_pretraining_onefold.sh" with the random seed equal to 22. 
+ This will run the slurm job script 4 times, one for each fold, "slurm_multitask_informer_pretraining_template.sh" with the random seed equal to 22. 
 
  The slurm job script ends up running the python script shown in the local experiment (multitask_informer_pretraining.py):
  ```

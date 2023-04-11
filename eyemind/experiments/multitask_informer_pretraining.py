@@ -6,7 +6,11 @@ import os
 
 if __name__ == "__main__":
     print(f'CWD: {os.getcwd()}')
-    cli = FoldsLightningCLI(InformerMultiTaskEncoderDecoder, InformerDataModule, run=False, seed_everything_default=42, save_config_overwrite=True)
+    cli = FoldsLightningCLI(InformerMultiTaskEncoderDecoder, 
+                            InformerDataModule, 
+                            run=False, 
+                            seed_everything_default=42, 
+                            save_config_overwrite=True)
     cli.datamodule.setup()
     if cli.config.num_folds != -1:
         cli.datamodule.setup_folds(cli.config.num_folds)

@@ -2,9 +2,11 @@ import argparse
 import subprocess
 from pathlib import Path
 
+# This python script automates running a slurm bash script for each fold. 
+# Run this with -s slurm_multitask_informer_pretraining_template.sh
 
 def main(args):
-    for i in range(args.num_folds):
+    for i in args.folds:
         if args.resume_ckpt:
             ckpt_dirpath = Path(args.resume_ckpt, f"fold{i}", "checkpoints")
             if args.last_ckpt:
@@ -12,7 +14,7 @@ def main(args):
             else:
                 ckpt_path = str(next(ckpt_dirpath.glob('epoch*.ckpt')))        
         else:
-            ckpt_path = ""
+            ckpt_path = "" 
         cmd = f"sbatch {args.slurm_script} {i} {args.seed} {ckpt_path}"
         print(cmd)
         cmd_list = cmd.split(" ")
@@ -22,8 +24,8 @@ def main(args):
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-s", "--slurm_script", required=True, help="Path to the slurm script to run")
-    parser.add_argument("-f", "--num_folds", required=True, type=int, help="Number of folds to run")
+    parser.add_argument("-s", "--slurm_script", required=True, help="Path to the template slurm script to run")
+    parser.add_argument("-f", "--folds", required=True, type=int, nargs='*', help="list of fold numbers to run (e.g. 0 1 2 3)")
     parser.add_argument("--seed", type=int, default=42, help="Seed for pytorch-lightning")
     parser.add_argument("--resume_ckpt", type=str, default="", help="base dir containing checkpoint to resume training from")
     parser.add_argument("--last_ckpt", action='store_true', help="If you want to use the last checkpoint instead of the best saved one")

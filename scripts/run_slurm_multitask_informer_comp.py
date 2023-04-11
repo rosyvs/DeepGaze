@@ -3,7 +3,7 @@ import subprocess
 from pathlib import Path
 
 # This python script automates running a slurm bash script for each fold. 
-# Run this with -s slurm_multitask_informer_comp_onefold.sh
+# Run this with -s slurm_multitask_informer_comp_template.sh
 
 def main(args):
     for i in range(args.num_folds):
@@ -22,7 +22,7 @@ def main(args):
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-s", "--slurm_script", required=True, help="Path to the slurm script to run")
+    parser.add_argument("-s", "--slurm_script", required=True, help="Path to the tempalate slurm script to run")
     parser.add_argument("-f", "--num_folds", required=True, type=int, help="Number of folds to run")
     parser.add_argument("-d", "--base_dir", required=True, help="encoder_ckpt base directory path")
     parser.add_argument("--resume_ckpt", type=str, default="", help="checkpoint to resume training from")
