@@ -10,8 +10,10 @@ def main(args):
         ckpt_dirpath = Path(args.base_dir, f"fold{i}", "checkpoints")
         if args.last_ckpt:
             ckpt_path = str(next(ckpt_dirpath.glob('last*.ckpt')))
-        else:
-            ckpt_path = str(next(ckpt_dirpath.glob('epoch*.ckpt')))
+        else: # get most recent checkpoint
+            files=ckpt_dirpath.glob('epoch*.ckpt')
+            latest_file = max([list(files)], key=lambda item: item.stat().st_ctime)
+            ckpt_path = str(latest_file)    
         cmd = f"sbatch {args.slurm_script} {i} {ckpt_path} {args.label_col} {args.resume_ckpt}"
         print(cmd)
         cmd_list = cmd.split(" ")
