@@ -7,7 +7,7 @@
 #SBATCH --gres=gpu:2
 #SBATCH --job-name=multitask-informer-pretraining-fold-%j
 #SBATCH --cpus-per-task=4
-#SBATCH --output=slurm_logs/multitask-informer-pretraining-exp-fold.%j.out
+#SBATCH --output=slurm_logs/pretraining.%j.out
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=roso8920@colorado.edu
 
