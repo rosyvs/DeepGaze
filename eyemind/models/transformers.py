@@ -780,7 +780,7 @@ class InformerClassifierModel(LightningModule):
             return dec_out
         else:
             return dec_out
-            
+        
     def training_step(self, batch, batch_idx):
         return self._step(batch, batch_idx, step_type="train")
     
@@ -806,13 +806,11 @@ class InformerClassifierModel(LightningModule):
         probs = self._get_probs(logits)
         y = y.int()
         accuracy = self.accuracy_metric(probs, y)
+        auroc = self.auroc_metric(probs, y)
         self.logger.experiment.add_scalars("losses", {f"{step_type}_loss": loss}, self.current_epoch)        
         self.log(f"{step_type}_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log(f"{step_type}_accuracy", accuracy, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-
-        if not self.step_type == 'train': 
-            auroc = self.auroc_metric(probs, y) # TODO: put this only at end epoch, possiblr cause of memory leak
-            self.log(f"{step_type}_auroc", auroc, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.log(f"{step_type}_auroc", auroc, on_step=False, on_epoch=True, prog_bar=True, logger=True)
         return loss
 
     def configure_optimizers(self):
