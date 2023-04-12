@@ -5,6 +5,12 @@ from pathlib import Path
 # This python script automates running a slurm bash script for each fold. 
 # Run this with -s slurm_multitask_informer_pretraining_template.sh
 
+#e.g.
+# python scripts/run_slurm_multitask_informer_pretrain.py \
+# -s scripts/slurm_multitask_informer_pretraining_template.sh \
+# -f 0 1 2 3 --seed 21 \
+# --resume_ckpt lightning_logs/informer_pretraining_seed21/
+
 def main(args):
     for i in args.folds:
         if args.resume_dir:

@@ -1,5 +1,5 @@
 # pytorch_lightning==1.7.6
-seed_everything: 303
+seed_everything: 21
 fold_number: 0
 split_filepath: ./data_splits/4fold_participant.yml # gets overridden
 trainer:
