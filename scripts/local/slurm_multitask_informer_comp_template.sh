@@ -30,12 +30,12 @@ echo "Label Column: $3"
 name="informer_${3}"
 version="fold${1}"
 split_filepath="./data_splits/4fold_participant/seed${2}.yml"
-resume_ckpt=$3
+resume_dir=$3
 
 echo $name
 echo $version
 echo $split_filepath
-echo $resume_ckpt
+echo $resume_dir
 
 
 python3 eyemind/experiments/multitask_informer_comp.py -c experiment_configs/cluster/multitask_informer_comp.yml --fold_number $1 --model.encoder_ckpt $2 --data.label_col $3 --trainer.logger.init_args.name ${name} --trainer.logger.init_args.version ${version}
