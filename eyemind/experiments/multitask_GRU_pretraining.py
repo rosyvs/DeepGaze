@@ -1,4 +1,4 @@
-from eyemind.dataloading.gaze_data import BaseSequenceToSequenceDataModule
+from eyemind.dataloading.gaze_data import PIDkFoldS2SDataModule
 from eyemind.models.encoder_decoder import MultiTaskEncoderDecoder
 from eyemind.experiments.cli import FoldsLightningCLI
 import os
@@ -6,7 +6,7 @@ import os
 if __name__ == "__main__":
     print(f'CWD: {os.getcwd()}')
     cli = FoldsLightningCLI(MultiTaskEncoderDecoder, 
-                            BaseSequenceToSequenceDataModule, 
+                            PIDkFoldS2SDataModule,
                             run=False, 
                             seed_everything_default=42, 
                             save_config_overwrite=True)

@@ -765,3 +765,6 @@ class GazeDataModule(LightningDataModule):
         parser.add_argument("--usecols", type=int, nargs='*', default=None)
         parser.add_argument("--skiprows", type=int, default=1)
         return parser
+
+class PIDkFoldS2SDataModule(BaseSequenceToSequenceDataModule, ParticipantKFoldDataModule):
+    pass
