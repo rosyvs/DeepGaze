@@ -16,7 +16,7 @@ import os
 import torch
 import torch.nn as nn
 
-from . import ae
+from eyemind.obf.model import ae
 
 
 def print_models_info(names, models):
