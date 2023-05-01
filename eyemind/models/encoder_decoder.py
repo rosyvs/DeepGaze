@@ -102,8 +102,9 @@ class EncoderDecoderModel(LightningModule):
         y = y.int()
         #print(preds.sum(), y.sum())
         accuracy = self.accuracy_metric(probs, y)
-        auroc = self.auroc_metric(probs, y)
-        self.logger.experiment.add_scalars("losses", {f"{step_type}": loss}, self.global_step)        
+        if not step_type == 'train': 
+            auroc = self.auroc_metric(probs, y) # TODO: put this only at end epoch, possiblr cause of memory leak
+            self.log(f"{step_type}_auroc", auroc, on_step=False, on_epoch=True, prog_bar=True, logger=True)        self.logger.experiment.add_scalars("losses", {f"{step_type}": loss}, self.global_step)        
         self.log(f"{step_type}_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log(f"{step_type}_accuracy", accuracy, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log(f"{step_type}_auroc", auroc, on_step=False, on_epoch=True, prog_bar=True, logger=True)

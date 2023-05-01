@@ -1,13 +1,13 @@
 #!/bin/bash
 
 #SBATCH --nodes=1
-#SBATCH --time=1:00:00 
+#SBATCH --time=4:00:00 
 #SBATCH --partition=aa100
 #SBATCH --ntasks=1
-#SBATCH --gres=gpu:2
+#SBATCH --gres=gpu:3
 #SBATCH --job-name=multitask-GRU-pretraining-fold-%j
 #SBATCH --cpus-per-task=4
-#SBATCH --output=slurm_logs/pretraining.%j.out
+#SBATCH --output=slurm_logs/GRUpre.%j.out
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=roso8920@colorado.edu
 
