@@ -9,7 +9,7 @@ from pathlib import Path
 # python scripts/run_slurm_multitask_GRU_pretrain.py 
 # -s scripts/slurm_multitask_GRU_pretraining_template.sh \
 # -f 0 1 2 3 --seed 21 \
-# --resume_ckpt lightning_logs/informer_pretraining_seed21/
+# --resume_dir lightning_logs/GRU_pretraining_seed21/
 
 def main(args):
     for i in args.folds:
