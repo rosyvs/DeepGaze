@@ -6,7 +6,7 @@ from pathlib import Path
 # Run this with -s slurm_multitask_informer_pretraining_template.sh
 
 #e.g.
-# python scripts/run_slurm_GRU_informer_pretrain.py \
+# python scripts/run_slurm_multitask_GRU_pretrain.py 
 # -s scripts/slurm_multitask_GRU_pretraining_template.sh \
 # -f 0 1 2 3 --seed 21 \
 # --resume_ckpt lightning_logs/informer_pretraining_seed21/
