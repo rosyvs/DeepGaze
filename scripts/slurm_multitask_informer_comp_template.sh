@@ -5,7 +5,7 @@
 #SBATCH --partition=aa100
 #SBATCH --ntasks=1
 #SBATCH --gres=gpu:2
-#SBATCH --job-name=multitask-informer-comp-fold-%j
+#SBATCH --job-name=comp.%j
 #SBATCH --cpus-per-task=4
 #SBATCH --output=slurm_logs/comp.%j.out
 #SBATCH --mail-type=ALL
