@@ -91,14 +91,9 @@ Held-out AUROCs
 | fold3  |           0.897 |           0.934 |           3.087 |           3.430 |
 
 Pretraining validation metrics
-| label       |   mean AUROC |   min AUROC |   max AUROC |
-|-------------|--------------|-------------|-------------|
-| Rote_X      |        0.720 |       0.647 |       0.755 |
-| Rote_Y      |        0.631 |       0.610 |       0.648 |
-| Rote_Z      |        0.657 |       0.596 |       0.730 |
-| Inference_X |        0.625 |       0.588 |       0.705 |
-| Inference_Y |        0.631 |       0.584 |       0.677 |
-| Inference_Z |        0.725 |       0.685 |       0.796 |
-| Deep_X      |        0.641 |       0.629 |       0.654 |
-| Deep_Z      |        0.656 |       0.618 |       0.684 |
-| MW          |        0.630 |       0.616 |       0.655 |
+| metric        |   mean |   min |   max |
+|---------------|--------|-------|-------|
+| val_fi_metric |  0.940 | 0.934 | 0.956 |
+| val_cl_metric |  0.894 | 0.892 | 0.897 |
+| val_pc_metric |  3.077 | 2.925 | 3.156 |
+| val_rc_metric |  3.435 | 3.406 | 3.483 |
