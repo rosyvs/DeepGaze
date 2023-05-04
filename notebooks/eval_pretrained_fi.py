@@ -21,7 +21,7 @@ from pytorch_lightning import Trainer
 
 #%% paths
 data_folder = Path("../data/processed/fixation")
-label_filepath = Path("../data/processed/EML1_pageLevel_with_filename_seq.csv") 
+label_filepath = Path("../data/processed/EML1_pageLevel_500+_matchEDMinstances.csv") 
 pre_trained_weights_dir = Path(OBF_RELPATH + "/pre_weights/sample_weights/")
 folds = Path("data_splits/4fold_participant/seed21.yml")
 

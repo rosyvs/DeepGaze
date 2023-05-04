@@ -84,8 +84,6 @@ class SequenceLabelDataset(Dataset):
         file_index_map = {f: i for i, f in enumerate(self.files)}
         return [file_index_map[f] for f in files if f in file_index_map]
 
-    def save_dataset(self, path):
-        pass
 
     @classmethod
     def load_dataset(cls, path, **kwargs):
@@ -125,10 +123,13 @@ class MultiFileDataset(Dataset):
 
         self.cached_data = {}
         print(len(self.files),len(self.labels))
+    
+    def export_selected_data(self):
+        self.files
 
     def __len__(self):
         return len(self.files)
-    
+
     def _get_file_path(self,filename):
         return str(Path(self.folder_name,filename).resolve())
     
