@@ -75,7 +75,7 @@ model:
   freeze_encoder: false
 data:
   data_dir: ../output
-  label_filepath: ../EML1_pageLevel_with_filename_seq.csv
+  label_filepath: ../EML1_pageLevel_500+_matchEDMinstances.csv
   label_col: Rote_X
   test_dir: null
   train_dataset: null
