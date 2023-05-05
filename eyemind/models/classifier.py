@@ -56,7 +56,11 @@ class oldEncoderClassifierModel(LightningModule):
         self.encoder = create_encoder(encoder_hidden_dim)
         if encoder_weights_path:
            self.encoder.load_state_dict(torch.load(encoder_weights_path))
-        self.model = creator.create_classifier_from_encoder(self.encoder,hidden_layers=classifier_hidden_layers,n_output=1,dropout=0.5)
+        self.model = creator.create_classifier_from_encoder(
+            self.encoder,
+            hidden_layers=classifier_hidden_layers,
+            n_output=1,
+            dropout=0.5)
         assert(n_output >= 1)
         self.num_classes = n_output
         self.pos_weight = torch.tensor(pos_weight,dtype=float) if pos_weight else None
@@ -286,16 +290,12 @@ class EncoderClassifierModel(LightningModule):
             #self.enc_embedding.requires_grad_(False)
             self.encoder.requires_grad_(False)
 
-    def forward(self, x_enc, enc_self_mask=None):
+    def forward(self, x_enc):
         #enc_out = self.enc_embedding(x_enc)
-        enc_out = self.encoder(x_enc, enc_self_mask)
+        enc_out = self.encoder(x_enc)
         dec_in = torch.mean(enc_out, 1)
         dec_out = self.classifier_head(dec_in)
-        if self.hparams.output_attention:
-            #return dec_out, attns
-            return dec_out
-        else:
-            return dec_out
+        return dec_out
         
     def training_step(self, batch, batch_idx):
         return self._step(batch, batch_idx, step_type="train")
@@ -305,7 +305,7 @@ class EncoderClassifierModel(LightningModule):
 
     def predict_step(self, batch: Any, batch_idx: int, dataloader_idx: int = 0):
         X, _ = batch
-        logits = self(X)
+        logits = self.forward(X)
         return self._get_preds(logits) 
     
     def test_step(self, batch, batch_idx):
@@ -353,17 +353,12 @@ class EncoderClassifierModel(LightningModule):
         parser.add_argument('--enc_in', type=int, default=2, help='encoder input size')
         parser.add_argument('--c_out', type=int, default=1, help='output size')
         parser.add_argument('--d_model', type=int, default=512, help='dimension of model')
-        parser.add_argument('--n_heads', type=int, default=8, help='num of heads')
-        parser.add_argument('--e_layers', type=int, default=2, help='num of encoder layers')
-        parser.add_argument('--s_layers', type=str, default='3,2,1', help='num of stack encoder layers')
-        parser.add_argument('--d_ff', type=int, default=2048, help='dimension of fcn')
+        # parser.add_argument('--e_layers', type=int, default=2, help='num of encoder layers')
+        # parser.add_argument('--s_layers', type=str, default='3,2,1', help='num of stack encoder layers')
         parser.add_argument('--factor', type=int, default=5, help='probsparse attn factor')
         parser.add_argument('--padding', type=int, default=0, help='padding type')
         parser.add_argument('--distil', action='store_false', help='whether to use distilling in encoder, using this argument means not using distilling', default=True)
-        parser.add_argument('--dropout', type=float, default=0.05, help='dropout')
-        parser.add_argument('--attn', type=str, default='prob', help='attention used in encoder, options:[prob, full]')
         parser.add_argument('--activation', type=str, default='gelu',help='activation')
-        parser.add_argument('--output_attention', action='store_true', help='whether to output attention in ecoder')
         parser.add_argument('--class_weights', type=float, nargs='*', default=[3., 1.])
         parser.add_argument('--freeze_encoder', action='store_false')
         return parser
