@@ -1,12 +1,12 @@
 from pytorch_lightning.utilities.cli import LightningCLI
 from eyemind.dataloading.gaze_data import SequenceToLabelDataModule
-from eyemind.models.transformers import InformerClassifierModel
+from eyemind.models.transformers import EncoderClassifierModel #TODO: replace with a regular classifier
 from eyemind.dataloading.gaze_data import BaseSequenceToSequenceDataModule
 from eyemind.experiments.cli import FoldsLightningCLI
 
 
 if __name__ == "__main__":
-    cli = FoldsLightningCLI(InformerClassifierModel, 
+    cli = FoldsLightningCLI(EncoderClassifierModel, 
                             SequenceToLabelDataModule, 
                             run=False, 
                             seed_everything_default=42,

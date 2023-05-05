@@ -8,6 +8,15 @@ import torch
 
 from eyemind.obf.model import ae
 from eyemind.obf.model import creator
+from eyemind.models.encoder_decoder import EncoderDecoderModel, MultiTaskEncoderDecoder
+from eyemind.analysis.predictions import get_encoder_from_checkpoint
+
+from eyemind.models.informer.utils.masking import TriangularCausalMask, ProbMask
+from eyemind.models.informer.models.encoder import Encoder, EncoderLayer, ConvLayer, EncoderStack
+from eyemind.models.informer.models.decoder import Decoder, DecoderLayer
+from eyemind.models.informer.models.attn import FullAttention, ProbAttention, AttentionLayer
+from eyemind.models.informer.models.embed import GazeEmbedding
+from eyemind.models.loss import RMSELoss
 
 def create_encoder(hidden_dim=128, backbone_type='gru', nlayers=2, conv_dim=32,input_dim=2,use_conv=True):
     if use_conv:
@@ -31,8 +40,16 @@ def create_encoder(hidden_dim=128, backbone_type='gru', nlayers=2, conv_dim=32,i
     encoder = nn.Sequential(*enc_layers)
     return encoder
 
-class EncoderClassifierModel(LightningModule):
-    def __init__(self, encoder_hidden_dim: int=128, encoder_weights_path: str="", classifier_hidden_layers: List[int]=[256,512], n_output: int=1, pos_weight: Optional[List[float]]=None, learning_rate: float=1e-3, dropout: float=0.5, freeze_encoder: bool=False):
+class oldEncoderClassifierModel(LightningModule):
+    def __init__(self, 
+                 encoder_hidden_dim: int=128, 
+                 encoder_weights_path: str="", 
+                 classifier_hidden_layers: List[int]=[256,512], 
+                 n_output: int=1, 
+                 pos_weight: Optional[List[float]]=None, 
+                 learning_rate: float=1e-3, 
+                 dropout: float=0.5, 
+                 freeze_encoder: bool=False):
         super().__init__()
         # Saves hyperparameters (init args)
         self.save_hyperparameters()
@@ -230,3 +247,123 @@ class EncoderClassifierMultiSequenceModel(LightningModule):
         group.add_argument('--encoder_weights_path', type=str, default="")
         group.add_argument('--classifier_hidden_layers', type=int, nargs='+', default=[256, 512])
         return parent_parser    
+    
+
+class EncoderClassifierModel(LightningModule):
+    def __init__(self, 
+                enc_in: int=2, 
+                d_model: int=128, 
+                n_heads: int=8, 
+                e_layers: int=3, 
+                d_ff: int=128, 
+                dropout: float=0.05, 
+                activation: str='gelu', 
+                distil: bool=True, 
+                learning_rate: float=1e-3, 
+                encoder_ckpt: str="",
+                freeze_encoder: bool=False):
+        super().__init__()
+        self.save_hyperparameters()
+        # # Scaler
+        # self.scaler = StandardScaler()
+        # Loss function
+        self.criterion = nn.BCEWithLogitsLoss()
+        # Metrics
+        self.auroc_metric = torchmetrics.AUROC()
+        self.accuracy_metric = torchmetrics.Accuracy()
+        # Encoding
+        if encoder_ckpt:
+            #self.enc_embedding, self.encoder = get_encoder_from_checkpoint(InformerMultiTaskEncoderDecoder, encoder_ckpt)
+            self.encoder = get_encoder_from_checkpoint(MultiTaskEncoderDecoder, 
+                                                       encoder_ckpt)
+        else:
+            raise NotImplementedError
+        self.classifier_head = ae.MLP(input_dim=d_model, 
+                                      layers=[64,1], 
+                                      activation="relu")
+
+        if freeze_encoder:
+            #self.enc_embedding.requires_grad_(False)
+            self.encoder.requires_grad_(False)
+
+    def forward(self, x_enc, enc_self_mask=None):
+        #enc_out = self.enc_embedding(x_enc)
+        enc_out = self.encoder(x_enc, enc_self_mask)
+        dec_in = torch.mean(enc_out, 1)
+        dec_out = self.classifier_head(dec_in)
+        if self.hparams.output_attention:
+            #return dec_out, attns
+            return dec_out
+        else:
+            return dec_out
+        
+    def training_step(self, batch, batch_idx):
+        return self._step(batch, batch_idx, step_type="train")
+    
+    def validation_step(self, batch, batch_idx):
+        self._step(batch, batch_idx, step_type="val")
+
+    def predict_step(self, batch: Any, batch_idx: int, dataloader_idx: int = 0):
+        X, _ = batch
+        logits = self(X)
+        return self._get_preds(logits) 
+    
+    def test_step(self, batch, batch_idx):
+        self._step(batch, batch_idx, step_type="test")
+
+    def _step(self, batch, batch_idx, step_type):
+        try:
+            X, y = batch
+        except ValueError as e:
+            print(f"{batch}")
+            raise e
+        logits = self(X).squeeze()
+        loss = self.criterion(logits, y)
+        probs = self._get_probs(logits)
+        y = y.int()
+        accuracy = self.accuracy_metric(probs, y)
+        auroc = self.auroc_metric(probs, y)
+        self.logger.experiment.add_scalars("losses", {f"{step_type}_loss": loss}, self.current_epoch)        
+        self.log(f"{step_type}_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log(f"{step_type}_accuracy", accuracy, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log(f"{step_type}_auroc", auroc, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        return loss
+
+    def configure_optimizers(self):
+        #params = self.classifier_head.parameters() if self.hparams.freeze_encoder else list(self.enc_embedding.parameters()) + list(self.encoder.parameters()) + list(self.classifier_head.parameters())
+        params = self.parameters()
+        optimizer = torch.optim.Adam(params, lr=self.hparams.learning_rate)
+        res = {"optimizer": optimizer}
+        res['lr_scheduler'] = {"scheduler": torch.optim.lr_scheduler.StepLR(optimizer, step_size=max(1, int(self.trainer.max_epochs / 5)), gamma=0.5)}
+        return res
+
+    def _get_preds(self, logits, threshold=0.5):
+        probs = torch.sigmoid(logits)
+        preds = (probs > threshold).float()
+        return preds
+
+    def _get_probs(self, logits):
+        probs = torch.sigmoid(logits)
+        return probs
+
+    def add_model_specific_args(parent_parser):
+        parser = parent_parser.add_argument_group("InformerEncoderDecoderModel")
+        parser.add_argument('--learning_rate', type=float, default=0.001)
+        parser.add_argument('--encoder_ckpt', type=str, default="")
+        parser.add_argument('--enc_in', type=int, default=2, help='encoder input size')
+        parser.add_argument('--c_out', type=int, default=1, help='output size')
+        parser.add_argument('--d_model', type=int, default=512, help='dimension of model')
+        parser.add_argument('--n_heads', type=int, default=8, help='num of heads')
+        parser.add_argument('--e_layers', type=int, default=2, help='num of encoder layers')
+        parser.add_argument('--s_layers', type=str, default='3,2,1', help='num of stack encoder layers')
+        parser.add_argument('--d_ff', type=int, default=2048, help='dimension of fcn')
+        parser.add_argument('--factor', type=int, default=5, help='probsparse attn factor')
+        parser.add_argument('--padding', type=int, default=0, help='padding type')
+        parser.add_argument('--distil', action='store_false', help='whether to use distilling in encoder, using this argument means not using distilling', default=True)
+        parser.add_argument('--dropout', type=float, default=0.05, help='dropout')
+        parser.add_argument('--attn', type=str, default='prob', help='attention used in encoder, options:[prob, full]')
+        parser.add_argument('--activation', type=str, default='gelu',help='activation')
+        parser.add_argument('--output_attention', action='store_true', help='whether to output attention in ecoder')
+        parser.add_argument('--class_weights', type=float, nargs='*', default=[3., 1.])
+        parser.add_argument('--freeze_encoder', action='store_false')
+        return parser

@@ -65,17 +65,9 @@ trainer:
   move_metrics_to_cpu: false
   multiple_trainloader_mode: max_size_cycle
 model:
-  encoder_hidden_dim: 128
-  factor: 5
-  d_model: 512
-  n_heads: 8
-  e_layers: 3
-  d_ff: 512
-  dropout: 0.05
-  activation: gelu
-  output_attention: false
+  d_model: 128
   learning_rate: 0.001
-  encoder_ckpt: ./lightning_logs/version_408703/checkpoints/epoch=177-step=1958.ckpt
+  encoder_ckpt: PLACEHOLDER
   freeze_encoder: true
 data:
   data_dir: ./data/processed/output

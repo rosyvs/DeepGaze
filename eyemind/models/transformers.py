@@ -749,8 +749,13 @@ class InformerClassifierModel(LightningModule):
             self.encoder = Encoder(
                 [
                     EncoderLayer(
-                        AttentionLayer(Attn(False, factor, attention_dropout=dropout, output_attention=output_attention), 
-                                    d_model, n_heads, mix=False),
+                        AttentionLayer(Attn(False, 
+                                            factor, 
+                                            attention_dropout=dropout, 
+                                            output_attention=output_attention), 
+                                            d_model, 
+                                            n_heads, 
+                                            mix=False),
                         d_model,
                         d_ff,
                         dropout=dropout,
@@ -764,7 +769,9 @@ class InformerClassifierModel(LightningModule):
                 ] if distil else None,
                 norm_layer=torch.nn.LayerNorm(d_model)
             )
-        self.classifier_head = ae.MLP(input_dim=d_model, layers=[64,1], activation="relu")
+        self.classifier_head = ae.MLP(input_dim=d_model, 
+                                      layers=[64,1], 
+                                      activation="relu")
 
         if freeze_encoder:
             #self.enc_embedding.requires_grad_(False)
