@@ -31,7 +31,7 @@ def main(args):
                 files=ckpt_dirpath.glob('*.ckpt')
                 latest_file = max(list(files), key=lambda item: item.stat().st_ctime)
                 ckpt_path = str(latest_file)    
-            cmd = f"sbatch {args.slurm_script} {i} {args.seed} {ckpt_path} {args.label_col}"
+            cmd = f"sbatch {args.slurm_script} {i} {args.seed} {ckpt_path} {l}"
             print(cmd)
             cmd_list = cmd.split(" ")
             result = subprocess.run(cmd_list, capture_output=True, text=True, check=True)
