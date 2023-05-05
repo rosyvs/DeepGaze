@@ -8,7 +8,7 @@ from eyemind.obf.model import creator
 from eyemind import obf
 from eyemind.dataloading.load_dataset import limit_sequence_len, get_label_mapper, get_filenames_for_dataset, create_filename_col, get_stratified_group_splits
 from eyemind.dataloading.gaze_data import GazeDataModule
-from eyemind.models.classifier import EncoderClassifierModel
+from eyemind.models.classifier import oldEncoderClassifierModel
 import pandas as pd
 import torch
 import numpy as np
