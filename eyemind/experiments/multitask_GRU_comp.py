@@ -1,7 +1,5 @@
-from pytorch_lightning.utilities.cli import LightningCLI
 from eyemind.dataloading.gaze_data import SequenceToLabelDataModule
-from eyemind.models.transformers import EncoderClassifierModel #TODO: replace with a regular classifier
-from eyemind.dataloading.gaze_data import BaseSequenceToSequenceDataModule
+from eyemind.models.classifier import EncoderClassifierModel 
 from eyemind.experiments.cli import FoldsLightningCLI
 
 
