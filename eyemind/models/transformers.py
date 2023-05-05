@@ -738,7 +738,8 @@ class InformerClassifierModel(LightningModule):
         # Encoding
         if encoder_ckpt:
             #self.enc_embedding, self.encoder = get_encoder_from_checkpoint(InformerMultiTaskEncoderDecoder, encoder_ckpt)
-            self.encoder = get_encoder_from_checkpoint(InformerMultiTaskEncoderDecoder, encoder_ckpt)
+            self.encoder = get_encoder_from_checkpoint(InformerMultiTaskEncoderDecoder, 
+                                                       encoder_ckpt)
         else:
             self.enc_embedding = GazeEmbedding(enc_in, d_model, dropout)
             #self.dec_embedding = GazeEmbedding(dec_in, d_model, dropout)
