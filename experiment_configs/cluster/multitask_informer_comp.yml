@@ -77,7 +77,7 @@ model:
   output_attention: false
   distil: false
   learning_rate: 0.001
-  encoder_ckpt: ./lightning_logs/version_408703/checkpoints/epoch=177-step=1958.ckpt
+  encoder_ckpt: PLACEHOLDER
   freeze_encoder: true
 data:
   data_dir: ./data/processed/output

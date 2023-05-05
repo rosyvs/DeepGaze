@@ -28,7 +28,7 @@ echo "Fold: $1"
 echo "Seed: $2"
 echo "Encoder Checkpoint: $3"
 echo "Label Column: $4"
-name="informer_${4}"
+name="GRU_${4}"
 version="fold${1}"
 split_filepath="./data_splits/4fold_participant/seed${2}.yml"
 
