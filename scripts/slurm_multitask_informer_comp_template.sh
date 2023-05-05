@@ -23,7 +23,7 @@ cd /projects/$USER/DeepGaze
 
 conda init bash
 conda activate dg
-pip install -e . # surely this doesnt need to be done as conda env already has eyemind?? 
+# pip install -e . # surely this doesnt need to be done as conda env already has eyemind?? 
 echo "Fold: $1"
 echo "Seed: $2"
 echo "Encoder Checkpoint: $3"
