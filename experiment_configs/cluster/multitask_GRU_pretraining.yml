@@ -7,7 +7,7 @@ trainer:
     class_path: pytorch_lightning.loggers.TensorBoardLogger
     init_args:
       save_dir: ./lightning_logs
-      name: GRU_pretraining
+      name: GRU_pre_seqlen
       version: fold0
   enable_checkpointing: true
   callbacks: 
