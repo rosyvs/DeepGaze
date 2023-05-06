@@ -28,7 +28,7 @@ conda activate dg
 echo "Fold: $1"
 echo "Seed: $2"
 version="fold${1}seqlen${3}"
-name="GRU_pretraining_seed${2}"
+name="GRU_pre_seqlen_seed${2}"
 split_filepath="./data_splits/4fold_participant/seed${2}.yml"
 seqlen=${3}
 echo $name
@@ -36,4 +36,4 @@ echo $version
 echo $split_filepath
 echo $seqlen
 
-python3 eyemind/experiments/multitask_GRU_pretraining.py -c experiment_configs/cluster/multitask_GRU_pretraining.yml --fold_number $1 --seed_everything $2 --split_filepath ${split_filepath} --trainer.logger.init_args.name ${name} --trainer.logger.init_args.version ${version} --model.sequence_length ${seqlen}
+python3 eyemind/experiments/multitask_GRU_pretraining.py -c experiment_configs/cluster/multitask_GRU_pretraining.yml --fold_number $1 --seed_everything $2 --split_filepath ${split_filepath} --trainer.logger.init_args.name ${name} --trainer.logger.init_args.version ${version}  --data.sequence_length ${seqlen}
