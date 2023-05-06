@@ -5,9 +5,9 @@
 #SBATCH --partition=aa100
 #SBATCH --ntasks=1
 #SBATCH --gres=gpu:2
-#SBATCH --job-name=multitask-GRU-pretraining-fold-%j
+#SBATCH --job-name=GRUpreseqlen
 #SBATCH --cpus-per-task=8
-#SBATCH --output=slurm_logs/GRUpre.%j.out
+#SBATCH --output=slurm_logs/GRUpreseqlen.%j.out
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=roso8920@colorado.edu
 
