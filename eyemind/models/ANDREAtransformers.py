@@ -120,7 +120,8 @@ class InformerEncoderDecoderModel(LightningModule):
                 pred_len: int=150,
                 padding: int=0,
                 factor: int=5, 
-                d_model: int=512, 
+                d_model: int=512,
+                d_embed: int=1280,
                 n_heads: int=8, 
                 e_layers: int=3, 
                 d_layers: int=2, 
@@ -308,6 +309,7 @@ class InformerEncoderDecoderModel(LightningModule):
         parser.add_argument('--class_weights', type=float, nargs='*', default=[3., 1.])
         parser.add_argument('--freeze_encoder', type=bool, default=False)
         parser.add_argument('--max_rmse_err', type=float, default=70., help='clamps max rmse loss')
+        parser.add_argument('--d_embed', type=int, default=1280, help='word embedding size')
         return parser
 
 
@@ -321,7 +323,8 @@ class InformerEncoderFixationModel(LightningModule):
                 pred_len: int=150,
                 padding: int=0,
                 factor: int=5, 
-                d_model: int=512, 
+                d_model: int=512,
+                d_embed: int=1280,
                 n_heads: int=8, 
                 e_layers: int=3, 
                 d_layers: int=2, 
@@ -355,19 +358,19 @@ class InformerEncoderFixationModel(LightningModule):
             [
                 EncoderLayer(
                     AttentionLayer(Attn(False, factor, attention_dropout=dropout, output_attention=output_attention), 
-                                d_model, n_heads, mix=False),
-                    d_model,
-                    d_ff,
+                                d_embed, n_heads, mix=False),
+                    d_embed,
+                    d_embed,
                     dropout=dropout,
                     activation=activation
                 ) for l in range(e_layers)
             ],
             [
                 ConvLayer(
-                    d_model
+                    d_embed
                 ) for l in range(e_layers-1)
             ] if distil else None,
-            norm_layer=torch.nn.LayerNorm(d_model)
+            norm_layer=torch.nn.LayerNorm(d_embed)
         )
         # self.end_conv1 = nn.Conv1d(in_channels=label_len+out_len, out_channels=out_len, kernel_size=1, bias=True)
         # self.end_conv2 = nn.Conv1d(in_channels=d_model, out_channels=c_out, kernel_size=1, bias=True)
@@ -376,7 +379,8 @@ class InformerEncoderFixationModel(LightningModule):
     def forward(self, x_enc, enc_self_mask=None):
         #x_enc: (bs, sequence_len,2)
         #x_dec: (bs, sequence_len)
-        enc_out = self.enc_embedding(x_enc)
+        enc_out = self.enc_embedding(x_enc[:1])
+        enc_out = np.concatenate((x_enc[2:], enc_out), axis=1)
         enc_out, attns = self.encoder(enc_out, attn_mask=enc_self_mask)
         dec_out = self.decoder(enc_out)
         
@@ -507,6 +511,7 @@ class InformerEncoderFixationModel(LightningModule):
         parser.add_argument('--class_weights', type=float, nargs='*', default=[3., 1.])
         parser.add_argument('--freeze_encoder', type=bool, default=False)
         parser.add_argument('--max_rmse_err', type=float, default=70., help='clamps max rmse loss')
+        parser.add_argument('--d_embed', type=int, default=1280, help='word embedding dimension')
         return parser
 
 class InformerMultiTaskEncoderDecoder(LightningModule):
@@ -602,11 +607,8 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
         try:
             X, fix_y, X2, cl_y = batch
         except ValueError as e:
-            try:
-                X, fix_y = batch
-            except ValueError as e:
-                print(f"{batch}")
-                raise e
+            print(f"{batch}")
+            raise e
         total_loss = 0
         for task in self.hparams.tasks:
             if task == "cl":
@@ -711,6 +713,7 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
         parser.add_argument('--class_weights', type=float, nargs='*', default=[3., 1.])
         parser.add_argument('--tasks', type=str, nargs='*', default=["fi", "cl", "rc", "pc"])
         parser.add_argument('--freeze_encoder', type=bool, default=False)
+        parser.add_argument('--d_embed', type=int, default=1280, help='word embedding size')
         return parser
     
 class InformerClassifierModel(LightningModule):
@@ -741,8 +744,7 @@ class InformerClassifierModel(LightningModule):
         # Encoding
         if encoder_ckpt:
             #self.enc_embedding, self.encoder = get_encoder_from_checkpoint(InformerMultiTaskEncoderDecoder, encoder_ckpt)
-            self.encoder = get_encoder_from_checkpoint(InformerMultiTaskEncoderDecoder, 
-                                                       encoder_ckpt)
+            self.encoder = get_encoder_from_checkpoint(InformerMultiTaskEncoderDecoder, encoder_ckpt)
         else:
             self.enc_embedding = GazeEmbedding(enc_in, d_model, dropout)
             #self.dec_embedding = GazeEmbedding(dec_in, d_model, dropout)
@@ -753,13 +755,8 @@ class InformerClassifierModel(LightningModule):
             self.encoder = Encoder(
                 [
                     EncoderLayer(
-                        AttentionLayer(Attn(False, 
-                                            factor, 
-                                            attention_dropout=dropout, 
-                                            output_attention=output_attention), 
-                                            d_model, 
-                                            n_heads, 
-                                            mix=False),
+                        AttentionLayer(Attn(False, factor, attention_dropout=dropout, output_attention=output_attention), 
+                                    d_model, n_heads, mix=False),
                         d_model,
                         d_ff,
                         dropout=dropout,
@@ -773,9 +770,7 @@ class InformerClassifierModel(LightningModule):
                 ] if distil else None,
                 norm_layer=torch.nn.LayerNorm(d_model)
             )
-        self.classifier_head = ae.MLP(input_dim=d_model, 
-                                      layers=[64,1], 
-                                      activation="relu")
+        self.classifier_head = ae.MLP(input_dim=d_model, layers=[64,1], activation="relu")
 
         if freeze_encoder:
             #self.enc_embedding.requires_grad_(False)
@@ -791,7 +786,7 @@ class InformerClassifierModel(LightningModule):
             return dec_out
         else:
             return dec_out
-        
+            
     def training_step(self, batch, batch_idx):
         return self._step(batch, batch_idx, step_type="train")
     
@@ -861,4 +856,5 @@ class InformerClassifierModel(LightningModule):
         parser.add_argument('--output_attention', action='store_true', help='whether to output attention in ecoder')
         parser.add_argument('--class_weights', type=float, nargs='*', default=[3., 1.])
         parser.add_argument('--freeze_encoder', action='store_false')
+        parser.add_argument('--d_embed', type=int, default=1280, help='word embedding size')
         return parser
