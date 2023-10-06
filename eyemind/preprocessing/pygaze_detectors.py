@@ -17,7 +17,6 @@
 #
 #	You should have received a copy of the GNU General Public License
 #	along with this program.  If not, see <http://www.gnu.org/licenses/>
-
 # EyeTribe Reader
 #
 # Reads files as produced by PyTribe (https://github.com/esdalmaijer/PyTribe),
@@ -34,236 +33,336 @@
 # edwin.dalmaijer@psy.ox.ax.uk
 #
 # version 1 (01-Jul-2014)
-
 __author__ = "Edwin Dalmaijer"
+# modified by Rosy Southwell 
 
-import numpy
-
+import numpy as np
 
 def blink_detection(x, y, time, missing=0.0, minlen=10):
-	
-	"""Detects blinks, defined as a period of missing data that lasts for at
-	least a minimal amount of samples
-	
-	arguments
-
-	x		-	numpy array of x positions
-	y		-	numpy array of y positions
-	time		-	numpy array of EyeTribe timestamps
-
-	keyword arguments
-
-	missing	-	value to be used for missing data (default = 0.0)
-	minlen	-	integer indicating the minimal amount of consecutive
-				missing samples
-	
-	returns
-	Sblk, Eblk
-				Sblk	-	list of lists, each containing [starttime]
-				Eblk	-	list of lists, each containing [starttime, endtime, duration]
-	"""
-	
-	# empty list to contain data
-	Sblk = []
-	Eblk = []
-	
-	# check where the missing samples are
-	mx = numpy.array(x==missing, dtype=int)
-	my = numpy.array(y==missing, dtype=int)
-	miss = numpy.array((mx+my) == 2, dtype=int)
-	
-	# check where the starts and ends are (+1 to counteract shift to left)
-	diff = numpy.diff(miss)
-	starts = numpy.where(diff==1)[0] + 1
-	ends = numpy.where(diff==-1)[0] + 1
-	
-	# compile blink starts and ends
-	for i in range(len(starts)):
-		# get starting index
-		s = starts[i]
-		# get ending index
-		if i < len(ends):
-			e = ends[i]
-		elif len(ends) > 0:
-			e = ends[-1]
-		else:
-			e = -1
-		# append only if the duration in samples is equal to or greater than
-		# the minimal duration
-		if e-s >= minlen:
-			# add starting time
-			Sblk.append([time[s]])
-			# add ending time
-			Eblk.append([time[s],time[e],time[e]-time[s]])
-	
-	return Sblk, Eblk
-
+    """Detects blinks, defined as a period of missing data that lasts for at
+    least a minimal amount of samples
+    arguments
+    x		-	np array of x positions
+    y		-	np array of y positions
+    time		-	np array of EyeTribe timestamps
+    keyword arguments
+    missing	-	value to be used for missing data (default = 0.0)
+    minlen	-	integer indicating the minimal amount of consecutive
+                missing samples
+    returns
+    Sblk, Eblk
+                Sblk	-	list of lists, each containing [starttime]
+                Eblk	-	list of lists, each containing [starttime, endtime, duration]
+    """
+    # empty list to contain data
+    Sblk = []
+    Eblk = []
+    # check where the missing samples are
+    mx = np.array(x==missing, dtype=int)
+    my = np.array(y==missing, dtype=int)
+    miss = np.array((mx+my) == 2, dtype=int)
+    # check where the starts and ends are (+1 to counteract shift to left)
+    diff = np.diff(miss)
+    starts = np.where(diff==1)[0] + 1
+    ends = np.where(diff==-1)[0] + 1
+    # compile blink starts and ends
+    for i in range(len(starts)):
+        # get starting index
+        s = starts[i]
+        # get ending index
+        if i < len(ends):
+            e = ends[i]
+        elif len(ends) > 0:
+            e = ends[-1]
+        else:
+            e = -1
+        # append only if the duration in samples is equal to or greater than
+        # the minimal duration
+        if e-s >= minlen:
+            # add starting time
+            Sblk.append([time[s]])
+            # add ending time
+            Eblk.append([time[s],time[e],time[e]-time[s]])
+    return Sblk, Eblk
 def remove_missing(x, y, time, missing):
-	mx = numpy.array(x==missing, dtype=int)
-	my = numpy.array(y==missing, dtype=int)
-	x = x[(mx+my) == 0]
-	y = y[(mx+my) == 0]
-	time = time[(mx+my) == 0]
-	return x, y, time
-
+    mx = np.array((x==missing) | (np.isnan(x)), dtype=int)
+    my = np.array((y==missing) | (np.isnan(y)), dtype=int)
+    x = x[(mx+my) == 0]
+    y = y[(mx+my) == 0]
+    time = time[(mx+my) == 0]
+    return x, y, time
 
 def fixation_detection(x, y, time, missing=0.0, maxdist=25, mindur=50):
-	
-	"""Detects fixations, defined as consecutive samples with an inter-sample
-	distance of less than a set amount of pixels (disregarding missing data)
-	
-	arguments
-
-	x		-	numpy array of x positions
-	y		-	numpy array of y positions
-	time		-	numpy array of EyeTribe timestamps
-
-	keyword arguments
-
-	missing	-	value to be used for missing data (default = 0.0)
-	maxdist	-	maximal inter sample distance in pixels (default = 25)
-	mindur	-	minimal duration of a fixation in milliseconds; detected
-				fixation cadidates will be disregarded if they are below
-				this duration (default = 100)
-	
-	returns
-	Sfix, Efix
-				Sfix	-	list of lists, each containing [starttime]
-				Efix	-	list of lists, each containing [starttime, endtime, duration, endx, endy]
-	"""
-
-	x, y, time = remove_missing(x, y, time, missing)
-
-	# empty list to contain data
-	Sfix = []
-	Efix = []
-	
-	# loop through all coordinates
-	si = 0
-	fixstart = False
-	for i in range(1,len(x)):
-		# calculate Euclidean distance from the current fixation coordinate
-		# to the next coordinate
-		squared_distance = ((x[si]-x[i])**2 + (y[si]-y[i])**2)
-		dist = 0.0
-		if squared_distance > 0:
-			dist = squared_distance**0.5
-		# check if the next coordinate is below maximal distance
-		if dist <= maxdist and not fixstart:
-			# start a new fixation
-			si = 0 + i
-			fixstart = True
-			Sfix.append([time[i]])
-		elif dist > maxdist and fixstart:
-			# end the current fixation
-			fixstart = False
-			# only store the fixation if the duration is ok
-			if time[i-1]-Sfix[-1][0] >= mindur:
-				Efix.append([Sfix[-1][0], time[i-1], time[i-1]-Sfix[-1][0], x[si], y[si]])
-			# delete the last fixation start if it was too short
-			else:
-				Sfix.pop(-1)
-			si = 0 + i
-		elif not fixstart:
-			si += 1
-	#add last fixation end (we can lose it if dist > maxdist is false for the last point)
-	if len(Sfix) > len(Efix):
-		Efix.append([Sfix[-1][0], time[len(x)-1], time[len(x)-1]-Sfix[-1][0], x[si], y[si]])
-	return Sfix, Efix
+    """Detects fixations, defined as consecutive samples with an inter-sample
+    distance of less than a set amount of pixels (disregarding missing data)
+    arguments
+    x		-	np array of x positions
+    y		-	np array of y positions
+    time		-	np array of EyeTribe timestamps
+    keyword arguments
+    missing	-	value to be used for missing data (default = 0.0)
+    maxdist	-	maximal inter sample distance in pixels (default = 25)
+    mindur	-	minimal duration of a fixation in milliseconds; detected
+                fixation cadidates will be disregarded if they are below
+                this duration (default = 100)
+    returns
+    Sfix, Efix
+                Sfix	-	list of lists, each containing [starttime]
+                Efix	-	list of lists, each containing [starttime, endtime, duration, endx, endy]
+    """
+    x, y, time = remove_missing(x, y, time, missing)
+    # empty list to contain data
+    Sfix = []
+    Efix = []
+    # loop through all coordinates
+    si = 0
+    fixstart = False
+    for i in range(1,len(x)):
+        # calculate Euclidean distance from the current fixation coordinate
+        # to the next coordinate
+        squared_distance = ((x[si]-x[i])**2 + (y[si]-y[i])**2)
+        dist = 0.0
+        if squared_distance > 0:
+            dist = squared_distance**0.5
+        # check if the next coordinate is below maximal distance
+        if dist <= maxdist and not fixstart:
+            # start a new fixation
+            si = 0 + i
+            fixstart = True
+            Sfix.append([time[i]])
+        elif dist > maxdist and fixstart:
+            # end the current fixation
+            fixstart = False
+            # only store the fixation if the duration is ok
+            if time[i-1]-Sfix[-1][0] >= mindur:
+                Efix.append([Sfix[-1][0], time[i-1], time[i-1]-Sfix[-1][0], x[si], y[si]])
+            # delete the last fixation start if it was too short
+            else:
+                Sfix.pop(-1)
+            si = 0 + i
+        elif not fixstart:
+            si += 1
+    #add last fixation end (we can lose it if dist > maxdist is false for the last point)
+    if len(Sfix) > len(Efix):
+        Efix.append([Sfix[-1][0], time[len(x)-1], time[len(x)-1]-Sfix[-1][0], x[si], y[si]])
+    return Sfix, Efix
 
 
-def saccade_detection(x, y, time, missing=0.0, minlen=5, maxvel=40, maxacc=340):
-	
-	"""Detects saccades, defined as consecutive samples with an inter-sample
-	velocity of over a velocity threshold or an acceleration threshold
-	
-	arguments
+def saccade_detection(x, y, time, missing=0.0, mindist=.15, mindur=0,maxvel=30, maxacc=8000):
+    """MODIFIED ALGO (similar to EyeLink): 
+    Detects saccades, defined as consecutive samples with an inter-sample
+    velocity of over a velocity threshold or an acceleration threshold
+    arguments, and a minimum displacement
+    x		-	np array of x positions
+    y		-	np array of y positions
+    time		-	np array of tracker timestamps in milliseconds
+    keyword arguments
+    missing	-	value to be used for missing data (default = 0.0)
+    mindist	-	minimal distance of saccades in degrees
+    minlen	-	minimal length of saccades in milliseconds
+    maxvel	-	velocity threshold in deg/second 
+    maxacc	-	acceleration threshold in deg/second**2
 
-	x		-	numpy array of x positions
-	y		-	numpy array of y positions
-	time		-	numpy array of tracker timestamps in milliseconds
+    returns
+    Ssac, Esac
+            Ssac	-	list of lists, each containing [starttime]
+            Esac	-	list of lists, each containing [starttime, endtime, duration, startx, starty, endx, endy]
+    """
+    x, y, time = remove_missing(x, y, time, missing)
+    # CONTAINERS
+    Ssac = []
+    Esac = []
+    # INTER-SAMPLE MEASURES
+    # the distance between samples is the square root of the sum
+    # of the squared horizontal and vertical interdistances
+    intdist = (np.diff(x)**2 + np.diff(y)**2)**0.5
+    # get inter-sample times
+    inttime = np.diff(time)
+    # recalculate inter-sample times to seconds
+    inttime = inttime / 1000.0
+    # VELOCITY AND ACCELERATION
+    # the velocity between samples is the inter-sample distance
+    # divided by the inter-sample time
+    vel = intdist / inttime
+    # the acceleration is the sample-to-sample difference in
+    # eye movement velocity
+    acc = np.diff(vel)/inttime[1:] # Bugfix: added the time denominator, what if vel is based on missing vals, and the time basis is no longer linear? 
+    # SACCADE START AND END
+    t0i = 0
+    stop = False
 
-	keyword arguments
+    while not stop:
+        # saccade start (t1) is when the velocity or acceleration
+        # surpass threshold, saccade end (t2) is when either return
+        # under threshold
+        # detect saccade starts
+        sacstarts = np.where((vel[1+t0i:] > maxvel).astype(int) + (acc[t0i:] > maxacc).astype(int) >= 1)[0]
+        if len(sacstarts) > 0:
+            # timestamp for starting position
+            t1i = t0i + sacstarts[0] + 1
+            if t1i >= len(time)-1:
+                t1i = len(time)-2
+            t1 = time[t1i]
+            # add to saccade starts
+            Ssac.append([t1])
+            # detect saccade endings
+            sacends = np.where((vel[1+t1i:] < maxvel).astype(int) + (acc[t1i:] < maxacc).astype(int) >=1)[0]
+            if len(sacends) > 0:
+                # timestamp for ending position
+                t2i = sacends[0] + 1 + t1i + 2
+                if t2i >= len(time):
+                    t2i = len(time)-1
+                t2 = time[t2i]
+                dur = t2 - t1
+                dist =  ((x[t2i]-x[t1i])**2 + (y[t2i]-y[t1i])**2)**0.5
+                # ignore saccades that did not go far enough
+                if dist >= mindist and dur>=mindur:
+                    # add to saccade ends
+                    Esac.append([t1, t2, dur, x[t1i], y[t1i], x[t2i], y[t2i]])
+                else:
+                    # remove last saccade start on too short distance
+                    Ssac.pop(-1)
+                # update t0i
+                t0i = 0 + t2i
+            else:
+                stop = True
+        else:
+            stop = True
+    return Ssac, Esac
 
-	missing	-	value to be used for missing data (default = 0.0)
-	minlen	-	minimal length of saccades in milliseconds; all detected
-				saccades with len(sac) < minlen will be ignored
-				(default = 5)
-	maxvel	-	velocity threshold in pixels/second (default = 40)
-	maxacc	-	acceleration threshold in pixels / second**2
-				(default = 340)
-	
-	returns
-	Ssac, Esac
-			Ssac	-	list of lists, each containing [starttime]
-			Esac	-	list of lists, each containing [starttime, endtime, duration, startx, starty, endx, endy]
-	"""
-	x, y, time = remove_missing(x, y, time, missing)
+def faster_saccade_detection(x, y, time, missing=0.0, mindist=.15, mindur=0,maxvel=30, maxacc=8000): #TODO: more performant than the orig
+    """MODIFIED ALGO (more similar to EyeLink, and more efficient than PyGaze): 
+    Detects saccades, defined as consecutive samples with an inter-sample
+    velocity of over a velocity threshold or an acceleration threshold
+    arguments, and a minimum displacement
+    x		-	np array of x positions
+    y		-	np array of y positions
+    time		-	np array of tracker timestamps in milliseconds
+    keyword arguments
+    missing	-	value to be used for missing data (default = 0.0)
+    mindist	-	minimal distance of saccades in degrees
+    minlen	-	minimal length of saccades in milliseconds
+    maxvel	-	velocity threshold in deg/second 
+    maxacc	-	acceleration threshold in deg/second**2
 
-	# CONTAINERS
-	Ssac = []
-	Esac = []
+    returns
+    Ssac, Esac
+            Ssac	-	list of lists, each containing [starttime]
+            Esac	-	list of lists, each containing [starttime, endtime, duration, startx, starty, endx, endy]
+    """
+    x, y, time = remove_missing(x, y, time, missing)
+    # CONTAINERS
+    Ssac = []
+    Esac = []
 
-	# INTER-SAMPLE MEASURES
-	# the distance between samples is the square root of the sum
-	# of the squared horizontal and vertical interdistances
-	intdist = (numpy.diff(x)**2 + numpy.diff(y)**2)**0.5
-	# get inter-sample times
-	inttime = numpy.diff(time)
-	# recalculate inter-sample times to seconds
-	inttime = inttime / 1000.0
-	
-	# VELOCITY AND ACCELERATION
-	# the velocity between samples is the inter-sample distance
-	# divided by the inter-sample time
-	vel = intdist / inttime
-	# the acceleration is the sample-to-sample difference in
-	# eye movement velocity
-	acc = numpy.diff(vel)
+    intdist = (np.diff(x)**2 + np.diff(y)**2)**0.5
+    inttime = np.diff(time)/ 1000.0
+    vel = intdist / inttime
+    acc = np.diff(vel)/inttime[1:] # Bugfix: added the time denominator, what if vel is based on missing vals, and the time basis is no longer linear? 
 
-	# SACCADE START AND END
-	t0i = 0
-	stop = False
-	while not stop:
-		# saccade start (t1) is when the velocity or acceleration
-		# surpass threshold, saccade end (t2) is when both return
-		# under threshold
-	
-		# detect saccade starts
-		sacstarts = numpy.where((vel[1+t0i:] > maxvel).astype(int) + (acc[t0i:] > maxacc).astype(int) >= 1)[0]
-		if len(sacstarts) > 0:
-			# timestamp for starting position
-			t1i = t0i + sacstarts[0] + 1
-			if t1i >= len(time)-1:
-				t1i = len(time)-2
-			t1 = time[t1i]
-			
-			# add to saccade starts
-			Ssac.append([t1])
-			
-			# detect saccade endings
-			sacends = numpy.where((vel[1+t1i:] < maxvel).astype(int) + (acc[t1i:] < maxacc).astype(int) == 2)[0]
-			if len(sacends) > 0:
-				# timestamp for ending position
-				t2i = sacends[0] + 1 + t1i + 2
-				if t2i >= len(time):
-					t2i = len(time)-1
-				t2 = time[t2i]
-				dur = t2 - t1
 
-				# ignore saccades that did not last long enough
-				if dur >= minlen:
-					# add to saccade ends
-					Esac.append([t1, t2, dur, x[t1i], y[t1i], x[t2i], y[t2i]])
-				else:
-					# remove last saccade start on too low duration
-					Ssac.pop(-1)
+    # note vel and acc need padding because they are from diff
+    peaks =( (np.insert([0.0],1,vel) > maxvel).astype(int) + (np.insert([0.0,0.0],2,acc) > maxacc).astype(int) >= 1).astype(int)
+    maybe_start_saccades = np.where(np.diff(peaks)>0)[0].tolist()
+    maybe_end_saccades=np.where(np.diff(peaks)<0)[0].tolist() 
+    if len(maybe_end_saccades)<len(maybe_start_saccades):
+        maybe_end_saccades.append(len(vel))
+    maybe_saccades = zip(maybe_start_saccades, maybe_end_saccades)
 
-				# update t0i
-				t0i = 0 + t2i
-			else:
-				stop = True
-		else:
-			stop = True
-	
-	return Ssac, Esac
+    for istart, iend in maybe_saccades:
+        t1 = time[istart]
+        t2 = time[iend]
+        dur = t2 - t1
+        dist =  ((x[iend]-x[istart])**2 + (y[iend]-y[istart])**2)**0.5
+        # ignore saccades that did not go far enough
+        if dist >= mindist and dur>=mindur:
+            # add to saccade ends
+                    # add to saccade starts
+            Ssac.append([t1])
+            # detect saccade endings
+            Esac.append([t1, t2, dur, x[istart], y[istart], x[iend], y[iend]])
+            # print('.o   .o')
+        else:
+            # print('O   O')
+            pass
+    return Ssac, Esac
+
+def orig_saccade_detection(x, y, time, missing=0.0, minlen=5, maxvel=40, maxacc=340):
+    """PYGAZE ALGO: Detects saccades, defined as consecutive samples with an inter-sample
+    velocity of over a velocity threshold or an acceleration threshold
+    arguments
+    x		-	np array of x positions
+    y		-	np array of y positions
+    time		-	np array of tracker timestamps in milliseconds
+    keyword arguments
+    missing	-	value to be used for missing data (default = 0.0)
+    minlen	-	minimal length of saccades in milliseconds; all detected
+                saccades with len(sac) < minlen will be ignored
+                (default = 5)
+    maxvel	-	velocity threshold in pixels/second (default = 40)
+    maxacc	-	acceleration threshold in pixels / second**2
+                (default = 340)
+    returns
+    Ssac, Esac
+            Ssac	-	list of lists, each containing [starttime]
+            Esac	-	list of lists, each containing [starttime, endtime, duration, startx, starty, endx, endy]
+    """
+    x, y, time = remove_missing(x, y, time, missing)
+    # CONTAINERS
+    Ssac = []
+    Esac = []
+    # INTER-SAMPLE MEASURES
+    # the distance between samples is the square root of the sum
+    # of the squared horizontal and vertical interdistances
+    intdist = (np.diff(x)**2 + np.diff(y)**2)**0.5
+    # get inter-sample times
+    inttime = np.diff(time)
+    # recalculate inter-sample times to seconds
+    inttime = inttime / 1000.0
+    # VELOCITY AND ACCELERATION
+    # the velocity between samples is the inter-sample distance
+    # divided by the inter-sample time
+    vel = intdist / inttime
+    # the acceleration is the sample-to-sample difference in
+    # eye movement velocity
+    acc = np.diff(vel)
+    # SACCADE START AND END
+    t0i = 0
+    stop = False
+    while not stop:
+        # saccade start (t1) is when the velocity or acceleration
+        # surpass threshold, saccade end (t2) is when both return
+        # under threshold
+        # detect saccade starts
+        sacstarts = np.where((vel[1+t0i:] > maxvel).astype(int) + (acc[t0i:] > maxacc).astype(int) >= 1)[0]
+        if len(sacstarts) > 0:
+            # timestamp for starting position
+            t1i = t0i + sacstarts[0] + 1
+            if t1i >= len(time)-1:
+                t1i = len(time)-2
+            t1 = time[t1i]
+            # add to saccade starts
+            Ssac.append([t1])
+            # detect saccade endings
+            sacends = np.where((vel[1+t1i:] < maxvel).astype(int) + (acc[t1i:] < maxacc).astype(int) == 2)[0]
+            if len(sacends) > 0:
+                # timestamp for ending position
+                t2i = sacends[0] + 1 + t1i + 2
+                if t2i >= len(time):
+                    t2i = len(time)-1
+                t2 = time[t2i]
+                dur = t2 - t1
+                # ignore saccades that did not last long enough
+                if dur >= minlen:
+                    # add to saccade ends
+                    Esac.append([t1, t2, dur, x[t1i], y[t1i], x[t2i], y[t2i]])
+                else:
+                    # remove last saccade start on too low duration
+                    Ssac.pop(-1)
+                # update t0i
+                t0i = 0 + t2i
+            else:
+                stop = True
+        else:
+            stop = True
+    return Ssac, Esac
