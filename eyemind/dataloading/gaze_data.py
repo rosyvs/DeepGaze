@@ -20,7 +20,17 @@ from eyemind.preprocessing.fixations import fixation_label_mapper
 
 
 class SequenceLabelDataset(Dataset):
-    def __init__(self, folder_name, file_list=[], file_mapper=None, file_type="csv", transform_x=None, transform_y=None, label_mapper=None, skiprows=1, usecols=[1,2], scale=False):
+    def __init__(self, 
+    folder_name, 
+    file_list=[], 
+    file_mapper=None, 
+    file_type="csv", 
+    transform_x=None, 
+    transform_y=None, 
+    label_mapper=None, 
+    skiprows=1, 
+    usecols=[1,2], 
+    scale=False):
         '''
         Dataset for large data with multiple csv files.
 

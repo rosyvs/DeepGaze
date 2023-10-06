@@ -59,7 +59,10 @@ def preprocess_fixation(fixation_folder_path, full_data_path, output_path):
 
 def main():
     #print(label_fixations("./data/raw/sample", "EML1_003.csv", pd.read_csv("./data/fixation/EML1_003.csv")).head())
-    preprocess_fixation("./data/fixation", "./data/processed/output", "./data/processed/fixation")
+    preprocess_fixation(
+        fixation_folder_path="./data/fixation", # TODO: What is this? 
+        full_data_path="./data/processed/output", 
+        output_path="./data/processed/fixation")
     
 
 if __name__ =="__main__":

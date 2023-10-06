@@ -71,7 +71,7 @@ def get_label_mapper(label_df, label_col):
 
 def get_label_df(label_path):
     label_df = pd.read_csv(label_path)
-    label_df = create_filename_col(label_df)
+    # label_df = create_filename_col(label_df)
     return label_df
 
 

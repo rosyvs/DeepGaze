@@ -425,8 +425,8 @@ class InformerEncoderFixationModel(LightningModule):
             logits, attns = self(X)
         else:
             logits = self(X)
-        logits = logits.squeeze().reshape(-1,2)
-        targets = fix_y.reshape(-1).long()
+        logits = logits.squeeze().reshape(-1,2) # make long for whole batch
+        targets = fix_y.reshape(-1).long() # make 1D vector for whole batch
         #mask = torch.any(X == -180, dim=1)
         loss = self.fi_criterion(logits, targets)
         preds = self._get_preds(logits)
