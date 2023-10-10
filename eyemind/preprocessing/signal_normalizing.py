@@ -38,8 +38,8 @@ def convert_to_angle(df,screen_center,pixel_degrees):
     return data
 
 def get_time_signal(df): # restart timestamps at each event change
-    min_tsample_df = df.groupby('event').min('tSample').rename(columns={"tSample":"min_tSample"})
-    min_tsample_df = min_tsample_df.filter(items=['event','min_tSample']).reset_index()
+    min_tsample_df = df.groupby('event')[['tSample']].min().rename(columns={"tSample":"min_tSample"})
+    # min_tsample_df = min_tsample_df.filter(items=['event','min_tSample']).reset_index()
     res_df = df.merge(min_tsample_df,on='event')
     res_df['t'] = res_df['tSample'] - res_df['min_tSample']
     return res_df
