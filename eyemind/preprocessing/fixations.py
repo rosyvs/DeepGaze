@@ -1,5 +1,6 @@
 from pathlib import Path
 import pandas as pd
+import os
 
 def avg_fixation_len(fixations):
     i = 0
@@ -56,6 +57,17 @@ def preprocess_fixation(fixation_folder_path, full_data_path, output_path):
             labeled_df = label_fixations(full_data_path, group_name, df_group)
             if labeled_df is not None:
                 labeled_df.to_csv(Path(output_path, group_name),index=False)
+
+def label_gaze_timeseries(gaze_df, label_df, label_name='fixation_label',onset_col='tStart',offset_col='tEnd',time_col='tSample'):
+    label_df = label_df[[onset_col, offset_col, label_name]]
+
+    label_df[time_col] = label_df.apply(lambda row: list(range(int(row[onset_col]), int(row[offset_col]))), axis=1)
+    label_df[label_name] = label_df.apply(lambda row: [row[label_name]]*(int(row[offset_col])-int(row[onset_col])), axis=1)
+
+    sample_label_df = label_df.explode([time_col, label_name])
+    sample_label_df = sample_label_df.drop([onset_col, offset_col], axis=1).reset_index(drop=True)
+    res_df = gaze_df.merge(sample_label_df , how='left', on=time_col)
+    return res_df
 
 def main():
     #print(label_fixations("./data/raw/sample", "EML1_003.csv", pd.read_csv("./data/fixation/EML1_003.csv")).head())
