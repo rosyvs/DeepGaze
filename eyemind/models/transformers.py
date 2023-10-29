@@ -510,6 +510,13 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
             self.fi_criterion = nn.CrossEntropyLoss(torch.Tensor(class_weights))
             #self.fi_criterion = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor(class_weights))
             self.fi_metric = torchmetrics.AveragePrecision(num_classes=c_out)
+        if "fm" in tasks:
+            if "fi" in tasks:
+                raise Exception("You can only use one of 'fi' and 'fm' as pretraining tasks, both were provided")
+            self.fm_decoder = nn.Linear(d_model, c_out, bias=True)
+            decoders.append(self.fm_decoder)
+            self.fm_criterion = nn.CrossEntropyLoss(torch.Tensor(class_weights))
+            self.fm_metric = torchmetrics.AveragePrecision(num_classes=c_out, average="weighted")
         if "pc" in tasks:
             self.pc_decoder = InformerDecoder(dec_in, c_out, factor, d_model, n_heads, d_layers, d_ff, dropout, attn, activation, mix)
             decoders.append(self.pc_decoder)
@@ -589,6 +596,14 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
                 probs = self._get_probs(logits)
                 task_metric = self.fi_metric(probs, targets_fi.int())
                 del enc, probs, targets_fi, fix_y
+            elif task == "fm":
+                enc = self.encoder(X)
+                logits = self.fi_decoder(enc).squeeze().reshape(-1,2)
+                targets_fm = fix_y.reshape(-1).long()
+                task_loss = self.fm_criterion(logits, targets_fm)
+                probs = self._get_probs(logits)
+                task_metric = self.fi_metric(probs, targets_fm.int())
+                del enc, probs, targets_fm, fix_y
             elif task == "pc":
                 X_pc, y_pc = predictive_coding_batch(X, self.hparams.seq_len, self.hparams.pred_len, self.hparams.label_len)
                 enc = self.encoder(X_pc)
@@ -830,17 +845,17 @@ class InformerClassifierModel(LightningModule):
 
 
 
- class InformerEncoderMulticlassModel(InformerEncoderFixationModel):
+class InformerEncoderMulticlassModel(InformerEncoderFixationModel):
 #     """Informer encoder-decoder stack for multiclass classification of each sample in the sequence
 #     Generalisation of InformerEncoderFixationModel for >2 classes
 #     """    
-    def __init__(self, n_classes)
+    def __init__(self, n_classes):
         super.__init__(c_out=n_classes, class_weights=[1.]*n_classes)
 
         # Loss function
         self.fm_criterion = nn.CrossEntropyLoss(torch.Tensor(class_weights))
         # Metrics
-        self.fm_metric = torchmetrics.AUROC(task="multiclass",num_classes=c_out, average="weighted")
+        self.fm_metric = torchmetrics.AveragePrecision(num_classes=c_out, average="weighted")
 
 
     def _step(self, batch, batch_idx, step_type):

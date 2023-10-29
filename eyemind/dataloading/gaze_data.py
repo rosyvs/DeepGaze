@@ -59,7 +59,7 @@ class SequenceLabelDataset(Dataset):
         self.transform_x = transform_x
         self.transform_y = transform_y
         if label_mapper:
-            self.labels = label_mapper(self.files)
+            self.labels = label_mapper(files=self.files)
         
     def __len__(self):
         return len(self.files)
@@ -129,7 +129,7 @@ class MultiFileDataset(Dataset):
         self.transform_x = transform_x
         self.transform_y = transform_y
         if label_mapper:
-            self.labels = label_mapper(self.files)
+            self.labels = label_mapper(files=self.files)
 
         self.cached_data = {}
         print(len(self.files),len(self.labels))
@@ -450,7 +450,7 @@ class SequenceToLabelDataModule(GroupStratifiedNestedCVDataModule, BaseGazeDataM
     
     @property
     def label_mapper(self):
-        return get_label_mapper(self.label_df, self.label_col)
+        return get_label_mapper(self.label_df, label_col=self.label_col)
     
     @property
     def file_mapper(self):
@@ -461,6 +461,7 @@ class BaseSequenceToSequenceDataModule(BaseGazeDataModule):
     def __init__(self,
                 data_dir: str,
                 label_filepath: str,
+                label_col: str,
                 load_setup_path: Optional[str] = None,
                 test_dir: Optional[str] = None,
                 train_dataset: Optional[Dataset] = None,
@@ -477,6 +478,7 @@ class BaseSequenceToSequenceDataModule(BaseGazeDataModule):
         super().__init__()
         self.data_dir = data_dir
         self.label_df = get_label_df(label_filepath)
+        self.label_col = label_col #TODO: needed?
         self.load_setup_path = load_setup_path
         self.test_dir = test_dir
         self.train_dataset = train_dataset
@@ -556,6 +558,7 @@ class BaseSequenceToSequenceDataModule(BaseGazeDataModule):
         group.add_argument("--num_workers", type=int, default=0)
         group.add_argument("--batch_size", type=int, default=8)
         group.add_argument("--label_filepath", type=str)
+        group.add_argument("--label_col", type=str)
         group.add_argument("--sequence_length", type=int, default=500)
         group.add_argument("--contrastive", type=bool, default=False)
         group.add_argument("--min_scanpath_length", type=int, default=500)
@@ -571,7 +574,7 @@ class BaseSequenceToSequenceDataModule(BaseGazeDataModule):
 
     @property
     def label_mapper(self):
-        return partial(fixation_label_mapper, self.data_dir)
+        return partial(fixation_label_mapper, folder=self.data_dir, label_col=self.label_col)
     
     @property
     def file_mapper(self):
@@ -582,6 +585,7 @@ class SequenceToSequenceDataModule(GroupStratifiedKFoldDataModule, BaseGazeDataM
     def __init__(self,
                 data_dir: str,
                 label_filepath: str,
+                label_col: str,
                 load_setup_path: Optional[str] = None,
                 test_dir: Optional[str] = None,
                 train_dataset: Optional[Dataset] = None,
@@ -597,6 +601,7 @@ class SequenceToSequenceDataModule(GroupStratifiedKFoldDataModule, BaseGazeDataM
         super().__init__()
         self.data_dir = data_dir
         self.label_df = get_label_df(label_filepath)
+        self.label_col=label_col
         self.load_setup_path = load_setup_path
         self.test_dir = test_dir
         self.train_dataset = train_dataset
@@ -684,7 +689,7 @@ class SequenceToSequenceDataModule(GroupStratifiedKFoldDataModule, BaseGazeDataM
 
     @property
     def label_mapper(self):
-        return partial(fixation_label_mapper, self.data_dir)
+        return partial(fixation_label_mapper, folder=self.data_dir, label_col=self.label_col)
     
     @property
     def file_mapper(self):

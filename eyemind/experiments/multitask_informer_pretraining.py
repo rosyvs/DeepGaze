@@ -1,5 +1,5 @@
 from pytorch_lightning.utilities.cli import LightningCLI
-from eyemind.models.transformers import InformerEncoderDecoderModel, InformerEncoderFixationModel, InformerMultiTaskEncoderDecoder
+from eyemind.models.transformers import InformerEncoderDecoderModel, InformerMultiTaskEncoderDecoder
 from eyemind.dataloading.informer_data import InformerDataModule
 from eyemind.experiments.cli import FoldsLightningCLI
 import os

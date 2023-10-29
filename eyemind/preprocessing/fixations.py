@@ -19,11 +19,11 @@ def avg_fixation_len(fixations):
     return sum(fix_lens) / len(fix_lens), len(fix_lens)
 
 
-def fixation_label_mapper(folder, files):
+def fixation_label_mapper(folder, files, label_col='fixation_label'):
     labels = []
     for f in files:
         df = pd.read_csv(str(Path(folder,f).resolve()))
-        label_array = df['fixation_label'].to_numpy(float)
+        label_array = df[label_col].to_numpy(float)
         labels.append(label_array)
     return labels
 

@@ -19,6 +19,7 @@ class InformerDataModule(BaseSequenceToSequenceDataModule, ParticipantKFoldDataM
     def __init__(self,
                 data_dir: str,
                 label_filepath: str,
+                label_col: str,
                 load_setup_path: Optional[str] = None,
                 test_dir: Optional[str] = None,
                 train_dataset: Optional[Dataset] = None,
@@ -38,6 +39,7 @@ class InformerDataModule(BaseSequenceToSequenceDataModule, ParticipantKFoldDataM
                 ):
         super().__init__(data_dir,
                         label_filepath,
+                        label_col,
                         load_setup_path,
                         test_dir,
                         train_dataset,
@@ -124,6 +126,7 @@ class InformerDataModule(BaseSequenceToSequenceDataModule, ParticipantKFoldDataM
         group.add_argument("--num_workers", type=int, default=0)
         group.add_argument("--batch_size", type=int, default=8)
         group.add_argument("--label_filepath", type=str)
+        group.add_argument("--label_col", type=str)
         group.add_argument("--sequence_length", type=int, default=250)
         group.add_argument("--min_scanpath_length", type=int, default=500)
         group.add_argument("--contrastive", type=bool, default=False)
@@ -139,7 +142,7 @@ class InformerDataModule(BaseSequenceToSequenceDataModule, ParticipantKFoldDataM
 
     @property
     def label_mapper(self):
-        return partial(fixation_label_mapper, self.data_dir)
+        return partial(fixation_label_mapper, folder=self.data_dir, label_col=self.label_col)
     
     @property
     def file_mapper(self):
