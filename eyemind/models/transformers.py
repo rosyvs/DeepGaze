@@ -830,137 +830,42 @@ class InformerClassifierModel(LightningModule):
 
 
 
+ class InformerEncoderMulticlassModel(InformerEncoderFixationModel):
+#     """Informer encoder-decoder stack for multiclass classification of each sample in the sequence
+#     Generalisation of InformerEncoderFixationModel for >2 classes
+#     """    
+    def __init__(self, n_classes)
+        super.__init__(c_out=n_classes, class_weights=[1.]*n_classes)
 
-class InformerEncoderMulticlassModel(LightningModule):
-    """Informer encoder-decoder stack for multiclass classification of each sample in the sequence
-    Generalisation of InformerEncoderFixationModel for >2 classes
-
-    Args:
-        LightningModule (_type_): _description_
-    """    
-    def __init__(self, 
-                enc_in: int=2, 
-                dec_in: int=1, 
-                c_out: int=3, 
-                seq_len: int=250, 
-                label_len: int=100, 
-                pred_len: int=150,
-                padding: int=0,
-                factor: int=5, 
-                d_model: int=512, 
-                n_heads: int=8, 
-                e_layers: int=3, 
-                d_layers: int=2, 
-                d_ff: int=512, 
-                dropout: float=0.05, 
-                attn: str='prob', 
-                activation: str='gelu', 
-                output_attention: bool=False, 
-                distil: bool=True, 
-                mix: bool=True, 
-                class_weights: List[float]=[1.,1.,1.],
-                max_rmse_err: float=70., #TODO: ??
-                learning_rate: float=1e-3, 
-                freeze_encoder: bool=False):
-        super().__init__()
-        self.save_hyperparameters()
-        # Scaler
-        self.scaler = StandardScaler()
         # Loss function
-        self.mc_criterion = nn.CrossEntropyLoss(torch.Tensor(class_weights))
+        self.fm_criterion = nn.CrossEntropyLoss(torch.Tensor(class_weights))
         # Metrics
-        self.mc_metric = torchmetrics.AUROC(task="multiclass",num_classes=c_out, average="weighted")
-        # Encoding
-        self.enc_embedding = GazeEmbedding(enc_in, d_model, dropout)
-        # Attention
-        Attn = ProbAttention if attn=='prob' else FullAttention
-        # Encoder
+        self.fm_metric = torchmetrics.AUROC(task="multiclass",num_classes=c_out, average="weighted")
 
-        self.encoder = Encoder(
-            [
-                EncoderLayer(
-                    AttentionLayer(Attn(False, factor, attention_dropout=dropout, output_attention=output_attention), 
-                                d_model, n_heads, mix=False),
-                    d_model,
-                    d_ff,
-                    dropout=dropout,
-                    activation=activation
-                ) for l in range(e_layers)
-            ],
-            [
-                ConvLayer(
-                    d_model
-                ) for l in range(e_layers-1)
-            ] if distil else None,
-            norm_layer=torch.nn.LayerNorm(d_model)
-        )
-        self.decoder = nn.Linear(d_model, c_out, bias=True)
-        
-    def forward(self, x_enc, enc_self_mask=None):
-
-        enc_out = self.enc_embedding(x_enc)
-        enc_out, attns = self.encoder(enc_out, attn_mask=enc_self_mask)
-        dec_out = self.decoder(enc_out)
-
-        if self.hparams.output_attention:
-            return dec_out, attns
-        else:
-            return dec_out
-
-    def training_step(self, batch, batch_idx):
-        return self._step(batch, batch_idx, step_type="train")
-    
-    def validation_step(self, batch, batch_idx):
-        self._step(batch, batch_idx, step_type="val")
-    
-    def test_step(self, batch, batch_idx):
-        self._step(batch, batch_idx, step_type="test")
 
     def _step(self, batch, batch_idx, step_type):
-        try:
-            X, fix_y = batch
-        except ValueError as e:
-            print(f"{batch}")
-            raise e
+            try:
+                X, fix_y = batch
+            except ValueError as e:
+                print(f"{batch}")
+                raise e
 
-        if self.hparams.output_attention:
-            logits, attns = self(X)
-        else:
-            logits = self(X)
-        logits = logits.squeeze().reshape(-1,2) # make long for whole batch
-        targets = fix_y.reshape(-1).long() # make 1D vector for whole batch
-        #mask = torch.any(X == -180, dim=1)
-        loss = self.mc_criterion(logits, targets)
-        preds = self._get_preds(logits)
-        probs = self._get_probs(logits)
-        targets = targets.int()
-        metric = self.mc_metric(probs, targets)
-        self.logger.experiment.add_scalars("losses", {f"{step_type}": loss}, self.current_epoch)        
-        self.log(f"{step_type}_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        self.log(f"{step_type}_metric", metric, on_step=False, on_epoch=True, prog_bar=True, logger=True)
-        return loss        
-
-    def configure_optimizers(self):
-        params = self.decoder.parameters() if self.hparams.freeze_encoder else list(self.encoder.parameters()) + list(self.decoder.parameters())
-        optimizer = torch.optim.Adam(params, lr=self.hparams.learning_rate)
-        res = {"optimizer": optimizer}
-        res['lr_scheduler'] = {"scheduler": torch.optim.lr_scheduler.StepLR(optimizer, step_size=max(1,int(self.trainer.max_epochs / 5)), gamma=0.5)}
-        return res
-
-    def _get_probs(self, logits):
-        if self.hparams.c_out == 1:
-            probs = torch.sigmoid(logits)
-        elif self.hparams.c_out > 1:
-            probs = torch.softmax(logits, dim=-1)        
-        return probs
-
-    def _get_preds(self, logits, threshold=0.5):
-        if self.hparams.c_out == 1:
-            probs = torch.sigmoid(logits)
-            preds = (probs > threshold).float()
-        elif self.hparams.c_out > 1:
-            preds = torch.argmax(logits, dim=-1)
-        return preds
+            if self.hparams.output_attention:
+                logits, attns = self(X)
+            else:
+                logits = self(X)
+            logits = logits.squeeze().reshape(-1,2) # make long for whole batch
+            targets = fix_y.reshape(-1).long() # make 1D vector for whole batch
+            #mask = torch.any(X == -180, dim=1)
+            loss = self.fm_criterion(logits, targets)
+            preds = self._get_preds(logits)
+            probs = self._get_probs(logits)
+            targets = targets.int()
+            metric = self.fm_metric(probs, targets)
+            self.logger.experiment.add_scalars("losses", {f"{step_type}": loss}, self.current_epoch)        
+            self.log(f"{step_type}_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+            self.log(f"{step_type}_metric", metric, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+            return loss   
         
     @staticmethod
     def add_model_specific_args(parent_parser):
@@ -985,7 +890,7 @@ class InformerEncoderMulticlassModel(LightningModule):
         parser.add_argument('--attn', type=str, default='prob', help='attention used in encoder, options:[prob, full]')
         parser.add_argument('--activation', type=str, default='gelu',help='activation')
         parser.add_argument('--output_attention', action='store_true', help='whether to output attention in ecoder')
-        parser.add_argument('--class_weights', type=float, nargs='*', default=[1., 1., 1.], help = 'weights per class to use for loss function')
+        parser.add_argument('--class_weights', type=float, nargs='*', default=[1., 1., 1.], help = 'weights per class to use for loss function, list of length c_out')
         parser.add_argument('--freeze_encoder', type=bool, default=False)
         parser.add_argument('--max_rmse_err', type=float, default=70., help='clamps max rmse loss')
         return parser
