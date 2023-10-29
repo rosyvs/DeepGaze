@@ -4,15 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import math
 import time
-
-# Stats of setup
-screen_res = (1920,1080)
-screen_size = (525.78,297.18)
-subject_dist = 989
-screen_center = (screen_res[0]//2,screen_res[1]//2)
-
-# Flag for off screen or NaN values
-NA_FLAG = -180 # Flag for off screen gaze
+from tqdm import tqdm
 
 def convert_to_sample_rate(df,current,target):
     step_size = round(current/target)
@@ -69,14 +61,16 @@ def preprocess_data(
     raw_data_path, 
     output_folder, 
     screen_res=(1920,1080), 
+    screen_size=(525.78,297.18),
     target_frequency=60, 
     current_frequency=1000, 
     subject_dist=989,
     NA_FLAG=-180, 
-    off_screen_buf=10, 
-    label_cols=[],debug=False):
+    off_screen_buf=5, 
+    label_cols=[],
+    debug=False):
 
-    for file_path in raw_data_path.glob('*.csv'):
+    for file_path in tqdm(Path(raw_data_path).glob('*.csv')):
         print(f"Processing File Path: {file_path}")
         start = time.time()
         cols = ['ParticipantID','XAvg','YAvg','event','tSample'] + label_cols
@@ -102,19 +96,24 @@ def preprocess_data(
 
         if debug:
             for event in df.event.unique():
-                plot_scanpath(res_df,event,t_lim=(0,5000),x_y_lim=(-x_lim,x_lim))
+                plot_scanpath(res_df,event, exclude=NA_FLAG)
         # Write files
         else:
             write_file_event(res_df,output_folder)
-        print(f"Processed {file_path} in {time.time() - start} seconds")
+        print(f"Processed {file_path} in {(time.time() - start):.1f} seconds")
 
 
 
 def main():
+    # Stats of setup (EML)
+    screen_res = (1920,1080)
+    screen_size = (525.78,297.18)
+    subject_dist = 989
+    off_screen_buf=5
     print("Calling main")
-    data_folder = Path("./data/")
-    preprocess_data(raw_data_path=Path(data_folder,"raw/sample"), 
-    output_folder=Path(data_folder,"processed/output"))
+    data_folder = "./data/"
+    preprocess_data(raw_data_path=os.path.join(data_folder,"raw/sample"), 
+    output_folder=Pos.path.join(data_folder,"processed/output"))
 
 if __name__ == "__main__":
     main()

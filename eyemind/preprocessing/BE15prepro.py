@@ -1,4 +1,4 @@
-# convert BEdata to format used by EML
+# preprocess BE15data to format used for modeling
 #%%
 import eyemind
 repodir = os.path.dirname(os.path.dirname(eyemind.__file__))
