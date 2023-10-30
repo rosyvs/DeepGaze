@@ -595,9 +595,9 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
             elif task == "fm":
                 enc = self.encoder(X)
                 logits = self.fm_decoder(enc).squeeze().reshape(-1,self.c_out) #TODO: reshape this differently or not at all? 
-                print(f'logits shape {logits.shape}') #logits shape torch.Size([32, 500, 3])
+                # print(f'logits shape {logits.shape}') #logits shape torch.Size([32, 500, 3])
                 targets_fm = fix_y.reshape(-1).long() # remove reshape #TODO: reshape to be long, but unreshape the logits
-                print(f'targets shape {targets_fm.shape}')#targets shape torch.Size([32, 500])
+                # print(f'targets shape {targets_fm.shape}')#targets shape torch.Size([32, 500])
                 task_loss = self.fm_criterion(logits, targets_fm)
                 probs = self._get_probs(logits)
                 task_metric = self.fm_metric(probs, targets_fm)
@@ -606,8 +606,8 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
                 X_pc, y_pc = predictive_coding_batch(X, self.hparams.seq_len, self.hparams.pred_len, self.hparams.label_len)
                 enc = self.encoder(X_pc)
                 logits = self.pc_decoder(enc, y_pc, pred_len=self.hparams.pred_len).squeeze()[0] if self.hparams.output_attention else self.pc_decoder(enc, y_pc, pred_len=self.hparams.pred_len).squeeze()
-                print(f'logits_pc: {logits.shape}')
-                print(f'y_pc: {y_pc.shape}')
+                # print(f'logits_pc: {logits.shape}')
+                # print(f'y_pc: {y_pc.shape}')
                 assert(logits.shape == y_pc.shape)
                 mask = y_pc > -180
                 task_loss = self.pc_criterion(logits[mask], y_pc[mask])
