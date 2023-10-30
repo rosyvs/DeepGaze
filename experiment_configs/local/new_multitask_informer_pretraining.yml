@@ -73,8 +73,8 @@ model:
   dec_in: 2
   c_out: 3
   seq_len: 500
-  label_len: 100
-  pred_len: 150
+  label_len: 100 #??
+  pred_len: 150 #??
   padding: 0
   factor: 5
   d_model: 512
@@ -97,7 +97,7 @@ model:
 data:
   data_dir: ./data/EML/gaze+fix+reg/
   label_filepath: ./data/processed/EML1_pageLevel_500+_matchEDMinstances.csv
-  label_col: regression_label
+  sample_label_col: regression_label
   load_setup_path: null
   test_dir: null
   train_dataset: null

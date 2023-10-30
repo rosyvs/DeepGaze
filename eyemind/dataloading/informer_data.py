@@ -19,7 +19,7 @@ class InformerDataModule(BaseSequenceToSequenceDataModule, ParticipantKFoldDataM
     def __init__(self,
                 data_dir: str,
                 label_filepath: str,
-                label_col: str,
+                sample_label_col: str,
                 load_setup_path: Optional[str] = None,
                 test_dir: Optional[str] = None,
                 train_dataset: Optional[Dataset] = None,
@@ -39,7 +39,7 @@ class InformerDataModule(BaseSequenceToSequenceDataModule, ParticipantKFoldDataM
                 ):
         super().__init__(data_dir,
                         label_filepath,
-                        label_col,
+                        sample_label_col,
                         load_setup_path,
                         test_dir,
                         train_dataset,
@@ -58,7 +58,7 @@ class InformerDataModule(BaseSequenceToSequenceDataModule, ParticipantKFoldDataM
         self.pred_length = pred_length
         self.label_length = label_length
         self.contrastive = contrastive
-
+        self.sample_label_col=sample_label_col #TODO: needed??
 
     def prepare_data(self):
         '''
@@ -68,7 +68,7 @@ class InformerDataModule(BaseSequenceToSequenceDataModule, ParticipantKFoldDataM
 
     def setup(self, stage: Optional[str] = None):
         if stage in ("fit", "predict", None):
-            dataset = SequenceLabelDataset(self.data_dir, file_mapper=self.file_mapper, label_mapper=self.label_mapper, transform_x=self.x_transforms, transform_y=self.y_transforms, usecols=[2,3], scale=True)
+            dataset = SequenceLabelDataset(self.data_dir, file_mapper=self.file_mapper, label_mapper=self.label_mapper, transform_x=self.x_transforms, transform_y=self.y_transforms, usecols=[1,2], scale=True)
             if self.load_setup_path:
                 self.load_setup(dataset)
             else:
@@ -126,7 +126,7 @@ class InformerDataModule(BaseSequenceToSequenceDataModule, ParticipantKFoldDataM
         group.add_argument("--num_workers", type=int, default=0)
         group.add_argument("--batch_size", type=int, default=8)
         group.add_argument("--label_filepath", type=str)
-        group.add_argument("--label_col", type=str)
+        group.add_argument("--sample_label_col", type=str)
         group.add_argument("--sequence_length", type=int, default=250)
         group.add_argument("--min_scanpath_length", type=int, default=500)
         group.add_argument("--contrastive", type=bool, default=False)
@@ -142,7 +142,7 @@ class InformerDataModule(BaseSequenceToSequenceDataModule, ParticipantKFoldDataM
 
     @property
     def label_mapper(self):
-        return partial(fixation_label_mapper, folder=self.data_dir, label_col=self.label_col)
+        return partial(fixation_label_mapper, folder=self.data_dir, label_col=self.sample_label_col)
     
     @property
     def file_mapper(self):

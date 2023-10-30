@@ -103,7 +103,7 @@ def random_multitask_collate_fn(sequence_length, batch, min_seq=1.0, max_seq=1.0
         full_sl = X[i].shape[0]
         start_ind = random.randrange(0,full_sl-sequence_length)
         end_ind = start_ind + sequence_length 
-        X_batched[i] = X[i][start_ind:end_ind,:]
+        X_batched[i] = X[i][start_ind:end_ind,:] # choose random interval within sequence
         fix_y_batched[i] = fix_y[i][start_ind:end_ind]
         if cl_y_batched[i] == 0:
             j = i
@@ -122,7 +122,7 @@ def random_multitask_collate_fn(sequence_length, batch, min_seq=1.0, max_seq=1.0
 
 def predictive_coding_batch(X_batch, input_length, pred_length, label_length):
     X_seq = X_batch[:,:input_length,:]
-    y_seq = X_batch[:,input_length-label_length:input_length+pred_length,:]
+    y_seq = X_batch[:,input_length-label_length:input_length+pred_length,:] # taken from later in the sequence, this is the target
     return X_seq, y_seq
 
 def reconstruction_batch(X_batch, label_length):

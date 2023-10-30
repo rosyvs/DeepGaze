@@ -29,7 +29,7 @@ class SequenceLabelDataset(Dataset):
     transform_y=None, 
     label_mapper=None, 
     skiprows=1, 
-    usecols=[1,2], 
+    usecols=[1,2], #?? TODO: cols 1 and 2 are XAvg and YAvg ONLY IF NO INDEX COL IN CSV
     scale=False):
         '''
         Dataset for large data with multiple csv files.
@@ -48,7 +48,7 @@ class SequenceLabelDataset(Dataset):
         self.skiprows = skiprows
         self.usecols = usecols
         self.scale=scale
-        # If their is a list passed then use it, else if function then use it, else use all files in folder
+        # If there is a list passed then use it, else if function then use it, else use all files in folder
         if file_list:
             self.files = file_list
         elif file_mapper:
@@ -152,7 +152,7 @@ class MultiFileDataset(Dataset):
         else:
             filepath = self._get_file_path(filename)
             # Assumes data has header row
-            x_data = np.loadtxt(open(filepath,"rb"),delimiter=",",skiprows=1,usecols=[2,3])
+            x_data = np.loadtxt(open(filepath,"rb"),delimiter=",",skiprows=1,usecols=[1,2])
             self.cached_data[filename] = x_data
         #print(x_data,label)
         if self.transform_x:
@@ -387,7 +387,13 @@ class SequenceToLabelDataModule(GroupStratifiedNestedCVDataModule, BaseGazeDataM
 
     def setup(self, stage: Optional[str] = None):
         if stage in ("fit", "predict", None):
-            dataset = SequenceLabelDataset(self.data_dir, file_mapper=self.file_mapper, label_mapper=self.label_mapper, transform_x=self.x_transforms, transform_y=self.y_transforms, scale=self.scale)
+            dataset = SequenceLabelDataset(
+                self.data_dir, 
+            file_mapper=self.file_mapper, 
+            label_mapper=self.label_mapper, 
+            transform_x=self.x_transforms, 
+            transform_y=self.y_transforms, 
+            scale=self.scale)
             if self.load_setup_path:
                 self.load_setup(dataset)
             else:
@@ -403,7 +409,11 @@ class SequenceToLabelDataModule(GroupStratifiedNestedCVDataModule, BaseGazeDataM
   
         elif stage == "test":
             if self.test_dir:
-                self.test_dataset = SequenceLabelDataset(dir, file_mapper=self.file_mapper, label_mapper=self.label_mapper, transform_x=self.x_transforms, transform_y=self.y_transforms)
+                self.test_dataset = SequenceLabelDataset(dir, 
+                file_mapper=self.file_mapper, 
+                label_mapper=self.label_mapper, 
+                transform_x=self.x_transforms, 
+                transform_y=self.y_transforms)
             
             assert self.test_dataset is not None
 
@@ -450,7 +460,7 @@ class SequenceToLabelDataModule(GroupStratifiedNestedCVDataModule, BaseGazeDataM
     
     @property
     def label_mapper(self):
-        return get_label_mapper(self.label_df, label_col=self.label_col)
+        return get_label_mapper(self.label_df, self.label_col)
     
     @property
     def file_mapper(self):
@@ -461,7 +471,7 @@ class BaseSequenceToSequenceDataModule(BaseGazeDataModule):
     def __init__(self,
                 data_dir: str,
                 label_filepath: str,
-                label_col: str,
+                sample_label_col: str,
                 load_setup_path: Optional[str] = None,
                 test_dir: Optional[str] = None,
                 train_dataset: Optional[Dataset] = None,
@@ -478,7 +488,7 @@ class BaseSequenceToSequenceDataModule(BaseGazeDataModule):
         super().__init__()
         self.data_dir = data_dir
         self.label_df = get_label_df(label_filepath)
-        self.label_col = label_col #TODO: needed?
+        self.sample_label_col = sample_label_col #TODO: needed?
         self.load_setup_path = load_setup_path
         self.test_dir = test_dir
         self.train_dataset = train_dataset
@@ -500,7 +510,13 @@ class BaseSequenceToSequenceDataModule(BaseGazeDataModule):
 
     def setup(self, stage: Optional[str] = None):
         if stage in ("fit", "predict", None):
-            dataset = SequenceLabelDataset(self.data_dir, file_mapper=self.file_mapper, label_mapper=self.label_mapper, transform_x=self.x_transforms, transform_y=self.y_transforms, usecols=[2,3])
+            dataset = SequenceLabelDataset(
+            self.data_dir, 
+            file_mapper=self.file_mapper, 
+            label_mapper=self.label_mapper, 
+            transform_x=self.x_transforms, 
+            transform_y=self.y_transforms, 
+            usecols=[1,2]) #TODO: these are hardcoded, but the default is 1,2. 2,3 is getting YAvg and event for my files with no idenx col, but ricks had index col
             if self.load_setup_path:
                 self.load_setup(dataset)
             else:
@@ -558,7 +574,7 @@ class BaseSequenceToSequenceDataModule(BaseGazeDataModule):
         group.add_argument("--num_workers", type=int, default=0)
         group.add_argument("--batch_size", type=int, default=8)
         group.add_argument("--label_filepath", type=str)
-        group.add_argument("--label_col", type=str)
+        group.add_argument("--sample_label_col", type=str)
         group.add_argument("--sequence_length", type=int, default=500)
         group.add_argument("--contrastive", type=bool, default=False)
         group.add_argument("--min_scanpath_length", type=int, default=500)
@@ -574,7 +590,7 @@ class BaseSequenceToSequenceDataModule(BaseGazeDataModule):
 
     @property
     def label_mapper(self):
-        return partial(fixation_label_mapper, folder=self.data_dir, label_col=self.label_col)
+        return partial(fixation_label_mapper, folder=self.data_dir, label_col=self.sample_label_col)
     
     @property
     def file_mapper(self):
@@ -585,7 +601,7 @@ class SequenceToSequenceDataModule(GroupStratifiedKFoldDataModule, BaseGazeDataM
     def __init__(self,
                 data_dir: str,
                 label_filepath: str,
-                label_col: str,
+                sample_label_col: str,
                 load_setup_path: Optional[str] = None,
                 test_dir: Optional[str] = None,
                 train_dataset: Optional[Dataset] = None,
@@ -601,7 +617,7 @@ class SequenceToSequenceDataModule(GroupStratifiedKFoldDataModule, BaseGazeDataM
         super().__init__()
         self.data_dir = data_dir
         self.label_df = get_label_df(label_filepath)
-        self.label_col=label_col
+        self.sample_label_col=sample_label_col
         self.load_setup_path = load_setup_path
         self.test_dir = test_dir
         self.train_dataset = train_dataset
@@ -623,7 +639,7 @@ class SequenceToSequenceDataModule(GroupStratifiedKFoldDataModule, BaseGazeDataM
 
     def setup(self, stage: Optional[str] = None):
         if stage in ("fit", "predict", None):
-            dataset = SequenceLabelDataset(self.data_dir, file_mapper=self.file_mapper, label_mapper=self.label_mapper, transform_x=self.x_transforms, transform_y=self.y_transforms, usecols=[2,3])
+            dataset = SequenceLabelDataset(self.data_dir, file_mapper=self.file_mapper, label_mapper=self.label_mapper, transform_x=self.x_transforms, transform_y=self.y_transforms, usecols=[1,2])
             if self.load_setup_path:
                 self.load_setup(dataset)
             else:
@@ -676,6 +692,7 @@ class SequenceToSequenceDataModule(GroupStratifiedKFoldDataModule, BaseGazeDataM
         group.add_argument("--num_workers", type=int, default=0)
         group.add_argument("--batch_size", type=int, default=8)
         group.add_argument("--label_filepath", type=str)
+        group.add_argument("--sample_label_col", type=str)
         group.add_argument("--sequence_length", type=int, default=500)
         return parent_parser
 
@@ -689,7 +706,7 @@ class SequenceToSequenceDataModule(GroupStratifiedKFoldDataModule, BaseGazeDataM
 
     @property
     def label_mapper(self):
-        return partial(fixation_label_mapper, folder=self.data_dir, label_col=self.label_col)
+        return partial(fixation_label_mapper, folder=self.data_dir, label_col=self.sample_label_col)
     
     @property
     def file_mapper(self):
