@@ -21,8 +21,12 @@ def main(args):
                 ckpt_path = str(next(ckpt_dirpath.glob('last*.ckpt')))
             else: # get most recent checkpoint
                 files=ckpt_dirpath.glob('*.ckpt')
-                latest_file = max(list(files), key=lambda item: item.stat().st_ctime)
-                ckpt_path = str(latest_file)    
+                if files:
+                    latest_file = max(list(files), key=lambda item: item.stat().st_ctime)
+                    ckpt_path = str(latest_file)    
+                else:
+                    print(f'no existing ckpt in resume_dir for fold {i}')
+                    ckpt_path = "" 
         else:
             ckpt_path = "" 
         cmd = f"sbatch {args.slurm_script} {i} {args.seed} {ckpt_path}"
