@@ -3,7 +3,9 @@ import subprocess
 from pathlib import Path
 
 # This python script automates running a slurm bash script for each fold. 
-# Run this with -s slurm_multitask_informer_pretraining_template.sh
+# Run this with a fold-level template in command line argument --slurm_script
+# e.g. slurm_multitask_informer_pretraining_template.sh 
+# slurm_new_multitask_informer_pretraining_template.sh
 
 #e.g.
 # python scripts/run_slurm_multitask_informer_pretrain.py \

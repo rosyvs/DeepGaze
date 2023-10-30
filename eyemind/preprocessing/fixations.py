@@ -23,7 +23,11 @@ def fixation_label_mapper(folder, files, label_col='fixation_label'):
     # print(label_col)
     labels = []
     for f in files:
-        df = pd.read_csv(str(Path(folder,f).resolve()))
+        try:
+            df = pd.read_csv(str(Path(folder,f).resolve()))
+        except Exception as e:
+            print(f'{str(Path(folder,f).resolve())}')
+            raise e
         label_array = df[label_col].to_numpy(float)
         labels.append(label_array)
     return labels
