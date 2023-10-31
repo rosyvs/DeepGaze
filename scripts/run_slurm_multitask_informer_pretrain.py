@@ -1,7 +1,8 @@
 import argparse
 import subprocess
 from pathlib import Path
-
+import glob
+import os
 # This python script automates running a slurm bash script for each fold. 
 # Run this with a fold-level template in command line argument --slurm_script
 # e.g. slurm_multitask_informer_pretraining_template.sh 
@@ -27,6 +28,7 @@ def main(args):
                     latest_file = max(list(files), key=lambda item: item.stat().st_ctime)
                     ckpt_path = str(latest_file)    
                 else:
+                    print(len(list(files)))
                     print(f'no existing ckpt in resume_dir for fold {i}')
                     ckpt_path = "" 
         else:
