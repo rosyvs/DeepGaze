@@ -20,7 +20,7 @@ def main(args):
             if args.last_ckpt:
                 ckpt_path = str(next(ckpt_dirpath.glob('last*.ckpt')))
             else: # get most recent checkpoint
-                print(f{str(ckpt_dirpath)})
+                print(f'{str(ckpt_dirpath)}')
                 files=ckpt_dirpath.glob('*.ckpt')
                 if list(files):
                     latest_file = max(list(files), key=lambda item: item.stat().st_ctime)
