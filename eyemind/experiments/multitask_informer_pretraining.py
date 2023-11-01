@@ -5,11 +5,11 @@ from eyemind.experiments.cli import FoldsLightningCLI
 import os
 
 if __name__ == "__main__":
-    print(f'CWD: {os.getcwd()}')
+    # print(f'CWD: {os.getcwd()}')
     cli = FoldsLightningCLI(InformerMultiTaskEncoderDecoder, 
                             InformerDataModule, 
                             run=False, 
-                            seed_everything_default=42, 
+                            seed_everything_default=21, 
                             save_config_overwrite=True)
     cli.datamodule.setup()
     if cli.config.num_folds != -1:
