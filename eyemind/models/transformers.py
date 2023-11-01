@@ -511,7 +511,7 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
             self.fm_decoder = nn.Linear(d_model, c_out, bias=True)
             decoders.append(self.fm_decoder)
             self.fm_criterion = nn.CrossEntropyLoss(weight=torch.Tensor(class_weights))
-            self.fm_metric = torchmetrics.AveragePrecision(num_classes=c_out, average="weighted")
+            self.fm_metric = torchmetrics.AveragePrecision(num_classes=c_out, average=None, thresholds=20)
         if "pc" in tasks:
             self.pc_decoder = InformerDecoder(dec_in, 2, factor, d_model, n_heads, d_layers, d_ff, dropout, attn, activation, mix)
             decoders.append(self.pc_decoder)
