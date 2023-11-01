@@ -48,7 +48,7 @@ if __name__=="__main__":
     parser.add_argument("--seed", type=int, default=42, help="Seed for pytorch-lightning")
     parser.add_argument("--resume_dir", type=str, default="", help="base dir containing checkpoint to resume training from")
     parser.add_argument("--last_ckpt", action='store_true', help="If you want to use the last checkpoint instead of the best saved one")
-    parser.add_argument("-h", "--hparams", type=str, default="", help="Path to the yaml of hyperparameters (should end _folds.yml)")
+    parser.add_argument("-p", "--hparams", type=str, default="", help="Path to the yaml of hyperparameters (should end _folds.yml)")
 
     args = parser.parse_args()
     main(args)    
