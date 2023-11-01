@@ -15,6 +15,10 @@ import os
 # --resume_ckpt lightning_logs/informer_pretraining_seed21/
 
 def main(args):
+    if not args.hparams:
+        hparams='experiment_configs/cluster/new_multitask_informer_pretraining_folds.yml'
+    else:
+        hparams=args.hparams
     for i in args.folds:
         if args.resume_dir:
             ckpt_dirpath = Path(args.resume_dir, f"fold{i}", "checkpoints")
@@ -30,7 +34,7 @@ def main(args):
                     ckpt_path = "" 
         else:
             ckpt_path = "" 
-        cmd = f"sbatch {args.slurm_script} {i} {args.seed} {ckpt_path}"
+        cmd = f"sbatch {args.slurm_script} {i} {args.seed} {ckpt_path} {hparams}"
         print(cmd)
         cmd_list = cmd.split(" ")
         result = subprocess.run(cmd_list, capture_output=True, text=True, check=True)
@@ -44,6 +48,8 @@ if __name__=="__main__":
     parser.add_argument("--seed", type=int, default=42, help="Seed for pytorch-lightning")
     parser.add_argument("--resume_dir", type=str, default="", help="base dir containing checkpoint to resume training from")
     parser.add_argument("--last_ckpt", action='store_true', help="If you want to use the last checkpoint instead of the best saved one")
+    parser.add_argument("-h", "--hparams", type=str, default="", help="Path to the yaml of hyperparameters (should end _folds.yml)")
+
     args = parser.parse_args()
     main(args)    
 

@@ -31,14 +31,16 @@ version="fold${1}"
 name="new_multitask_informer_pretraining_seed${2}"
 split_filepath="./data_splits/4fold_participant/seed${2}.yml"
 resume_dir=${3}
+hparams=${4}
 echo $name
 echo $version
 echo $split_filepath
 echo $resume_dir
+echo $hparams
 
 if [ -z "$resume_dir"]
 then
-  python3 eyemind/experiments/multitask_informer_pretraining.py -c experiment_configs/cluster/new_multitask_informer_pretraining_folds.yml --fold_number $1 --seed_everything $2 --split_filepath ${split_filepath} --trainer.logger.init_args.name ${name} --trainer.logger.init_args.version ${version}
+  python3 eyemind/experiments/multitask_informer_pretraining.py -c ${hparams} --fold_number $1 --seed_everything $2 --split_filepath ${split_filepath} --trainer.logger.init_args.name ${name} --trainer.logger.init_args.version ${version}
 else
-  python3 eyemind/experiments/multitask_informer_pretraining.py -c experiment_configs/cluster/new_multitask_informer_pretraining_folds.yml --fold_number $1 --seed_everything $2 --split_filepath ${split_filepath} --trainer.logger.init_args.name ${name} --trainer.logger.init_args.version ${version} --trainer.resume_from_checkpoint ${resume_dir}
+  python3 eyemind/experiments/multitask_informer_pretraining.py -c ${hparams} --fold_number $1 --seed_everything $2 --split_filepath ${split_filepath} --trainer.logger.init_args.name ${name} --trainer.logger.init_args.version ${version} --trainer.resume_from_checkpoint ${resume_dir}
 fi
