@@ -8,10 +8,9 @@ import torch
 from eyemind.dataloading.gaze_data import BaseGazeDataModule, BaseSequenceToSequenceDataModule, GroupStratifiedKFoldDataModule, ParticipantKFoldDataModule, SequenceLabelDataset, SequenceToSequenceDataModule
 from torch.utils.data import Dataset, DataLoader, Subset
 
-from eyemind.dataloading.load_dataset import filter_files_by_seqlen, get_label_df
+from eyemind.dataloading.load_dataset import filter_files_by_seqlen, get_label_df, label_samples, label_files
 from eyemind.dataloading.batch_loading import *
 from eyemind.dataloading.transforms import ToTensor
-from eyemind.preprocessing.fixations import fixation_label_mapper
 
 
 class InformerDataModule(BaseSequenceToSequenceDataModule, ParticipantKFoldDataModule):
@@ -19,7 +18,8 @@ class InformerDataModule(BaseSequenceToSequenceDataModule, ParticipantKFoldDataM
     def __init__(self,
                 data_dir: str,
                 label_filepath: str,
-                sample_label_col: str,
+                file_label_col: str, # file-level label col in label_filepath 
+                sample_label_col: str, # sample-level label col in each gaze file
                 load_setup_path: Optional[str] = None,
                 test_dir: Optional[str] = None,
                 train_dataset: Optional[Dataset] = None,
@@ -59,6 +59,7 @@ class InformerDataModule(BaseSequenceToSequenceDataModule, ParticipantKFoldDataM
         self.label_length = label_length
         self.contrastive = contrastive
         self.sample_label_col=sample_label_col #TODO: needed??
+        self.file_label_col=file_label_col #TODO: needed??
 
     def prepare_data(self):
         '''
@@ -68,7 +69,14 @@ class InformerDataModule(BaseSequenceToSequenceDataModule, ParticipantKFoldDataM
 
     def setup(self, stage: Optional[str] = None):
         if stage in ("fit", "predict", None):
-            dataset = SequenceLabelDataset(self.data_dir, file_mapper=self.file_mapper, label_mapper=self.label_mapper, transform_x=self.x_transforms, transform_y=self.y_transforms, usecols=[1,2], scale=True)
+            dataset = SequenceLabelDataset(
+                self.data_dir, 
+                file_mapper=self.file_mapper, 
+                label_mapper=self.label_mapper, 
+                transform_x=self.x_transforms, 
+                transform_y=self.y_transforms, 
+                usecols=[1,2], 
+                scale=True)
             if self.load_setup_path:
                 self.load_setup(dataset)
             else:
@@ -127,6 +135,7 @@ class InformerDataModule(BaseSequenceToSequenceDataModule, ParticipantKFoldDataM
         group.add_argument("--batch_size", type=int, default=8)
         group.add_argument("--label_filepath", type=str)
         group.add_argument("--sample_label_col", type=str)
+        group.add_argument("--file_label_col", type=str)
         group.add_argument("--sequence_length", type=int, default=250)
         group.add_argument("--min_scanpath_length", type=int, default=500)
         group.add_argument("--contrastive", type=bool, default=False)
@@ -142,7 +151,7 @@ class InformerDataModule(BaseSequenceToSequenceDataModule, ParticipantKFoldDataM
 
     @property
     def label_mapper(self):
-        return partial(fixation_label_mapper, folder=self.data_dir, label_col=self.sample_label_col)
+        return partial(label_samples, folder=self.data_dir, label_col=self.sample_label_col)
     
     @property
     def file_mapper(self):
@@ -172,3 +181,6 @@ def informer_collate(sequence_length, pred_length, label_length, batch):
     X_cl1, X_cl2, cl_labels = contrastive_batch(X, sequence_length)
 
     return X, fixation_decoder_inp, fixation_labels, rc_decoder_inp, X_pc, pc_labels, X_cl1, X_cl2, cl_labels
+
+
+class InformerMultitaskDatamodule(InformerDataModule, SequenceLabelDataset)

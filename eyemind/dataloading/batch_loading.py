@@ -25,7 +25,7 @@ def split_collate_fn(sequence_length, batch, contrastive=False):
     '''
     Takes variable length sequences, splits them each into 
     subsequences of sequence_length, and returns tensors:
-    
+    NOTE: NON RANDOM
     Args:
         batch: List[Tuples(Tensor(X), Tensor(y))] Contains a list of the returned items from dataset
         sequence_length: int lengths of the subsequences

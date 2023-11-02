@@ -24,13 +24,6 @@ def load_file_folds(path):
         file_folds_dict = yaml.safe_load(f)    
     return [(fold["train"], fold["val"]) for fold in file_folds_dict["folds"]]
 
-def label_files(label_df,label_col,filenames,id_col="filename"):
-    # Strip extension
-    ids = [f.split(".")[0] for f in filenames]
-    labels = label_df[label_col].loc[label_df[id_col].isin(ids)].values.tolist()
-    #labels = [label_df.loc[label_df[id_col] == id][label_col].values[0] for id in ids]
-    return labels
-
 def get_filenames_for_dataset(folder, label_df, label_col, id_col="filename", ext="csv", min_sequence_length=500):
     files = label_df[(~label_df[label_col].isna()) & (label_df["sequence_length"] > min_sequence_length)][id_col].to_list()
     label_filenames = set([f"{file}.{ext}" for file in files])
@@ -64,14 +57,29 @@ def create_filename_col(label_df):
     label_df["filename"] = label_df.apply(lambda row: get_id(row), axis=1)
     return label_df
 
-def get_label_mapper(label_df, label_col):
-    #filenames = get_filenames_for_dataset(label_df, data_folder, id_col, label_col, ext)
+def label_files(label_df,label_col,filenames,id_col="filename"):
+    ids = [f.split(".")[0] for f in filenames]    # Strip extension
+    labels = label_df[label_col].loc[label_df[id_col].isin(ids)].values.tolist()
+    return labels
+
+def label_samples(folder, files, label_col='fixation_label'):
+    labels = []
+    for f in files:
+        try:
+            df = pd.read_csv(str(Path(folder,f).resolve()))
+        except Exception as e:
+            print(f'{str(Path(folder,f).resolve())}')
+            raise e
+        label_array = df[label_col].to_numpy(float)
+        labels.append(label_array)
+    return labels
+
+def get_label_mapper(label_df, label_col): # this only works for file level labels
     label_mapper = partial(label_files, label_df, label_col, id_col="filename")
     return label_mapper
 
 def get_label_df(label_path):
     label_df = pd.read_csv(label_path)
-    # label_df = create_filename_col(label_df)
     return label_df
 
 

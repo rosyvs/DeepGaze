@@ -8,7 +8,7 @@ from typing import Any, Callable, List, Optional, Union
 import pandas as pd
 from sklearn.model_selection import train_test_split
 import yaml
-from eyemind.dataloading.load_dataset import filter_files_by_seqlen, get_filenames_for_dataset, get_label_df, get_label_mapper, get_participant_splits, get_stratified_group_splits, limit_sequence_len, load_file_folds, write_splits
+from eyemind.dataloading.load_dataset import label_samples, filter_files_by_seqlen, get_filenames_for_dataset, get_label_df, get_label_mapper, get_participant_splits, get_stratified_group_splits, limit_sequence_len, load_file_folds, write_splits
 from eyemind.dataloading.batch_loading import multitask_collate_fn, random_collate_fn, random_multitask_collate_fn, split_collate_fn
 import torchvision.transforms as T
 from torch.utils.data import Dataset, DataLoader, Sampler, Subset
@@ -16,7 +16,6 @@ from torch.utils.data import Dataset, DataLoader, Sampler, Subset
 from pytorch_lightning import LightningDataModule
 
 from eyemind.dataloading.transforms import LimitSequenceLength, StandardScaler, ToTensor
-from eyemind.preprocessing.fixations import fixation_label_mapper
 
 
 class SequenceLabelDataset(Dataset):
@@ -93,7 +92,6 @@ class SequenceLabelDataset(Dataset):
     def get_indices_from_files(self, files):
         file_index_map = {f: i for i, f in enumerate(self.files)}
         return [file_index_map[f] for f in files if f in file_index_map]
-
 
     @classmethod
     def load_dataset(cls, path, **kwargs):
@@ -389,11 +387,11 @@ class SequenceToLabelDataModule(GroupStratifiedNestedCVDataModule, BaseGazeDataM
         if stage in ("fit", "predict", None):
             dataset = SequenceLabelDataset(
                 self.data_dir, 
-            file_mapper=self.file_mapper, 
-            label_mapper=self.label_mapper, 
-            transform_x=self.x_transforms, 
-            transform_y=self.y_transforms, 
-            scale=self.scale)
+                file_mapper=self.file_mapper, 
+                label_mapper=self.label_mapper, 
+                transform_x=self.x_transforms, 
+                transform_y=self.y_transforms, 
+                scale=self.scale)
             if self.load_setup_path:
                 self.load_setup(dataset)
             else:
@@ -409,7 +407,8 @@ class SequenceToLabelDataModule(GroupStratifiedNestedCVDataModule, BaseGazeDataM
   
         elif stage == "test":
             if self.test_dir:
-                self.test_dataset = SequenceLabelDataset(dir, 
+                self.test_dataset = SequenceLabelDataset(
+                dir, 
                 file_mapper=self.file_mapper, 
                 label_mapper=self.label_mapper, 
                 transform_x=self.x_transforms, 
@@ -533,7 +532,6 @@ class BaseSequenceToSequenceDataModule(BaseGazeDataModule):
         elif stage == "test":
             if self.test_dir:
                 self.test_dataset = SequenceLabelDataset(dir, file_mapper=self.file_mapper, label_mapper=self.label_mapper, transform_x=self.x_transforms, transform_y=self.y_transforms)
-            
             assert self.test_dataset is not None
             
     def train_dataloader(self) -> DataLoader:
@@ -590,7 +588,7 @@ class BaseSequenceToSequenceDataModule(BaseGazeDataModule):
 
     @property
     def label_mapper(self):
-        return partial(fixation_label_mapper, folder=self.data_dir, label_col=self.sample_label_col)
+        return partial(label_samples, folder=self.data_dir, label_col=self.sample_label_col)
     
     @property
     def file_mapper(self):
@@ -639,7 +637,12 @@ class SequenceToSequenceDataModule(GroupStratifiedKFoldDataModule, BaseGazeDataM
 
     def setup(self, stage: Optional[str] = None):
         if stage in ("fit", "predict", None):
-            dataset = SequenceLabelDataset(self.data_dir, file_mapper=self.file_mapper, label_mapper=self.label_mapper, transform_x=self.x_transforms, transform_y=self.y_transforms, usecols=[1,2])
+            dataset = SequenceLabelDataset(
+                self.data_dir, 
+                file_mapper=self.file_mapper, 
+                label_mapper=self.label_mapper, 
+                transform_x=self.x_transforms, 
+                transform_y=self.y_transforms)
             if self.load_setup_path:
                 self.load_setup(dataset)
             else:
@@ -651,8 +654,12 @@ class SequenceToSequenceDataModule(GroupStratifiedKFoldDataModule, BaseGazeDataM
                     self.test_dataset = Subset(dataset, splits[1])
         elif stage == "test":
             if self.test_dir:
-                self.test_dataset = SequenceLabelDataset(dir, file_mapper=self.file_mapper, label_mapper=self.label_mapper, transform_x=self.x_transforms, transform_y=self.y_transforms)
-            
+                self.test_dataset = SequenceLabelDataset(
+                    dir, 
+                    file_mapper=self.file_mapper, 
+                    label_mapper=self.label_mapper, 
+                    transform_x=self.x_transforms, 
+                    transform_y=self.y_transforms)
             assert self.test_dataset is not None
             
     def train_dataloader(self) -> DataLoader:
@@ -706,7 +713,7 @@ class SequenceToSequenceDataModule(GroupStratifiedKFoldDataModule, BaseGazeDataM
 
     @property
     def label_mapper(self):
-        return partial(fixation_label_mapper, folder=self.data_dir, label_col=self.sample_label_col)
+        return partial(label_samples, folder=self.data_dir, label_col=self.sample_label_col)
     
     @property
     def file_mapper(self):
@@ -751,7 +758,14 @@ class GazeDataModule(LightningDataModule):
 
     def setup(self, stage: Optional[str] = None,):
         if stage in ("fit", None):
-            dataset_full = SequenceLabelDataset(self.data_dir, file_list=self.file_list, label_mapper=self.label_mapper, transform_x=self.transform_x, transform_y=self.transform_y, usecols=self.usecols, skiprows=self.skiprows)
+            dataset_full = SequenceLabelDataset(
+                self.data_dir, 
+                file_list=self.file_list, 
+                label_mapper=self.label_mapper, 
+                transform_x=self.transform_x, 
+                transform_y=self.transform_y, 
+                usecols=self.usecols, 
+                skiprows=self.skiprows)
             if self.splitter:
                 self.dataset_train, self.dataset_val = self._subset_from_split(dataset_full)
             else:
@@ -759,7 +773,14 @@ class GazeDataModule(LightningDataModule):
 
         if stage == "test":
             dir = self.test_dir if self.test_dir is not None else self.data_dir 
-            self.dataset_test = SequenceLabelDataset(dir, file_list=self.file_list, label_mapper=self.label_mapper, transform_x=self.transform_x, transform_y=self.transform_y, usecols=self.usecols, skiprows=self.skiprows)
+            self.dataset_test = SequenceLabelDataset(
+                dir, 
+                file_list=self.file_list, 
+                label_mapper=self.label_mapper, 
+                transform_x=self.transform_x, 
+                transform_y=self.transform_y, 
+                usecols=self.usecols, 
+                skiprows=self.skiprows)
     
     def train_dataloader(self) -> DataLoader:
         return self._get_dataloader(self.dataset_train)
@@ -800,4 +821,10 @@ class GazeDataModule(LightningDataModule):
         return parser
 
 class PIDkFoldS2SDataModule(BaseSequenceToSequenceDataModule, ParticipantKFoldDataModule):
+    pass
+
+class MultitaskDataModule(SequenceToSequenceDataModule, SequenceToLabelDataModule):
+    # supporting both seq2seq label and seq2label
+
+    # TODO: define a special dataset with seqlabels and samplabels
     pass
