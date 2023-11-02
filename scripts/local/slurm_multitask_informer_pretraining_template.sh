@@ -36,4 +36,4 @@ echo $version
 echo $split_filepath
 echo $resume_dir
 
-python3 eyemind/experiments/multitask_informer_pretraining.py -c experiment_configs/cluster/multitask_informer_pretraining_folds.yml --fold_number $1 --seed_everything $2 --split_filepath ${split_filepath} --trainer.logger.init_args.name ${name} --trainer.logger.init_args.version ${version} --trainer.resume_from_checkpoint ${resume_dir}
+python3 eyemind/experiments/multitask_informer_pretraining.py -c configs/cluster/multitask_informer_pretraining_folds.yml --fold_number $1 --seed_everything $2 --split_filepath ${split_filepath} --trainer.logger.init_args.name ${name} --trainer.logger.init_args.version ${version} --trainer.resume_from_checkpoint ${resume_dir}

@@ -27,7 +27,6 @@ conda activate dg
 pip install -e . # surely this doesnt need to be done as conda env already has eyemind?? 
 echo "Fold: $1"
 version="fold${1}"
-name="new_multitask_informer_pretraining"
 config=${2}
 resume_dir=${3}
 echo $name
@@ -37,7 +36,7 @@ echo $config
 
 if [ -z "$resume_dir"]
 then
-  python3 eyemind/experiments/multitask_informer_pretraining.py -c ${config} --fold_number $1 --trainer.logger.init_args.name ${name} --trainer.logger.init_args.version ${version}
+  python3 eyemind/experiments/multitask_informer_pretraining.py -c ${config} --fold_number $1 --trainer.logger.init_args.version ${version}
 else
-  python3 eyemind/experiments/multitask_informer_pretraining.py -c ${config} --fold_number $1 --trainer.logger.init_args.name ${name} --trainer.logger.init_args.version ${version} --trainer.resume_from_checkpoint ${resume_dir}
+  python3 eyemind/experiments/multitask_informer_pretraining.py -c ${config} --fold_number $1 --trainer.logger.init_args.version ${version} --trainer.resume_from_checkpoint ${resume_dir}
 fi

@@ -38,4 +38,4 @@ echo $split_filepath
 echo $resume_dir
 
 
-python3 eyemind/experiments/multitask_informer_comp.py -c experiment_configs/cluster/multitask_informer_comp.yml --fold_number $1 --model.encoder_ckpt $2 --data.label_col $3 --trainer.logger.init_args.name ${name} --trainer.logger.init_args.version ${version}
+python3 eyemind/experiments/multitask_informer_comp.py -c configs/cluster/multitask_informer_comp.yml --fold_number $1 --model.encoder_ckpt $2 --data.label_col $3 --trainer.logger.init_args.name ${name} --trainer.logger.init_args.version ${version}

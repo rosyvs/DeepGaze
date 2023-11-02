@@ -16,4 +16,4 @@ source ~/.bashrc
 cd /projects/$USER/DeepGaze
 conda activate eyemind
 # pip install .
-python3 eyemind/experiments/fixation_tuning.py -c experiment_configs/encdec_multitask_tuning_config.yml --gpus_per_trial 1 --exp_name multitask_tuning
+python3 eyemind/experiments/fixation_tuning.py -c configs/encdec_multitask_tuning_config.yml --gpus_per_trial 1 --exp_name multitask_tuning

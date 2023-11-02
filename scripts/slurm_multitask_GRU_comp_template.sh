@@ -37,4 +37,4 @@ echo $version
 echo $split_filepath
 
 
-python3 eyemind/experiments/multitask_GRU_comp.py -c experiment_configs/cluster/multitask_GRU_comp.yml --fold_number $1 --split_filepath ${split_filepath} --model.encoder_ckpt $3 --data.label_col $4 --trainer.logger.init_args.name ${name} --trainer.logger.init_args.version ${version}
+python3 eyemind/experiments/multitask_GRU_comp.py -c configs/cluster/multitask_GRU_comp.yml --fold_number $1 --split_filepath ${split_filepath} --model.encoder_ckpt $3 --data.label_col $4 --trainer.logger.init_args.name ${name} --trainer.logger.init_args.version ${version}

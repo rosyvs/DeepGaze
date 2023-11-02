@@ -19,4 +19,4 @@ cd /projects/$USER/DeepGaze
 conda activate dg
 # pip install .
 pip install torch==1.12.0+cu113 torchvision==0.13.0+cu113 -f https://download.pytorch.org/whl/torch_stable.html
-python3 eyemind/experiments/comprehension_experiment.py fit -c experiment_configs/inf_comp_freeze_enc_config.yml
+python3 eyemind/experiments/comprehension_experiment.py fit -c configs/inf_comp_freeze_enc_config.yml

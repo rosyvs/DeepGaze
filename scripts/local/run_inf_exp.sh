@@ -14,4 +14,4 @@ module load cudnn/8.1_for_cuda_11.2
 source ~/.bashrc
 cd /projects/$USER/DeepGaze
 # pip install .
-python3 eyemind/experiments/inference_experiment.py fit -c experiment_configs/inf_cluster_config.yml
+python3 eyemind/experiments/inference_experiment.py fit -c configs/inf_cluster_config.yml

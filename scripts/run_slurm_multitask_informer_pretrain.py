@@ -8,14 +8,14 @@ import os
 # e.g.
 # python scripts/run_slurm_multitask_informer_pretrain.py 
 # --folds 0 1 2 3\
-# --config experiment_configs/cluster/new_multitask_informer_pretraining_folds.yml \
+# --config configs/cluster/new_multitask_informer_pretraining_folds.yml \
 # --resume_ckpt lightning_logs/informer_pretraining_seed21/ 
 # --last_ckpt
 
 def main(args):
     SLURM_TEMPLATE = 'scripts/slurm_multitask_informer_pretraining_template.sh'
     if not args.config:
-        config='experiment_configs/cluster/new_multitask_informer_pretraining_folds.yml'
+        config='configs/cluster/new_multitask_informer_pretraining_folds.yml'
     else:
         config=args.config
     for i in args.folds:

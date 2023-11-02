@@ -16,4 +16,4 @@ source ~/.bashrc
 cd /projects/$USER/DeepGaze
 conda activate eyemind
 # pip install .
-python3 eyemind/experiments/comprehension_nested_cv.py -c experiment_configs/comprehension_nestedcv_config_encoderclassifiermodel.yml --gpus_per_trial 1 --exp_name comprehension-tune-sub
+python3 eyemind/experiments/comprehension_nested_cv.py -c configs/comprehension_nestedcv_config_encoderclassifiermodel.yml --gpus_per_trial 1 --exp_name comprehension-tune-sub
