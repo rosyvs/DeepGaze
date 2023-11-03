@@ -220,12 +220,23 @@ class VariableSequenceLengthEncoderDecoderModel(EncoderDecoderModel):
         return parser
 
 class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
-    def __init__(self, tasks: List[str]=["fi", "pc", "cl", "rc"], sequence_length: int=250, pred_length: int=100, hidden_dim: int=128, class_weights: List[float]=[3.,1.], max_rmse_err: float=70., num_classes: int=2, use_conv: bool=True, learning_rate: float=1e-3, freeze_encoder: bool=False):
+    def __init__(
+        self, 
+        tasks: List[str]=["fi", "pc", "cl", "rc"], s
+        equence_length: int=250, 
+        pred_length: int=100, 
+        hidden_dim: int=128, 
+        class_weights: List[float]=[3.,1.], 
+        max_rmse_err: float=70., 
+        num_classes: int=2, 
+        use_conv: bool=True, 
+        learning_rate: float=1e-3, 
+        freeze_encoder: bool=False):
         super().__init__(sequence_length, hidden_dim, class_weights, num_classes, use_conv, learning_rate, freeze_encoder)
         self.save_hyperparameters()
         if len(tasks) == 0:
             raise ValueError("There must be at least one task. Length of tasks is 0")
-        self.encoder, fi_decoder = create_encoder_decoder(hidden_dim, use_conv, input_seq_length=sequence_length)
+        self.encoder, fi_decoder = create_encoder_decoder(hidden_dim, out_dim=num_classes, use_conv, input_seq_length=sequence_length)
         #self.decoders = {}
         self.decoders = []
         self.criterions = []
@@ -239,6 +250,13 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
             # self.metrics["fi"] = torchmetrics.AUROC(num_classes=num_classes, average="weighted")
             self.fi_criterion = nn.CrossEntropyLoss(torch.Tensor(class_weights))
             self.fi_metric = torchmetrics.AUROC(num_classes=num_classes, average="weighted")
+        if "fm" in tasks:
+            if "fi" in tasks:
+                raise Exception("You can only use one of 'fi' and 'fm' as pretraining tasks, both were provided")
+            self.fm_decoder = fi_decoder
+            decoders.append(self.fm_decoder)
+            self.fm_criterion = nn.CrossEntropyLoss(weight=torch.Tensor(class_weights))
+            self.fm_metric = torchmetrics.AveragePrecision(num_classes=num_classes, average=None, thresholds=20)
         if "pc" in tasks:
             #self.decoders['pc'] = create_decoder(hidden_dim,output_seq_length=pred_length)
             self.pc_decoder = create_decoder(hidden_dim,output_seq_length=pred_length)
@@ -289,6 +307,11 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
             logits = self.fi_decoder(enc).squeeze()
             preds = self._get_preds(logits)
             targets = fix_y
+        elif task == "fm":
+            enc = self.encoder(X)
+            logits = self.fm_decoder(enc).squeeze()
+            preds = self._get_preds(logits)
+            targets = fix_y
         elif task == "pc":
             X_pc, y_pc = self.predictive_coding_batch(batch[0])
             enc = self.encoder(X_pc)
@@ -319,6 +342,12 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
                 logits = self.fi_decoder(enc).squeeze()
                 preds = self._get_preds(logits)
                 task_predictions["fi"] = preds
+                del enc
+            elif task == "fm":
+                enc = self.encoder(X)
+                logits = self.fi_decoder(enc).squeeze()
+                preds = self._get_preds(logits)
+                task_predictions["fm"] = preds
                 del enc
             elif task == "pc":
                 X_pc, y_pc = self.predictive_coding_batch(batch[0])
@@ -361,6 +390,14 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
                 probs = self._get_probs(logits)
                 task_metric = self.fi_metric(probs, targets_fi.int())
                 del enc, probs, targets_fi
+            elif task == "fm":
+                enc = self.encoder(X)
+                logits = self.fm_decoder(enc).squeeze().reshape(-1,self.c_out) #TODO: reshape this differently or not at all? 
+                targets_fm = fix_y.reshape(-1).long() # remove reshape #TODO: reshape to be long, but unreshape the logits
+                task_loss = self.fm_criterion(logits, targets_fm)
+                probs = self._get_probs(logits)
+                task_metric = self.fm_metric(probs, targets_fm)
+                del enc, probs, targets_fm, fix_y
             elif task == "pc":
                 X_pc, y_pc = self.predictive_coding_batch(batch[0])
                 enc = self.encoder(X_pc)

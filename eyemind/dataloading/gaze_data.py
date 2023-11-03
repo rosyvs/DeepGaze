@@ -8,8 +8,8 @@ from typing import Any, Callable, List, Optional, Union
 import pandas as pd
 from sklearn.model_selection import train_test_split
 import yaml
-from eyemind.dataloading.load_dataset import label_samples, filter_files_by_seqlen, get_filenames_for_dataset, get_label_df, get_label_mapper, get_participant_splits, get_stratified_group_splits, limit_sequence_len, load_file_folds, write_splits
-from eyemind.dataloading.batch_loading import multitask_collate_fn, random_collate_fn, random_multitask_collate_fn, split_collate_fn
+from eyemind.dataloading.load_dataset import label_samples, filter_files_by_seqlen, get_filenames_for_dataset, get_label_df, get_label_mapper, get_participant_splits, get_stratified_group_splits, limit_sequence_len, load_file_folds, write_splits, label_samples_and_files
+from eyemind.dataloading.batch_loading import multitask_collate_fn, random_collate_fn, random_multitask_collate_fn, split_collate_fn, random_multilabel_multitask_collate_fn
 import torchvision.transforms as T
 from torch.utils.data import Dataset, DataLoader, Sampler, Subset
 
@@ -58,7 +58,7 @@ class SequenceLabelDataset(Dataset):
         self.transform_x = transform_x
         self.transform_y = transform_y
         if label_mapper:
-            self.labels = label_mapper(files=self.files)
+            self.labels = label_mapper(filenames=self.files)
         
     def __len__(self):
         return len(self.files)
@@ -612,8 +612,9 @@ class SequenceToSequenceDataModule(GroupStratifiedKFoldDataModule, BaseGazeDataM
                 pin_memory: bool = True,
                 drop_last: bool = True,            
                 ):
-        super().__init__()
+        super().__init__(data_dir=data_dir, label_filepath=label_filepath,label_col=sample_label_col)
         self.data_dir = data_dir
+        self.label_filepath=label_filepath
         self.label_df = get_label_df(label_filepath)
         self.sample_label_col=sample_label_col
         self.load_setup_path = load_setup_path
@@ -823,8 +824,141 @@ class GazeDataModule(LightningDataModule):
 class PIDkFoldS2SDataModule(BaseSequenceToSequenceDataModule, ParticipantKFoldDataModule):
     pass
 
-class MultitaskDataModule(SequenceToSequenceDataModule, SequenceToLabelDataModule):
+class SequenceToMultiLabelDataModule(SequenceToSequenceDataModule, SequenceToLabelDataModule):
     # supporting both seq2seq label and seq2label
+    def __init__(self,
+                data_dir: str,
+                label_filepath: str,
+                sample_label_col: str,
+                file_label_col: str,
+                load_setup_path: Optional[str] = None,
+                test_dir: Optional[str] = None,
+                train_dataset: Optional[Dataset] = None,
+                val_dataset: Optional[Dataset] = None,
+                test_dataset: Optional[Dataset] = None,
+                train_fold: Optional[Dataset] = None,
+                val_fold: Optional[Dataset] = None,
+                sequence_length: int = 500,
+                num_workers: int = 0,
+                batch_size: int = 8,
+                pin_memory: bool = True,
+                drop_last: bool = True,   
+                label_length: int = 48,
+                pred_length: Optional[int] = None,    
+                min_scanpath_length: int = 500,
+                contrastive: bool = True,     
+                ):
+        super().__init__(data_dir=data_dir, label_filepath=label_filepath, sample_label_col=sample_label_col)
+        self.data_dir = data_dir
+        self.label_df = get_label_df(label_filepath)
+        self.sample_label_col=sample_label_col
+        self.file_label_col=file_label_col
+        self.load_setup_path = load_setup_path
+        self.test_dir = test_dir
+        self.train_dataset = train_dataset
+        self.val_dataset = val_dataset
+        self.test_dataset = test_dataset
+        self.train_fold = train_fold
+        self.val_fold = val_fold
+        self.sequence_length = sequence_length
+        self.min_scanpath_length = min_scanpath_length
+        self.pred_length = pred_length
+        self.label_length = label_length
+        self.contrastive = contrastive
+        self.batch_size = batch_size
+        self.num_workers = num_workers
+        self.pin_memory = pin_memory
+        self.drop_last = drop_last
 
-    # TODO: define a special dataset with seqlabels and samplabels
-    pass
+    # TODO: define a special dataset with seqlabels and samplabels, define a label_mapper to return both
+    def setup(self, stage: Optional[str] = None):
+        if stage in ("fit", "predict", None):
+            dataset = SequenceLabelDataset(
+                self.data_dir, 
+                file_mapper=self.file_mapper, 
+                label_mapper=self.label_mapper, 
+                transform_x=self.x_transforms, 
+                transform_y=self.y_transforms,
+                scale=True)
+            if self.load_setup_path:
+                self.load_setup(dataset)
+            else:
+                if self.test_dir:
+                    self.splits = train_test_split(np.arange(len(dataset.files)), test_size=0.2)
+                else:
+                    train_val_splits, test_split = train_test_split(np.arange(len(dataset.files)), test_size=0.1)
+                    train_split, val_split = train_test_split(train_val_splits, test_size=0.2)
+                    self.splits = (train_split, val_split, test_split)
+                    self.test_dataset = Subset(dataset, self.splits[2])
+                self.train_dataset = Subset(dataset, self.splits[0])
+                self.val_dataset = Subset(dataset, self.splits[1])
+
+        # elif stage == "test":
+        #     if self.test_dir:
+        #         self.test_dataset = SequenceLabelDataset(
+        #             dir, 
+        #             file_mapper=self.file_mapper, 
+        #             label_mapper=self.label_mapper, 
+        #             transform_x=self.x_transforms, 
+        #             transform_y=self.y_transforms)
+        #     assert self.test_dataset is not None
+
+    def train_dataloader(self) -> DataLoader:
+        if self.train_fold:
+            return self.get_dataloader(self.train_fold)
+        else:
+            return self.get_dataloader(self.train_dataset)
+
+    def val_dataloader(self) -> Union[DataLoader, List[DataLoader]]:
+        if self.val_fold:
+            return self.get_dataloader(self.val_fold)
+        else:
+            return self.get_dataloader(self.val_dataset)
+
+    def predict_dataloader(self) -> DataLoader:
+        if self.test_dataset:
+            return self.get_dataloader(self.test_dataset)
+        elif self.val_fold:
+            return self.get_dataloader(self.val_fold)
+        else:
+            return self.get_dataloader(self.train_dataset)
+
+    def test_dataloader(self) -> DataLoader:
+        return self.get_dataloader(self.test_dataset)
+
+    def get_dataloader(self, dataset: Dataset):
+        return DataLoader(
+            dataset, 
+            batch_size=self.batch_size, 
+            num_workers=self.num_workers, 
+            drop_last=self.drop_last, 
+            pin_memory=self.pin_memory,
+            collate_fn=partial(random_multilabel_multitask_collate_fn, self.sequence_length))
+
+    @staticmethod
+    def add_datamodule_specific_args(parent_parser):
+        group = parent_parser.add_argument_group("SequenceToSequenceDataModule")
+        group.add_argument("--data_dir", type=str)
+        group.add_argument("--test_dir", type=str, default="")
+        group.add_argument("--num_workers", type=int, default=0)
+        group.add_argument("--batch_size", type=int, default=8)
+        group.add_argument("--label_filepath", type=str)
+        group.add_argument("--sample_label_col", type=str)
+        group.add_argument("--file_label_col", type=str)
+        group.add_argument("--sequence_length", type=int, default=500)
+        group.add_argument("--min_scanpath_length", type=int, default=500)
+        group.add_argument("--contrastive", type=bool, default=False)
+        return parent_parser
+    @property
+    def x_transforms(self):
+        return ToTensor()
+    @property
+    def y_transforms(self):
+        return ToTensor()
+    @property
+    def file_mapper(self):
+        return partial(filter_files_by_seqlen, self.label_df, min_sequence_length=self.min_scanpath_length)
+    @property
+    def label_mapper(self):
+        return partial(label_samples_and_files, label_df=self.label_df, folder=self.data_dir, sample_label_col=self.sample_label_col, file_label_col=self.file_label_col)
+

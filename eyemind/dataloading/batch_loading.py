@@ -119,6 +119,39 @@ def random_multitask_collate_fn(sequence_length, batch, min_seq=1.0, max_seq=1.0
             X2_batched[i] = X[i][start_ind:end_ind,:]
     return X_batched, fix_y_batched, X2_batched, cl_y_batched.float()
 
+def random_multilabel_multitask_collate_fn(sequence_length, batch, min_seq=1.0, max_seq=1.0):
+    """
+    Takes variable length scanpaths and selects a random part of sequence length and batches them
+    For multilabel data (sequence and fixation labels) for use with class SequenceToMultilabelDataModule
+    """
+    X, (fix_y, seq_y) = zip(*batch) # todo perhaps unpack y first then split into fix and seq? 
+    bs = len(X)
+    fs = X[0].shape[-1]
+    if min_seq != max_seq:
+        sequence_length = random.randrange(int(min_seq*sequence_length), int(max_seq*sequence_length))
+    X_batched = torch.zeros((bs,sequence_length,fs))
+    fix_y_batched = torch.zeros((bs, sequence_length))
+    X2_batched = torch.zeros((bs,sequence_length,fs))
+    cl_y_batched = torch.randint(0,2,(bs,)) # randomly set each item in batch to have same or diff source for CL
+    for i in range(bs): # loop over batch
+        full_sl = X[i].shape[0]
+        start_ind = random.randrange(0,full_sl-sequence_length) # randomly choose sequence start
+        end_ind = start_ind + sequence_length 
+        X_batched[i] = X[i][start_ind:end_ind,:] # choose random interval within sequence
+        fix_y_batched[i] = fix_y[i][start_ind:end_ind]
+        if cl_y_batched[i] == 0:
+            j = i
+            while j == i:
+                j = random.randrange(0,bs) # choose another item from batch to pair this x with
+            full_sl = X[j].shape[0]
+            start_ind = random.randrange(0,full_sl-sequence_length)
+            end_ind = start_ind + sequence_length
+            X2_batched[i] = X[j][start_ind:end_ind,:]
+        else: # simply choose another random subsequence from same seq (can overlap)
+            start_ind = random.randrange(0,full_sl-sequence_length)
+            end_ind = start_ind + sequence_length
+            X2_batched[i] = X[i][start_ind:end_ind,:] 
+    return X_batched, fix_y_batched, seq_y, X2_batched, cl_y_batched.float()
 
 def predictive_coding_batch(X_batch, input_length, pred_length, label_length):
     X_seq = X_batch[:,:input_length,:]

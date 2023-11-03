@@ -44,7 +44,7 @@ if __name__=="__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--folds", required=True, type=int, nargs='*', help="list of fold numbers to run (e.g. 0 1 2 3)")
     parser.add_argument("-c", "--config", type=str, default="", help="Path to the yaml of hyperparameters (should end _folds.yml)")
-    parser.add_argument("--resume_dir", type=str, default="", help="base dir containing checkpoint to resume training from")
+    parser.add_argument("-r","--resume_dir", type=str, default="", help="base dir containing checkpoint to resume training from")
     parser.add_argument("-l","--last_ckpt", action='store_true', help="If you want to use the last checkpoint instead of the best saved one")
 
     args = parser.parse_args()

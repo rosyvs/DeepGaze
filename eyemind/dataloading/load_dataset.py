@@ -62,9 +62,9 @@ def label_files(label_df,label_col,filenames,id_col="filename"):
     labels = label_df[label_col].loc[label_df[id_col].isin(ids)].values.tolist()
     return labels
 
-def label_samples(folder, files, label_col='fixation_label'):
+def label_samples(folder, filenames, label_col='fixation_label'):
     labels = []
-    for f in files:
+    for f in filenames:
         try:
             df = pd.read_csv(str(Path(folder,f).resolve()))
         except Exception as e:
@@ -73,6 +73,22 @@ def label_samples(folder, files, label_col='fixation_label'):
         label_array = df[label_col].to_numpy(float)
         labels.append(label_array)
     return labels
+
+def label_samples_and_files(folder, filenames, label_df, sample_label_col='fixation_label',file_label_col='readWPM', id_col="filename"):
+    # labeller to get sequence-(file)-level labels AND sample-level labels
+    ids = [f.split(".")[0] for f in filenames]    # Strip extension
+    sample_labels = []
+    for f in filenames:
+        try:
+            df = pd.read_csv(str(Path(folder,f).resolve()))
+        except Exception as e:
+            print(f'{str(Path(folder,f).resolve())}')
+            raise e
+        label_array = df[sample_label_col].to_numpy(float)
+        sample_labels.append(label_array)
+
+    file_labels = label_df[file_label_col].loc[label_df[id_col].isin(ids)].values.tolist()
+    return sample_labels, file_labels
 
 def get_label_mapper(label_df, label_col): # this only works for file level labels
     label_mapper = partial(label_files, label_df, label_col, id_col="filename")

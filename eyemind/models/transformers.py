@@ -484,40 +484,40 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
             self.fi_decoder = nn.Linear(d_model, 2, bias=True)
             decoders.append(self.fi_decoder)
             self.fi_criterion = nn.CrossEntropyLoss(torch.Tensor(class_weights))
-            #self.fi_criterion = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor(class_weights))
-            self.fi_metric = torchmetrics.AveragePrecision(num_classes=2)
+            self.fi_metric = torchmetrics.AveragePrecision(task="binary",num_classes=2)
         if "fm" in tasks:
             if "fi" in tasks:
                 raise Exception("You can only use one of 'fi' and 'fm' as pretraining tasks, both were provided")
             self.fm_decoder = nn.Linear(d_model, c_out, bias=True)
             decoders.append(self.fm_decoder)
             self.fm_criterion = nn.CrossEntropyLoss(weight=torch.Tensor(class_weights))
-            self.fm_metric = torchmetrics.AveragePrecision(num_classes=c_out, average=None, thresholds=20)
+            self.fm_metric = torchmetrics.AveragePrecision(task="multiclass",num_classes=c_out, average=None, thresholds=20)
         if "pc" in tasks:
             self.pc_decoder = InformerDecoder(dec_in, 2, factor, d_model, n_heads, d_layers, d_ff, dropout, attn, activation, mix)
             decoders.append(self.pc_decoder)
             self.pc_criterion = RMSELoss()
             self.pc_metric = torchmetrics.MeanSquaredError(squared=False)
         if "cl" in tasks:
-            #cl_input_dim = hidden_dim * 2
             self.cl_decoder = ae.MLP(input_dim=d_model,
                                 layers=[128, 2],
                                 activation="relu",
                                 batch_norm=True)
             decoders.append(self.cl_decoder)
             self.cl_criterion = nn.CrossEntropyLoss()
-            self.cl_metric = torchmetrics.Accuracy(num_classes=2)
-
-            # self.criterions["cl"] = nn.CrossEntropyLoss()
-            # self.metrics["cl"] = torchmetrics.Accuracy(num_classes=num_classes)
+            self.cl_metric = torchmetrics.Accuracy(task="binary",num_classes=2)
         if "rc" in tasks:
             #self.decoders["rc"] = create_decoder(hidden_dim,output_seq_length=sequence_length)
             self.rc_decoder = InformerDecoder(dec_in, 2, factor, d_model, n_heads, d_layers, d_ff, dropout, attn, activation, mix)
             decoders.append(self.rc_decoder)
             self.rc_criterion = RMSELoss()
             self.rc_metric = torchmetrics.MeanSquaredError(squared=False)
-            # self.criterions["rc"] = RMSELoss()
-            # self.metrics["rc"] = torchmetrics.MeanSquaredError()         
+        if "sr" in tasks: # sequence-level regression
+            self.sr_decoder = ae.MLP(input_dim=d_model, 
+                                      layers=[64,1], 
+                                      activation="relu") # this activation fn doesn't apply to final layer
+            decoders.append(self.sr_decoder)
+            self.sr_criterion=RMSELoss() 
+            self.sr_metric=torchmetrics.MeanAbsoluteError()
         self.decoders = nn.ModuleList(decoders)
         self.c_out=c_out
         
@@ -543,14 +543,16 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
         self._step(batch, batch_idx, step_type="test")
 
     def _step(self, batch, batch_idx, step_type):
-        try:
+        n_items = len(batch) # this is not the batch size, but the number of items (data and labels) to unpack
+        print(f'n_items in batch: {n_items}')
+        if n_items==2:
+            X, fix_y = batch
+        elif n_items ==4:
             X, fix_y, X2, cl_y = batch
-        except ValueError as e:
-            try:
-                X, fix_y = batch
-            except ValueError as e:
-                print(f"{batch}")
-                raise e
+        elif n_items==5:
+            X, fix_y, seq_y, X2, cl_y = batch
+        else:
+            raise ValueError('unpacked batch has {n_items} elements, check collate_fn is compatible with this model')
         total_loss = 0
         for task in self.hparams.tasks: # TODO: pass these as a list of models each with own class defined separately
             if task == "cl":
@@ -575,10 +577,8 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
                 del enc, probs, targets_fi, fix_y
             elif task == "fm":
                 enc = self.encoder(X)
-                logits = self.fm_decoder(enc).squeeze().reshape(-1,self.c_out) #TODO: reshape this differently or not at all? 
-                # print(f'logits shape {logits.shape}') #logits shape torch.Size([32, 500, 3])
-                targets_fm = fix_y.reshape(-1).long() # remove reshape #TODO: reshape to be long, but unreshape the logits
-                # print(f'targets shape {targets_fm.shape}')#targets shape torch.Size([32, 500])
+                logits = self.fm_decoder(enc).squeeze().reshape(-1,self.c_out) 
+                targets_fm = fix_y.reshape(-1).long() 
                 task_loss = self.fm_criterion(logits, targets_fm)
                 probs = self._get_probs(logits)
                 task_metric = self.fm_metric(probs, targets_fm)
@@ -610,9 +610,16 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
                 task_metric = self.pc_metric(logits[mask], y_rc[mask])
                 #task_loss = torch.clamp(self.rc_criterion(logits, X), max=self.hparams.max_rmse_err)
                 #task_metric = self.rc_metric(logits, X)
-                del y_rc               
+                del y_rc
+            elif task == "sr": # sequence-level scalar regression
+                enc = self.encoder(X)
+                logits=self.sr_decoder(X)
+                preds=logits
+                loss = self.criterion(logits, seq_y)
+                accuracy = self.accuracy_metric(preds, seq_y) 
+                del seq_y
             else:
-                raise ValueError("Task not recognized.")
+                raise ValueError(f"Task {task} not recognized.")
             self.log(f"{step_type}_{task}_loss", task_loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
             self.log(f"{step_type}_{task}_metric", task_metric, on_step=False, on_epoch=True, prog_bar=True, logger=True)
             total_loss += task_loss
@@ -963,7 +970,7 @@ class InformerEncoderScalarRegModel(LightningModule):
             )
         self.classifier_head = ae.MLP(input_dim=d_model, 
                                       layers=[64,1], 
-                                      activation="relu")
+                                      activation="relu") # this activation fn doesn't apply to final layer
 
         if freeze_encoder:
             #self.enc_embedding.requires_grad_(False)
@@ -1002,13 +1009,11 @@ class InformerEncoderScalarRegModel(LightningModule):
             raise e
         logits = self(X).squeeze()
         loss = self.criterion(logits, y)
-        probs = self._get_probs(logits)
-        accuracy = self.accuracy_metric(probs, y)
-        auroc = self.auroc_metric(probs, y)
+        preds = self._get_preds(logits)#TODO: not probsbility
+        accuracy = self.accuracy_metric(preds, y) 
         self.logger.experiment.add_scalars("losses", {f"{step_type}_loss": loss}, self.current_epoch)        
         self.log(f"{step_type}_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log(f"{step_type}_accuracy", accuracy, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        self.log(f"{step_type}_auroc", auroc, on_step=False, on_epoch=True, prog_bar=True, logger=True)
         return loss
 
     def configure_optimizers(self):
@@ -1019,10 +1024,8 @@ class InformerEncoderScalarRegModel(LightningModule):
         res['lr_scheduler'] = {"scheduler": torch.optim.lr_scheduler.StepLR(optimizer, step_size=max(1, int(self.trainer.max_epochs / 5)), gamma=0.5)}
         return res
 
-    def _get_preds(self, logits, threshold=0.5):
-        probs = torch.sigmoid(logits)
-        preds = (probs > threshold).float()
-        return preds
+    def _get_preds(self, logits):
+        return logits
 
     def _get_probs(self, logits):
         probs = torch.sigmoid(logits)
@@ -1033,7 +1036,6 @@ class InformerEncoderScalarRegModel(LightningModule):
         parser.add_argument('--learning_rate', type=float, default=0.001)
         parser.add_argument('--encoder_ckpt', type=str, default="")
         parser.add_argument('--enc_in', type=int, default=2, help='encoder input size')
-        parser.add_argument('--c_out', type=int, default=1, help='output size')
         parser.add_argument('--d_model', type=int, default=512, help='dimension of model')
         parser.add_argument('--n_heads', type=int, default=8, help='num of heads')
         parser.add_argument('--e_layers', type=int, default=2, help='num of encoder layers')
@@ -1046,6 +1048,5 @@ class InformerEncoderScalarRegModel(LightningModule):
         parser.add_argument('--attn', type=str, default='prob', help='attention used in encoder, options:[prob, full]')
         parser.add_argument('--activation', type=str, default='gelu',help='activation')
         parser.add_argument('--output_attention', action='store_true', help='whether to output attention in ecoder')
-        parser.add_argument('--class_weights', type=float, nargs='*', default=[3., 1.])
         parser.add_argument('--freeze_encoder', action='store_false')
         return parser

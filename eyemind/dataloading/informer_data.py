@@ -5,7 +5,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 
 import torch
-from eyemind.dataloading.gaze_data import BaseGazeDataModule, BaseSequenceToSequenceDataModule, GroupStratifiedKFoldDataModule, ParticipantKFoldDataModule, SequenceLabelDataset, SequenceToSequenceDataModule
+from eyemind.dataloading.gaze_data import BaseSequenceToSequenceDataModule, ParticipantKFoldDataModule, SequenceLabelDataset, SequenceToMultiLabelDataModule
 from torch.utils.data import Dataset, DataLoader, Subset
 
 from eyemind.dataloading.load_dataset import filter_files_by_seqlen, get_label_df, label_samples, label_files
@@ -27,7 +27,7 @@ class InformerDataModule(BaseSequenceToSequenceDataModule, ParticipantKFoldDataM
                 test_dataset: Optional[Dataset] = None,
                 train_fold: Optional[Dataset] = None,
                 val_fold: Optional[Dataset] = None,
-                sequence_length: int = 250,
+                sequence_length: int = 500,
                 label_length: int = 48,
                 pred_length: Optional[int] = None,
                 num_workers: int = 0,
@@ -157,30 +157,5 @@ class InformerDataModule(BaseSequenceToSequenceDataModule, ParticipantKFoldDataM
     def file_mapper(self):
         return partial(filter_files_by_seqlen, self.label_df, min_sequence_length=self.min_scanpath_length)
 
-def informer_collate(sequence_length, pred_length, label_length, batch):
-    '''
-    Returns batches for 4 tasks. FixationID, Predictive Coding, Reconstruction, Contrastive Learning
-    
-    Args:
-        sequence_length: (int) Length of encoder input
-        pred_length: (int) Length of predictions for decoder output
-        label_length: (int) Length of input labels to decoder for start
-        batch: (List[Tuples(Tensor(X), Tensor(y))]) Contains a list of the returned items from dataset
-    '''
-    
-    X, fixation_labels = zip(*batch)
-    
-    # 1. Fixation ID 
-    # 2. Reconstruction (RC) (Just uses same X batch and the y is made from the X)
-    fixation_decoder_inp, fixation_labels = fixation_batch(sequence_length,label_length, pred_length, X, fixation_labels)
-    rc_decoder_inp = reconstruction_batch(X, label_length)
-    # 3. Predictive Coding (PC)
-    X_pc, pc_labels = predictive_coding_batch(X, sequence_length, pred_length, label_length)
-
-    # 4. Contrastive Learning (CL)
-    X_cl1, X_cl2, cl_labels = contrastive_batch(X, sequence_length)
-
-    return X, fixation_decoder_inp, fixation_labels, rc_decoder_inp, X_pc, pc_labels, X_cl1, X_cl2, cl_labels
-
-
-class InformerMultitaskDatamodule(InformerDataModule, SequenceLabelDataset)
+class InformerMultiLabelDatamodule(SequenceToMultiLabelDataModule):
+    pass
