@@ -74,7 +74,7 @@ model:
   freeze_encoder: false
 data:
   data_dir: ./data/processed/fixation
-  label_filepath: ./data/processed/EML1_pageLevel_500+_matchEDMinstances.csv
+  label_filepath: ./data/EML/EML1_pageLevel_500+_matchEDMinstances.csv
   load_setup_path: null
   test_dir: null
   train_dataset: null

@@ -69,6 +69,7 @@ model:
   - pc
   - cl
   - rc
+  - sr
   enc_in: 2
   dec_in: 2
   c_out: 3
@@ -96,8 +97,9 @@ model:
   freeze_encoder: false
 data:
   data_dir: ./data/EML/gaze+fix+reg/
-  label_filepath: ./data/processed/EML1_pageLevel_500+_matchEDMinstances.csv
+  label_filepath: ./data/EML/EML1_pageLevel_500+_matchEDMinstances.csv
   sample_label_col: regression_label
+  file_label_col: readWPM
   load_setup_path: null
   test_dir: null
   train_dataset: null

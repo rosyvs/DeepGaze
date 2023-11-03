@@ -81,7 +81,7 @@ model:
   freeze_encoder: true
 data:
   data_dir: ./data/processed/output
-  label_filepath: ./data/processed/EML1_pageLevel_500+_matchEDMinstances.csv
+  label_filepath: ./data/EML/EML1_pageLevel_500+_matchEDMinstances.csv
   label_col: Rote_X
   load_setup_path: null
   test_dir: null
