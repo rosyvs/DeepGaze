@@ -88,7 +88,8 @@ def label_samples_and_files(folder, filenames, label_df, sample_label_col='fixat
         sample_labels.append(label_array)
 
     file_labels = label_df[file_label_col].loc[label_df[id_col].isin(ids)].values.tolist()
-    return sample_labels, file_labels
+    labels = list(zip(sample_labels, file_labels))
+    return labels
 
 def get_label_mapper(label_df, label_col): # this only works for file level labels
     label_mapper = partial(label_files, label_df, label_col, id_col="filename")

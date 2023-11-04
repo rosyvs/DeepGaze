@@ -8,7 +8,7 @@ import torchmetrics
 from eyemind.analysis.predictions import get_encoder_from_checkpoint
 from eyemind.dataloading.batch_loading import fixation_batch, predictive_coding_batch
 from eyemind.obf.model import ae
-from ..dataloading.transforms import StandardScaler
+from ..dataloading.transforms import GazeScaler
 from eyemind.models.informer.models.model import InformerStack
 
 from eyemind.models.informer.utils.masking import TriangularCausalMask, ProbMask
@@ -138,7 +138,7 @@ class InformerEncoderDecoderModel(LightningModule):
         super().__init__()
         self.save_hyperparameters()
         # Scaler
-        self.scaler = StandardScaler()
+        self.scaler = GazeScaler()
         # Loss function
         self.pc_criterion = RMSELoss()
         # Metrics
@@ -315,7 +315,7 @@ class InformerEncoderFixationModel(LightningModule):
         super().__init__()
         self.save_hyperparameters()
         # Scaler
-        self.scaler = StandardScaler()
+        self.scaler = GazeScaler()
         # Loss function
         self.fi_criterion = nn.CrossEntropyLoss(torch.Tensor(class_weights))
         # Metrics
@@ -475,7 +475,7 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
         if len(tasks) == 0:
             raise ValueError("There must be at least one task. Length of tasks is 0")
         # Scaler
-        self.scaler = StandardScaler()
+        self.scaler = GazeScaler()
         # Encoder
         self.encoder = InformerEncoder(enc_in, factor, d_model, n_heads, e_layers, d_ff, dropout, attn, activation, output_attention, distil)
         # Decoders, metrics, and criterions for each task
@@ -484,14 +484,14 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
             self.fi_decoder = nn.Linear(d_model, 2, bias=True)
             decoders.append(self.fi_decoder)
             self.fi_criterion = nn.CrossEntropyLoss(torch.Tensor(class_weights))
-            self.fi_metric = torchmetrics.AveragePrecision(task="binary",num_classes=2)
+            self.fi_metric = torchmetrics.AveragePrecision(task="multiclass",num_classes=2)
         if "fm" in tasks:
             if "fi" in tasks:
                 raise Exception("You can only use one of 'fi' and 'fm' as pretraining tasks, both were provided")
             self.fm_decoder = nn.Linear(d_model, c_out, bias=True)
             decoders.append(self.fm_decoder)
             self.fm_criterion = nn.CrossEntropyLoss(weight=torch.Tensor(class_weights))
-            self.fm_metric = torchmetrics.AveragePrecision(task="multiclass",num_classes=c_out, average=None, thresholds=20)
+            self.fm_metric = torchmetrics.AveragePrecision(task="multiclass",num_classes=c_out, average="macro", thresholds=20)
         if "pc" in tasks:
             self.pc_decoder = InformerDecoder(dec_in, 2, factor, d_model, n_heads, d_layers, d_ff, dropout, attn, activation, mix)
             decoders.append(self.pc_decoder)
@@ -504,7 +504,7 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
                                 batch_norm=True)
             decoders.append(self.cl_decoder)
             self.cl_criterion = nn.CrossEntropyLoss()
-            self.cl_metric = torchmetrics.Accuracy(task="binary",num_classes=2)
+            self.cl_metric = torchmetrics.Accuracy(task="multiclass",num_classes=2)
         if "rc" in tasks:
             #self.decoders["rc"] = create_decoder(hidden_dim,output_seq_length=sequence_length)
             self.rc_decoder = InformerDecoder(dec_in, 2, factor, d_model, n_heads, d_layers, d_ff, dropout, attn, activation, mix)
@@ -544,7 +544,6 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
 
     def _step(self, batch, batch_idx, step_type):
         n_items = len(batch) # this is not the batch size, but the number of items (data and labels) to unpack
-        print(f'n_items in batch: {n_items}')
         if n_items==2:
             X, fix_y = batch
         elif n_items ==4:
@@ -613,10 +612,10 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
                 del y_rc
             elif task == "sr": # sequence-level scalar regression
                 enc = self.encoder(X)
-                logits=self.sr_decoder(X)
+                logits=self.sr_decoder(torch.mean(enc, 1)) # average over time dimension, this is what the comprehension classifier does
                 preds=logits
-                loss = self.criterion(logits, seq_y)
-                accuracy = self.accuracy_metric(preds, seq_y) 
+                task_loss = self.sr_criterion(logits, seq_y)
+                task_metric = self.sr_metric(preds, seq_y) 
                 del seq_y
             else:
                 raise ValueError(f"Task {task} not recognized.")
@@ -702,7 +701,7 @@ class InformerClassifierModel(LightningModule):
         super().__init__()
         self.save_hyperparameters()
         # Scaler
-        self.scaler = StandardScaler()
+        self.scaler = GazeScaler()
         # Loss function
         self.criterion = nn.BCEWithLogitsLoss()
         # Metrics
@@ -845,7 +844,7 @@ class InformerEncoderMulticlassModel(InformerEncoderFixationModel):
         # Loss function
         self.fm_criterion = nn.CrossEntropyLoss(torch.Tensor(class_weights))
         # Metrics
-        self.fm_metric = torchmetrics.AveragePrecision(num_classes=c_out, average="weighted")
+        self.fm_metric = torchmetrics.AveragePrecision(task="multiclass",num_classes=c_out, average="macro", thresholds=20)
 
 
     def _step(self, batch, batch_idx, step_type):
@@ -928,7 +927,7 @@ class InformerEncoderScalarRegModel(LightningModule):
         super().__init__()
         self.save_hyperparameters()
         # Scaler
-        self.scaler = StandardScaler()
+        self.scaler = GazeScaler()
         # Loss function
         self.criterion = RMSELoss() 
         # Metrics

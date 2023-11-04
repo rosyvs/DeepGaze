@@ -8,7 +8,7 @@ import torchmetrics
 from eyemind.analysis.predictions import get_encoder_from_checkpoint
 from eyemind.dataloading.batch_loading import fixation_batch, predictive_coding_batch
 from eyemind.obf.model import ae
-from ..dataloading.transforms import StandardScaler
+from ..dataloading.transforms import GazeScaler
 from eyemind.models.informer.models.model import InformerStack
 
 from eyemind.models.informer.utils.masking import TriangularCausalMask, ProbMask
@@ -139,7 +139,7 @@ class InformerEncoderDecoderModel(LightningModule):
         super().__init__()
         self.save_hyperparameters()
         # Scaler
-        self.scaler = StandardScaler()
+        self.scaler = GazeScaler()
         # Loss function
         self.pc_criterion = RMSELoss()
         # Metrics
@@ -342,7 +342,7 @@ class InformerEncoderFixationModel(LightningModule):
         super().__init__()
         self.save_hyperparameters()
         # Scaler
-        self.scaler = StandardScaler()
+        self.scaler = GazeScaler()
         # Loss function
         self.fi_criterion = nn.CrossEntropyLoss(torch.Tensor(class_weights))
         # Metrics
@@ -544,7 +544,7 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
         if len(tasks) == 0:
             raise ValueError("There must be at least one task. Length of tasks is 0")
         # Scaler
-        self.scaler = StandardScaler()
+        self.scaler = GazeScaler()
         # Encoder
         self.encoder = InformerEncoder(enc_in, factor, d_model, n_heads, e_layers, d_ff, dropout, attn, activation, output_attention, distil)
         # Decoders, metrics, and criterions for each task
@@ -735,7 +735,7 @@ class InformerClassifierModel(LightningModule):
         super().__init__()
         self.save_hyperparameters()
         # Scaler
-        self.scaler = StandardScaler()
+        self.scaler = GazeScaler()
         # Loss function
         self.criterion = nn.BCEWithLogitsLoss()
         # Metrics

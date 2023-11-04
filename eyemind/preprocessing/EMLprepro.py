@@ -129,12 +129,11 @@ print(round(100*reg_stats[classes].sum()/reg_stats['n'].sum(),1))
 # print('microaverage:')
 # print(100*(reg_stats[classes]/reg_stats['n']).mean())
 
- #%% select instances ang get summary stats
+#%% select instances ang get summary stats
 data_path =  os.path.join(repodir,'data/processed/EML1_pageLevel_500+_matchEDMinstances.csv')
 instances = pd.read_csv(data_path)
 
 # filter stats by instances
-
 fix_stats = pd.read_csv(os.path.join(repodir,"data/EML/gaze+fix_counts.csv"))
 fix_stats.rename(columns={'Unnamed: 0':'filename'}, inplace=True)
 classes=list(fix_stats.drop('filename', axis=1).columns)
@@ -155,3 +154,16 @@ print(f'regression class weights: {weights}')
 
 
 #%% add reading speed labels to gaze data
+df=pd.read_csv(os.path.join(repodir,'data/EML/EML1_pageLevel_500+_matchEDMinstances.csv'))
+text=pd.read_csv(os.path.join(repodir,'data/EML/texts-char-word-counts.csv')).rename(columns={'text':'Text','pageNum':'PageNum'})
+df=df.merge(text,how='left',on=['Text','PageNum'])
+df.columns
+df['readWPM']=df['wordCount']/df['readtime']*60
+df.to_csv('/Users/roso8920/Dropbox (Emotive Computing)/EML Rosy/DeepGaze/data/EML/EML1_pageLevel_500+_matchEDMinstances.csv')
+
+#%% compute gaze coordinate mean and sd
+from eyemind.preprocessing.standardizing import get_stats
+data_path =  os.path.join(repodir,'data/processed/EML1_pageLevel_500+_matchEDMinstances.csv')
+instances = pd.read_csv(data_path)
+mean,std=get_stats(os.path.join(repodir,"data/EML/gaze+fix+reg"), filenames=list(instances['filename']))
+# %%

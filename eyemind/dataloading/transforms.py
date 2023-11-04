@@ -2,6 +2,7 @@ from matplotlib.pyplot import flag
 import numpy as np
 import numpy.ma as ma
 import torch
+import pandas as pd
 from torchvision.transforms import Normalize
 
 class LimitSequenceLength(object):
@@ -34,9 +35,9 @@ class ToTensor(object):
     def __call__(self, v):
         return torch.tensor(v).float()
 
-class StandardScaler():
+class GazeScaler():
 
-    def __init__(self, mean=[-0.698, -1.940], std=[4.15, 3.286], flag=-180):
+    def __init__(self, mean=[-0.698, -1.955], std=[4.113, 3.234], flag=-180):
         self.mean = np.array(mean)
         self.std = np.array(std)
         self.flag = flag
@@ -60,5 +61,24 @@ class StandardScaler():
             mx = ma.masked_values(data, self.flag)
             mx_scaled = mx*self.std + self.mean
             return mx_scaled.filled(self.flag)
+        else:
+            raise TypeError("Data should be a torch tensor or a numpy array")
+
+class StandardScaler():
+    def __init__(self, mean=0.0, std=1.0):
+        self.mean = np.array(mean)
+        self.std = np.array(std)
+    def __call__(self, data):
+        mx_stand = (data - self.mean) / self.std
+        return mx_stand
+    def inverse_transform(self, data):
+        # tensors
+        if isinstance(data, torch.Tensor):
+            data = data * torch.tensor(self.std, device=data.device) + torch.tensor(self.mean, device=data.device)
+            data[mask] = self.flag
+            return data
+        elif isinstance(data, (np.ndarray, list, pd.Series)):
+            mx_scaled = data*self.std + self.mean
+            return mx_scaled
         else:
             raise TypeError("Data should be a torch tensor or a numpy array")

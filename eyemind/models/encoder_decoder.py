@@ -256,7 +256,7 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
             self.fm_decoder = fi_decoder
             decoders.append(self.fm_decoder)
             self.fm_criterion = nn.CrossEntropyLoss(weight=torch.Tensor(class_weights))
-            self.fm_metric = torchmetrics.AveragePrecision(num_classes=num_classes, average=None, thresholds=20)
+            self.fm_metric = torchmetrics.AveragePrecision(num_classes=num_classes, average="macro", thresholds=20)
         if "pc" in tasks:
             #self.decoders['pc'] = create_decoder(hidden_dim,output_seq_length=pred_length)
             self.pc_decoder = create_decoder(hidden_dim,output_seq_length=pred_length)
@@ -274,13 +274,13 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
             self.cl_decoder = cl_decoder
             self.decoders.append(self.cl_decoder)
             self.cl_criterion = nn.CrossEntropyLoss()
-            self.cl_metric = torchmetrics.Accuracy(num_classes=num_classes)
+            self.cl_metric = torchmetrics.Accuracy(num_classes=2)
 
             # self.criterions["cl"] = nn.CrossEntropyLoss()
             # self.metrics["cl"] = torchmetrics.Accuracy(num_classes=num_classes)
         if "rc" in tasks:
             #self.decoders["rc"] = create_decoder(hidden_dim,output_seq_length=sequence_length)
-            self.rc_decoder = create_decoder(hidden_dim,output_seq_length=sequence_length)
+            self.rc_decoder = create_decoder(hidden_dim,output_seq_length=2)
             self.decoders.append(self.rc_decoder)
             self.rc_criterion = RMSELoss()
             self.rc_metric = torchmetrics.MeanSquaredError(squared=False)

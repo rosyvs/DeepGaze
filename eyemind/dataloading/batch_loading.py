@@ -124,7 +124,8 @@ def random_multilabel_multitask_collate_fn(sequence_length, batch, min_seq=1.0, 
     Takes variable length scanpaths and selects a random part of sequence length and batches them
     For multilabel data (sequence and fixation labels) for use with class SequenceToMultilabelDataModule
     """
-    X, (fix_y, seq_y) = zip(*batch) # todo perhaps unpack y first then split into fix and seq? 
+    X, Y  = zip(*batch) # todo perhaps unpack y first then split into fix and seq? 
+    fix_y, seq_y = zip(*Y)
     bs = len(X)
     fs = X[0].shape[-1]
     if min_seq != max_seq:
@@ -133,12 +134,14 @@ def random_multilabel_multitask_collate_fn(sequence_length, batch, min_seq=1.0, 
     fix_y_batched = torch.zeros((bs, sequence_length))
     X2_batched = torch.zeros((bs,sequence_length,fs))
     cl_y_batched = torch.randint(0,2,(bs,)) # randomly set each item in batch to have same or diff source for CL
+    seq_y_batched=torch.zeros((bs,1)) # needs to be converted from tuple to tensor for batch
     for i in range(bs): # loop over batch
         full_sl = X[i].shape[0]
         start_ind = random.randrange(0,full_sl-sequence_length) # randomly choose sequence start
         end_ind = start_ind + sequence_length 
         X_batched[i] = X[i][start_ind:end_ind,:] # choose random interval within sequence
         fix_y_batched[i] = fix_y[i][start_ind:end_ind]
+        seq_y_batched[i,] = seq_y[i]
         if cl_y_batched[i] == 0:
             j = i
             while j == i:
@@ -151,7 +154,7 @@ def random_multilabel_multitask_collate_fn(sequence_length, batch, min_seq=1.0, 
             start_ind = random.randrange(0,full_sl-sequence_length)
             end_ind = start_ind + sequence_length
             X2_batched[i] = X[i][start_ind:end_ind,:] 
-    return X_batched, fix_y_batched, seq_y, X2_batched, cl_y_batched.float()
+    return X_batched, fix_y_batched, seq_y_batched, X2_batched, cl_y_batched.float()
 
 def predictive_coding_batch(X_batch, input_length, pred_length, label_length):
     X_seq = X_batch[:,:input_length,:]

@@ -98,8 +98,11 @@ model:
 data:
   data_dir: ./data/EML/gaze+fix+reg/
   label_filepath: ./data/EML/EML1_pageLevel_500+_matchEDMinstances.csv
-  sample_label_col: regression_label
   file_label_col: readWPM
+  sample_label_col: regression_label
+  scale_file_label: true
+  scale_sample_label: false
+  scale_gaze: true #TODO: get new gaze mean and sd 
   load_setup_path: null
   test_dir: null
   train_dataset: null

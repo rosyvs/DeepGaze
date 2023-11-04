@@ -269,7 +269,7 @@ class EncoderClassifierModel(LightningModule):
         super().__init__()
         self.save_hyperparameters()
         # # Scaler
-        # self.scaler = StandardScaler()
+        # self.scaler = GazeScaler()
         # Loss function
         self.criterion = nn.BCEWithLogitsLoss()
         # Metrics

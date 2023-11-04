@@ -76,7 +76,7 @@ class InformerDataModule(BaseSequenceToSequenceDataModule, ParticipantKFoldDataM
                 transform_x=self.x_transforms, 
                 transform_y=self.y_transforms, 
                 usecols=[1,2], 
-                scale=True)
+                scale=True) # this is scaling X
             if self.load_setup_path:
                 self.load_setup(dataset)
             else:

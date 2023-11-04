@@ -8,6 +8,7 @@ from typing import Any, Callable, List, Optional, Union
 import pandas as pd
 from sklearn.model_selection import train_test_split
 import yaml
+from eyemind.dataloading.transforms import StandardScaler, GazeScaler
 from eyemind.dataloading.load_dataset import label_samples, filter_files_by_seqlen, get_filenames_for_dataset, get_label_df, get_label_mapper, get_participant_splits, get_stratified_group_splits, limit_sequence_len, load_file_folds, write_splits, label_samples_and_files
 from eyemind.dataloading.batch_loading import multitask_collate_fn, random_collate_fn, random_multitask_collate_fn, split_collate_fn, random_multilabel_multitask_collate_fn
 import torchvision.transforms as T
@@ -15,7 +16,7 @@ from torch.utils.data import Dataset, DataLoader, Sampler, Subset
 
 from pytorch_lightning import LightningDataModule
 
-from eyemind.dataloading.transforms import LimitSequenceLength, StandardScaler, ToTensor
+from eyemind.dataloading.transforms import LimitSequenceLength, GazeScaler, ToTensor
 
 
 class SequenceLabelDataset(Dataset):
@@ -71,7 +72,7 @@ class SequenceLabelDataset(Dataset):
         filepath = self._get_file_path(filename)
         x_data = np.loadtxt(open(filepath,"rb"),delimiter=",",skiprows=self.skiprows,usecols=self.usecols)
         if self.scale:
-            scaler = StandardScaler()
+            scaler = GazeScaler()
             x_data = scaler(x_data)
         if self.transform_x:
             x_data = self.transform_x(x_data)
@@ -97,6 +98,53 @@ class SequenceLabelDataset(Dataset):
     def load_dataset(cls, path, **kwargs):
         pass
 
+class SequenceMultiLabelDataset(SequenceLabelDataset):
+
+    '''
+    Dataset for large data with multiple csv files AND multile labels per sequence 
+    (curently supports 1 sequence(file)-level and 1 sample-level label)
+
+    Args:
+    folder_name (str): path to folder where csv files are for x data
+    file_list (list[str]): list of filenames to use for dataset
+    file_mapper (fn): Gives list of files in folder to use for the dataset. Returns filename as string
+    file_type (str): file extension. This is only used if file_mapper is none
+    transform_x (list[fns]): functions that are applied to the x_data
+    label_file (str): path to file specifying labels for each file
+    label_mapper (fn): maps list of files to labels. Returns list
+    '''
+    def __init__(self, 
+                folder_name, 
+                gaze_scaler=None, 
+                file_label_scaler=None, 
+                sample_label_scaler=None, 
+                *args,**kwargs):
+        super().__init__(folder_name, *args, **kwargs)
+        self.gaze_scaler=gaze_scaler
+        self.sample_label_scaler=sample_label_scaler
+        self.file_label_scaler=file_label_scaler
+
+    def __getitem__(self,idx):
+        filename = self.files[idx]
+        filepath = self._get_file_path(filename)
+        x_data = np.loadtxt(open(filepath,"rb"),delimiter=",",skiprows=self.skiprows,usecols=self.usecols)
+        if self.gaze_scaler:
+            x_data = self.gaze_scaler(x_data)
+        if self.transform_x:
+            x_data = self.transform_x(x_data)
+        if self.labels:
+            sample_label, file_label =self.labels[idx]
+            if self.file_label_scaler:
+                file_label=self.file_label_scaler(file_label)
+            if self.sample_label_scaler:
+                sample_label=self.sample_label_scaler(sample_label)
+            if self.transform_y:
+                sample_label = self.transform_y(sample_label)
+                file_label = self.transform_y(file_label)
+            label = (sample_label, file_label)
+            return x_data, label
+        else:
+            return x_data
 
 class MultiFileDataset(Dataset):
     def __init__(self, folder_name, file_list=[], file_mapper=None, file_type="csv", transform_x=None, transform_y=None, label_mapper=None):
@@ -847,11 +895,18 @@ class SequenceToMultiLabelDataModule(SequenceToSequenceDataModule, SequenceToLab
                 pred_length: Optional[int] = None,    
                 min_scanpath_length: int = 500,
                 contrastive: bool = True,     
+                scale_file_label: bool = True,
+                scale_sample_label: bool = False,
+                scale_gaze: bool = False,
+                mean_gaze_xy: Optional[list]=[-0.698, -1.940],
+                std_gaze_xy: Optional[list]=[4.15, 3.286],
+                mean_sample_label: Optional[float]=0.0,
+                std_sample_label: Optional[float]=1.0,
                 ):
         super().__init__(data_dir=data_dir, label_filepath=label_filepath, sample_label_col=sample_label_col)
-        self.data_dir = data_dir
-        self.label_df = get_label_df(label_filepath)
-        self.sample_label_col=sample_label_col
+        # self.data_dir = data_dir
+        # self.label_df = get_label_df(label_filepath)
+        # self.sample_label_col=sample_label_col
         self.file_label_col=file_label_col
         self.load_setup_path = load_setup_path
         self.test_dir = test_dir
@@ -869,17 +924,26 @@ class SequenceToMultiLabelDataModule(SequenceToSequenceDataModule, SequenceToLab
         self.num_workers = num_workers
         self.pin_memory = pin_memory
         self.drop_last = drop_last
+        self.scale_file_label = scale_file_label
+        self.scale_sample_label =scale_sample_label
+        self.scale_gaze =scale_gaze
+        self.mean_gaze_xy=mean_gaze_xy
+        self.std_gaze_xy=std_gaze_xy
+        self.mean_sample_label=mean_sample_label
+        self.std_sample_label=std_sample_label
 
     # TODO: define a special dataset with seqlabels and samplabels, define a label_mapper to return both
     def setup(self, stage: Optional[str] = None):
         if stage in ("fit", "predict", None):
-            dataset = SequenceLabelDataset(
+            dataset = SequenceMultiLabelDataset(
                 self.data_dir, 
                 file_mapper=self.file_mapper, 
                 label_mapper=self.label_mapper, 
                 transform_x=self.x_transforms, 
                 transform_y=self.y_transforms,
-                scale=True)
+                gaze_scaler=self.gaze_scaler if self.scale_gaze else None,
+                file_label_scaler=self.file_label_scaler if self.scale_file_label else None,
+                sample_label_scaler=self.sample_label_scaler if self.scale_sample_label else None)
             if self.load_setup_path:
                 self.load_setup(dataset)
             else:
@@ -935,9 +999,32 @@ class SequenceToMultiLabelDataModule(SequenceToSequenceDataModule, SequenceToLab
             pin_memory=self.pin_memory,
             collate_fn=partial(random_multilabel_multitask_collate_fn, self.sequence_length))
 
+    def setup_fold_index(self, fold_index: int) -> None:# From ParticipantKfold data module to override group stratified k fold's method
+        train_indices, val_indices = self.splits[fold_index]
+        self.train_fold = Subset(self.train_dataset.dataset, train_indices)
+        self.val_fold = Subset(self.train_dataset.dataset, val_indices)
+
+    def setup_folds(self, num_folds: int) -> None: # From ParticipantKfold data module to override group stratified k fold's method
+        self.num_folds = num_folds
+        train_indices = self.train_dataset.indices
+        train_files, train_labels = self.train_dataset.dataset.get_files_from_indices(train_indices), self.train_dataset.dataset.get_labels_from_indices(train_indices)
+        if num_folds == 1:
+            split_list = train_test_split(train_indices, test_size=0.15)
+            self.splits = [(split_list[i], split_list[i+1]) for i in range(0, len(split_list)-1)]
+        elif num_folds > 1:
+            splits = []
+            for split in get_participant_splits(train_files, self.label_df, folds=num_folds):
+                train_split = [train_indices[ind] for ind in split[0]]
+                val_split = [train_indices[ind] for ind in split[1]]
+                splits.append((train_split, val_split))
+            self.splits = splits
+            
+        else:
+            raise ValueError   
+
     @staticmethod
     def add_datamodule_specific_args(parent_parser):
-        group = parent_parser.add_argument_group("SequenceToSequenceDataModule")
+        group = parent_parser.add_argument_group("SequenceToMultiLabelDataModule")
         group.add_argument("--data_dir", type=str)
         group.add_argument("--test_dir", type=str, default="")
         group.add_argument("--num_workers", type=int, default=0)
@@ -961,4 +1048,20 @@ class SequenceToMultiLabelDataModule(SequenceToSequenceDataModule, SequenceToLab
     @property
     def label_mapper(self):
         return partial(label_samples_and_files, label_df=self.label_df, folder=self.data_dir, sample_label_col=self.sample_label_col, file_label_col=self.file_label_col)
-
+    @property
+    def file_label_scaler(self):
+        mn = np.mean(self.label_df[self.file_label_col])
+        sd = np.std(self.label_df[self.file_label_col])
+        if self.scale_file_label:
+            scaler=partial(StandardScaler(mean=mn, std=sd))
+        return scaler
+    @property
+    def sample_label_scaler(self):
+        if self.scale_sample_labels:
+            scaler=partial(StandardScaler(mean=self.mean_sample_label, std=std_sample_label))
+        return scaler
+    @property
+    def gaze_scaler(self):
+        if self.scale_gaze:
+            scaler=partial(GazeScaler(mean=self.mean_gaze_xy, std=self.std_gaze_xy))
+        return scaler
