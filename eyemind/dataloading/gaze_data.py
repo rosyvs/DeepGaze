@@ -895,15 +895,17 @@ class SequenceToMultiLabelDataModule(SequenceToSequenceDataModule, SequenceToLab
                 pred_length: Optional[int] = None,    
                 min_scanpath_length: int = 500,
                 contrastive: bool = True,     
-                scale_file_label: bool = True,
-                scale_sample_label: bool = False,
-                scale_gaze: bool = False,
+                scale_file_label: Optional[bool] = True,
+                scale_sample_label: Optional[bool] = False,
+                scale_gaze: Optional[bool] = False,
                 mean_gaze_xy: Optional[list]=[-0.698, -1.940],
                 std_gaze_xy: Optional[list]=[4.15, 3.286],
                 mean_sample_label: Optional[float]=0.0,
                 std_sample_label: Optional[float]=1.0,
                 ):
-        super().__init__(data_dir=data_dir, label_filepath=label_filepath, sample_label_col=sample_label_col)
+        super().__init__(data_dir=data_dir, 
+        label_filepath=label_filepath, 
+        sample_label_col=sample_label_col)
         # self.data_dir = data_dir
         # self.label_df = get_label_df(label_filepath)
         # self.sample_label_col=sample_label_col
