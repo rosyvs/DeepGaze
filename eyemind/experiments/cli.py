@@ -1,6 +1,6 @@
 from typing import Any
 from pytorch_lightning import Trainer
-from pytorch_lightning.utilities.cli import LightningCLI, LightningArgumentParser
+from pytorch_lightning.cli import LightningCLI, LightningArgumentParser
 from pytorch_lightning.callbacks import ModelCheckpoint
 from eyemind.trainer.loops import KFoldLoop
 

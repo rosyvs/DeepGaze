@@ -7,7 +7,7 @@ import pandas as pd
 from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import TensorBoardLogger
 import pytorch_lightning
-from pytorch_lightning.utilities.cli import LightningCLI
+from pytorch_lightning.cli import LightningCLI
 from sklearn.model_selection import train_test_split
 from torch import seed
 from eyemind.dataloading.gaze_data import GazeDataModule, SequenceToLabelDataModule

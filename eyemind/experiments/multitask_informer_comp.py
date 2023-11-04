@@ -1,4 +1,4 @@
-from pytorch_lightning.utilities.cli import LightningCLI
+from pytorch_lightning.cli import LightningCLI
 from eyemind.dataloading.gaze_data import SequenceToLabelDataModule
 from eyemind.models.transformers import InformerClassifierModel
 from eyemind.dataloading.informer_data import InformerDataModule

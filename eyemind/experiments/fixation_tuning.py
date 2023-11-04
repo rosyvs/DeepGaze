@@ -2,7 +2,7 @@ from argparse import ArgumentParser
 import math
 from pytorch_lightning import Trainer
 import pytorch_lightning
-from pytorch_lightning.utilities.cli import LightningCLI
+from pytorch_lightning.cli import LightningCLI
 from pytorch_lightning.loggers import TensorBoardLogger
 from torch import Tensor
 from ray import tune

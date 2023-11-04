@@ -1,4 +1,4 @@
-from pytorch_lightning.utilities.cli import LightningCLI
+from pytorch_lightning.cli import LightningCLI
 from eyemind.dataloading.gaze_data import BaseSequenceToSequenceDataModule
 
 from eyemind.models.encoder_decoder import MultiTaskEncoderDecoder

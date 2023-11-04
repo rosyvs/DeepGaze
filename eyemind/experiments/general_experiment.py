@@ -1,6 +1,6 @@
 from argparse import ArgumentParser
 from pytorch_lightning import Trainer
-from pytorch_lightning.utilities.cli import LightningCLI
+from pytorch_lightning.cli import LightningCLI
 from eyemind.dataloading.gaze_data import BaseGazeDataModule, BaseSequenceToSequenceDataModule, SequenceToLabelDataModule
 from eyemind.dataloading.informer_data import InformerDataModule
 from eyemind.experiments.cli import GazeLightningCLI

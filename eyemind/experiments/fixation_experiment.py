@@ -6,7 +6,7 @@ from functools import partial
 import numpy as np
 import pandas as pd
 from pytorch_lightning import Trainer
-from pytorch_lightning.utilities.cli import LightningCLI
+from pytorch_lightning.cli import LightningCLI
 from pytorch_lightning.loggers import TensorBoardLogger
 from torch.utils.data import SubsetRandomSampler
 import torch
