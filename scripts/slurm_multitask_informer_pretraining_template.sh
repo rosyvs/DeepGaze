@@ -11,7 +11,7 @@
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=roso8920@colorado.edu
 
-echo "running multitask_informer_pretraining.py with new pretraining tasks"
+echo "running new_multitask_informer_pretraining.py with new pretraining tasks"
 
 
 module purge
@@ -36,7 +36,7 @@ echo $config
 
 if [ -z "$resume_dir"]
 then
-  python3 eyemind/experiments/multitask_informer_pretraining.py -c ${config} --fold_number $1 --trainer.logger.init_args.version ${version}
+  python3 eyemind/experiments/new_multitask_informer_pretraining.py -c ${config} --fold_number $1 --trainer.logger.init_args.version ${version}
 else
-  python3 eyemind/experiments/multitask_informer_pretraining.py -c ${config} --fold_number $1 --trainer.logger.init_args.version ${version} --trainer.resume_from_checkpoint ${resume_dir}
+  python3 eyemind/experiments/new_multitask_informer_pretraining.py -c ${config} --fold_number $1 --trainer.logger.init_args.version ${version} --trainer.resume_from_checkpoint ${resume_dir}
 fi
