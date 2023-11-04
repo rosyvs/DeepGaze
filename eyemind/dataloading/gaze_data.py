@@ -899,8 +899,8 @@ class SequenceToMultiLabelDataModule(SequenceToSequenceDataModule, SequenceToLab
     def __init__(self,
                 data_dir: str,
                 label_filepath: str,
-                sample_label_col: str,
-                file_label_col: str,
+                sample_label_col: Optional[str] = None,
+                file_label_col: Optional[str] = None,
                 load_setup_path: Optional[str] = None,
                 test_dir: Optional[str] = None,
                 train_dataset: Optional[Dataset] = None,
@@ -1055,7 +1055,7 @@ class SequenceToMultiLabelDataModule(SequenceToSequenceDataModule, SequenceToLab
         group.add_argument("--batch_size", type=int, default=8)
         group.add_argument("--label_filepath", type=str)
         group.add_argument("--sample_label_col", type=str)
-        group.add_argument("--file_label_col", type=str)
+        group.add_argument("--file_label_col", type=str, default=None)
         group.add_argument("--sequence_length", type=int, default=500)
         group.add_argument("--min_scanpath_length", type=int, default=500)
         group.add_argument("--contrastive", type=bool, default=False)
