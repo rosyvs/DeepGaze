@@ -98,6 +98,8 @@ data:
   data_dir: ./data/EML/gaze+fix/
   label_filepath: ./data/EML/EML1_pageLevel_500+_matchEDMinstances.csv
   sample_label_col: fixation_label
+  scale_gaze: true #TODO: get new gaze mean and sd 
+  scale_sample_label: false
   load_setup_path: null
   test_dir: null
   train_dataset: null

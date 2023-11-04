@@ -1,7 +1,8 @@
 # pytorch_lightning==1.7.6
 seed_everything: 21
-fold_number: 2
+fold_number: 0
 split_filepath: ./data_splits/4fold_participant.yml
+num_folds: 4
 trainer:
   logger:
     class_path: pytorch_lightning.loggers.TensorBoardLogger
@@ -80,7 +81,7 @@ model:
   encoder_ckpt: PLACEHOLDER
   freeze_encoder: true
 data:
-  data_dir: ./data/processed/output
+  data_dir: ./data/EML/gaze+fix+reg/
   label_filepath: ./data/EML/EML1_pageLevel_500+_matchEDMinstances.csv
   label_col: Rote_X
   load_setup_path: null
@@ -89,6 +90,7 @@ data:
   test_dataset: null
   train_fold: null
   val_fold: null
+  min_scanpath_length: 500
   sequence_length: 500
   num_workers: 4
   batch_size: 32

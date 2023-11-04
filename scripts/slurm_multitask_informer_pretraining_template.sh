@@ -29,7 +29,6 @@ echo "Fold: $1"
 version="fold${1}"
 config=${2}
 resume_dir=${3}
-echo $name
 echo $version
 echo $resume_dir
 echo $config
