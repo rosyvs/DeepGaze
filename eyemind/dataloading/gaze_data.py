@@ -1035,6 +1035,13 @@ class SequenceToMultiLabelDataModule(SequenceToSequenceDataModule, SequenceToLab
         group.add_argument("--sequence_length", type=int, default=500)
         group.add_argument("--min_scanpath_length", type=int, default=500)
         group.add_argument("--contrastive", type=bool, default=False)
+        group.add_argument("--scale_file_label", type=bool, default=False)
+        group.add_argument("--scale_sample_label", type=bool, default=False)
+        group.add_argument("--scale_gaze", type=bool, default=False)
+        group.add_argument("--mean_gaze_xy",nargs='*', default=None)
+        group.add_argument("--std_gaze_xy",nargs='*', default=None)
+        group.add_argument("--mean_sample_label", type=float, default=0.0)
+        group.add_argument("--std_sample_label", type=float, default=1.0)
         return parent_parser
     @property
     def x_transforms(self):
@@ -1057,7 +1064,7 @@ class SequenceToMultiLabelDataModule(SequenceToSequenceDataModule, SequenceToLab
         return scaler
     @property
     def sample_label_scaler(self):
-        if self.scale_sample_labels:
+        if self.scale_sample_label:
             scaler=partial(StandardScaler(mean=self.mean_sample_label, std=std_sample_label))
         return scaler
     @property
