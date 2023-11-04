@@ -21,16 +21,16 @@ from eyemind.dataloading.transforms import LimitSequenceLength, GazeScaler, ToTe
 
 class SequenceLabelDataset(Dataset):
     def __init__(self, 
-    folder_name, 
-    file_list=[], 
-    file_mapper=None, 
-    file_type="csv", 
-    transform_x=None, 
-    transform_y=None, 
-    label_mapper=None, 
-    skiprows=1, 
-    usecols=[1,2], #?? TODO: cols 1 and 2 are XAvg and YAvg ONLY IF NO INDEX COL IN CSV
-    scale=False):
+            folder_name, 
+            file_list=[], 
+            file_mapper=None, 
+            file_type="csv", 
+            transform_x=None, 
+            transform_y=None, 
+            label_mapper=None, 
+            skiprows=1, 
+            usecols=[1,2], #?? TODO: cols 1 and 2 are XAvg and YAvg ONLY IF NO INDEX COL IN CSV
+            scale=False):
         '''
         Dataset for large data with multiple csv files.
 
@@ -115,11 +115,33 @@ class SequenceMultiLabelDataset(SequenceLabelDataset):
     '''
     def __init__(self, 
                 folder_name, 
+                file_list=[], 
+                file_mapper=None, 
+                file_type="csv", 
+                transform_x=None, 
+                transform_y=None, 
+                label_mapper=None, 
+                skiprows=1, 
+                usecols=[1,2], #?? TODO: cols 1 and 2 are XAvg and YAvg ONLY IF NO INDEX COL IN CSV
                 gaze_scaler=None, 
                 file_label_scaler=None, 
                 sample_label_scaler=None, 
-                *args,**kwargs):
-        super().__init__(folder_name, *args, **kwargs)
+                ):
+        self.folder_name = Path(folder_name)
+        self.skiprows = skiprows
+        self.usecols = usecols
+        # If there is a list passed then use it, else if function then use it, else use all files in folder
+        if file_list:
+            self.files = file_list
+        elif file_mapper:
+            self.files = file_mapper(str(self.folder_name.resolve()))
+        else:
+            self.files = [str(f.resolve()) for f in self.folder_name.glob(f"*.{file_type}")]
+        self.files = sorted(self.files)
+        self.transform_x = transform_x
+        self.transform_y = transform_y
+        if label_mapper:
+            self.labels = label_mapper(filenames=self.files)
         self.gaze_scaler=gaze_scaler
         self.sample_label_scaler=sample_label_scaler
         self.file_label_scaler=file_label_scaler
@@ -894,7 +916,7 @@ class SequenceToMultiLabelDataModule(SequenceToSequenceDataModule, SequenceToLab
                 label_length: int = 48,
                 pred_length: Optional[int] = None,    
                 min_scanpath_length: int = 500,
-                contrastive: bool = True,     
+                contrastive: bool = True,    
                 scale_file_label: Optional[bool] = True,
                 scale_sample_label: Optional[bool] = False,
                 scale_gaze: Optional[bool] = False,
@@ -904,10 +926,10 @@ class SequenceToMultiLabelDataModule(SequenceToSequenceDataModule, SequenceToLab
                 std_sample_label: Optional[float]=1.0,
                 ):
         super().__init__(data_dir=data_dir, 
-        label_filepath=label_filepath, 
-        sample_label_col=sample_label_col)
+                        label_filepath=label_filepath, 
+                        sample_label_col=sample_label_col)
         # self.data_dir = data_dir
-        # self.label_df = get_label_df(label_filepath)
+        self.label_df = get_label_df(label_filepath)
         # self.sample_label_col=sample_label_col
         self.file_label_col=file_label_col
         self.load_setup_path = load_setup_path
