@@ -447,7 +447,7 @@ class InformerEncoderFixationModel(LightningModule):
 
 class InformerMultiTaskEncoderDecoder(LightningModule):
     def __init__(self,
-                tasks: List[str]=["fi", "pc", "cl", "rc"],
+                tasks: List[str]=["fm", "pc", "cl", "rc","sr"],
                 enc_in: int=2, 
                 dec_in: int=1, 
                 c_out: int=2, # output layer size for pretraining fixation classifier 
@@ -673,7 +673,7 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
         parser.add_argument('--activation', type=str, default='gelu',help='activation')
         parser.add_argument('--output_attention', action='store_true', help='whether to output attention in ecoder')
         parser.add_argument('--class_weights', type=float, nargs='*', default=[3., 1.])
-        parser.add_argument('--tasks', type=str, nargs='*', default=["fi", "cl", "rc", "pc"])
+        parser.add_argument('--tasks', type=str, nargs='*', default=["fm", "cl", "rc", "pc","sr"])
         parser.add_argument('--freeze_encoder', type=bool, default=False)
         return parser
     

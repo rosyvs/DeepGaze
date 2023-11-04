@@ -13,8 +13,13 @@ from pathlib import Path
 # --label_col Rote_X
 
 def main(args):
+    SLURM_TEMPLATE = 'scripts/slurm_multitask_informer_comp_template.sh'
+    if not args.config:
+        config='configs/cluster/new_multitask_informer_comp.yml'
+    else:
+        config=args.config
     if args.label_col=="ALL":
-        label_list = ['Rote_X', 'Rote_Y', "Rote_Z",
+        label_list = ['SVT','Rote_X', 'Rote_Y', "Rote_Z",
           'Inference_X', "Inference_Y","Inference_Z",
           "Deep_X", "Deep_Z",
           "MW"]
@@ -30,7 +35,7 @@ def main(args):
                 files=ckpt_dirpath.glob('*.ckpt')
                 latest_file = max(list(files), key=lambda item: item.stat().st_ctime)
                 ckpt_path = str(latest_file)    
-            cmd = f"sbatch {args.slurm_script} {i} {args.seed} {ckpt_path} {l}"
+            cmd = f"sbatch {SLURM_TEMPLATE} {i} {config} {ckpt_path} {l}"
             print(cmd)
             cmd_list = cmd.split(" ")
             result = subprocess.run(cmd_list, capture_output=True, text=True, check=True)
@@ -40,11 +45,9 @@ def main(args):
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-s", "--slurm_script", required=True, help="Path to the tempalate slurm script to run")
     parser.add_argument("-f", "--folds", required=True, type=int, nargs='*', help="list of fold numbers to run (e.g. 0 1 2 3)")
-    parser.add_argument("--seed", type=int, default=42, help="Seed for pytorch-lightning, should match that of encoder")
+    parser.add_argument("-c", "--config", type=str, default="", help="Path to the yaml of hyperparameters (should end _folds.yml)")
     parser.add_argument("-d", "--encoder_dir", required=True, help="encoder_ckpt base directory path")
-    parser.add_argument("--last_ckpt", action='store_true', help="If you want to use the last checkpoint instead of the best saved one")
-    parser.add_argument("-l", "--label_col", default="Rote_X" ,help="Comprehension label column name. ALL for all")
+    parser.add_argument("-y", "--label_col", default="Rote_X" ,help="Comprehension label column name. ALL for all")
     args = parser.parse_args()
     main(args)
