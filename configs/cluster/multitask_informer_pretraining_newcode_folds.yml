@@ -100,6 +100,7 @@ data:
   sample_label_col: fixation_label
   file_label_col: null
   scale_gaze: true #TODO: get new gaze mean and sd 
+  scale_file_label: false
   scale_sample_label: false
   load_setup_path: null
   test_dir: null

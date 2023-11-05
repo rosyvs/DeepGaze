@@ -1081,18 +1081,24 @@ class SequenceToMultiLabelDataModule(SequenceToSequenceDataModule, SequenceToLab
         return partial(label_samples_and_files, label_df=self.label_df, folder=self.data_dir, sample_label_col=self.sample_label_col, file_label_col=self.file_label_col)
     @property
     def file_label_scaler(self):
-        mn = np.mean(self.label_df[self.file_label_col])
-        sd = np.std(self.label_df[self.file_label_col])
         if self.scale_file_label:
+            mn = np.mean(self.label_df[self.file_label_col])
+            sd = np.std(self.label_df[self.file_label_col])
             scaler=partial(StandardScaler(mean=mn, std=sd))
+        else:
+            scaler=None
         return scaler
     @property
     def sample_label_scaler(self):
         if self.scale_sample_label:
             scaler=partial(StandardScaler(mean=self.mean_sample_label, std=std_sample_label))
+        else:
+            scaler=None
         return scaler
     @property
     def gaze_scaler(self):
         if self.scale_gaze:
             scaler=partial(GazeScaler(mean=self.mean_gaze_xy, std=self.std_gaze_xy))
+        else:
+            scaler=None
         return scaler
