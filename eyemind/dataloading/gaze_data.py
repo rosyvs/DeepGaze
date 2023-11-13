@@ -1094,7 +1094,7 @@ class SequenceToMultiLabelDataModule(SequenceToSequenceDataModule, SequenceToLab
             mapper = partial(label_samples_and_files, label_df=self.label_df, folder=self.data_dir, sample_label_col=self.sample_label_col, file_label_col=self.file_label_col)
         else:
             mapper = partial(label_samples, folder=self.data_dir, label_col=self.sample_label_col)
-        return 
+        return mapper
     @property
     def file_label_scaler(self):
         if self.scale_file_label:
