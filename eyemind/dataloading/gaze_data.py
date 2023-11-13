@@ -1027,13 +1027,17 @@ class SequenceToMultiLabelDataModule(SequenceToSequenceDataModule, SequenceToLab
         return self.get_dataloader(self.test_dataset)
 
     def get_dataloader(self, dataset: Dataset):
+        if self.file_label_col:
+            collate_fn=partial(random_multilabel_multitask_collate_fn, self.sequence_length)
+        else:
+            collate_fn=partial(random_multitask_collate_fn, self.sequence_length)
         return DataLoader(
             dataset, 
             batch_size=self.batch_size, 
             num_workers=self.num_workers, 
             drop_last=self.drop_last, 
             pin_memory=self.pin_memory,
-            collate_fn=partial(random_multilabel_multitask_collate_fn, self.sequence_length))
+            collate_fn=collate_fn)
 
     def setup_fold_index(self, fold_index: int) -> None:# From ParticipantKfold data module to override group stratified k fold's method
         train_indices, val_indices = self.splits[fold_index]
