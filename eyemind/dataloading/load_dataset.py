@@ -86,9 +86,11 @@ def label_samples_and_files(folder, filenames, label_df, sample_label_col='fixat
             raise e
         label_array = df[sample_label_col].to_numpy(float)
         sample_labels.append(label_array)
-
-    file_labels = label_df[file_label_col].loc[label_df[id_col].isin(ids)].values.tolist()
-    labels = list(zip(sample_labels, file_labels))
+    if file_label_col:
+        file_labels = label_df[file_label_col].loc[label_df[id_col].isin(ids)].values.tolist()
+        labels = list(zip(sample_labels, file_labels))
+    else:
+        return sample_labels
     return labels
 
 def get_label_mapper(label_df, label_col): # this only works for file level labels
