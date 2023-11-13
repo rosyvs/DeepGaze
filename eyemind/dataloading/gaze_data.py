@@ -30,7 +30,7 @@ class SequenceLabelDataset(Dataset):
             label_mapper=None, 
             skiprows=1, 
             usecols=[1,2], #?? TODO: cols 1 and 2 are XAvg and YAvg ONLY IF NO INDEX COL IN CSV
-            scale=False,
+            scale_gaze=False,
             gaze_scaler=None, 
 ):
         '''
@@ -49,7 +49,7 @@ class SequenceLabelDataset(Dataset):
         self.folder_name = Path(folder_name)
         self.skiprows = skiprows
         self.usecols = usecols
-        self.scale=scale
+        self.scale_gaze=scale_gaze
         self.gaze_scaler=gaze_scaler
         # If there is a list passed then use it, else if function then use it, else use all files in folder
         if file_list:
@@ -74,9 +74,8 @@ class SequenceLabelDataset(Dataset):
         filename = self.files[idx]
         filepath = self._get_file_path(filename)
         x_data = np.loadtxt(open(filepath,"rb"),delimiter=",",skiprows=self.skiprows,usecols=self.usecols)
-        if self.scale:
-            scaler = GazeScaler()
-            x_data = scaler(x_data)
+        if self.scale_gaze:
+            x_data = self.gaze_scaler(x_data)
         if self.transform_x:
             x_data = self.transform_x(x_data)
         if self.labels:
