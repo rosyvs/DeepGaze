@@ -30,7 +30,9 @@ class SequenceLabelDataset(Dataset):
             label_mapper=None, 
             skiprows=1, 
             usecols=[1,2], #?? TODO: cols 1 and 2 are XAvg and YAvg ONLY IF NO INDEX COL IN CSV
-            scale=False):
+            scale=False,
+            gaze_scaler=None, 
+):
         '''
         Dataset for large data with multiple csv files.
 
@@ -48,6 +50,7 @@ class SequenceLabelDataset(Dataset):
         self.skiprows = skiprows
         self.usecols = usecols
         self.scale=scale
+        self.gaze_scaler=gaze_scaler
         # If there is a list passed then use it, else if function then use it, else use all files in folder
         if file_list:
             self.files = file_list
@@ -956,18 +959,28 @@ class SequenceToMultiLabelDataModule(SequenceToSequenceDataModule, SequenceToLab
         self.mean_sample_label=mean_sample_label
         self.std_sample_label=std_sample_label
 
-    # TODO: define a special dataset with seqlabels and samplabels, define a label_mapper to return both
     def setup(self, stage: Optional[str] = None):
         if stage in ("fit", "predict", None):
-            dataset = SequenceMultiLabelDataset(
+            if self.file_label_col:
+                dataset = SequenceMultiLabelDataset(
+                    self.data_dir, 
+                    file_mapper=self.file_mapper, 
+                    label_mapper=self.label_mapper, 
+                    transform_x=self.x_transforms, 
+                    transform_y=self.y_transforms,
+                    gaze_scaler=self.gaze_scaler if self.scale_gaze else None,
+                    file_label_scaler=self.file_label_scaler if self.scale_file_label else None,
+                    sample_label_scaler=self.sample_label_scaler if self.scale_sample_label else None)
+            else:
+                dataset = SequenceLabelDataset(
                 self.data_dir, 
-                file_mapper=self.file_mapper, 
-                label_mapper=self.label_mapper, 
-                transform_x=self.x_transforms, 
-                transform_y=self.y_transforms,
-                gaze_scaler=self.gaze_scaler if self.scale_gaze else None,
-                file_label_scaler=self.file_label_scaler if self.scale_file_label else None,
-                sample_label_scaler=self.sample_label_scaler if self.scale_sample_label else None)
+                    file_mapper=self.file_mapper, 
+                    label_mapper=self.label_mapper, 
+                    transform_x=self.x_transforms, 
+                    transform_y=self.y_transforms, 
+                    scale_gaze=self.scale_gaze,
+                    gaze_scaler=self.gaze_scaler if self.scale_gaze else None,
+                    )
             if self.load_setup_path:
                 self.load_setup(dataset)
             else:
@@ -1078,7 +1091,11 @@ class SequenceToMultiLabelDataModule(SequenceToSequenceDataModule, SequenceToLab
         return partial(filter_files_by_seqlen, self.label_df, min_sequence_length=self.min_scanpath_length)
     @property
     def label_mapper(self):
-        return partial(label_samples_and_files, label_df=self.label_df, folder=self.data_dir, sample_label_col=self.sample_label_col, file_label_col=self.file_label_col)
+        if self.file_label_col:
+            mapper = partial(label_samples_and_files, label_df=self.label_df, folder=self.data_dir, sample_label_col=self.sample_label_col, file_label_col=self.file_label_col)
+        else:
+            mapper = partial(label_samples, folder=self.data_dir, label_col=self.sample_label_col)
+        return 
     @property
     def file_label_scaler(self):
         if self.scale_file_label:
