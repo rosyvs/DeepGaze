@@ -429,7 +429,8 @@ class SequenceToLabelDataModule(GroupStratifiedNestedCVDataModule, BaseGazeDataM
                 batch_size: int = 8,
                 pin_memory: bool = True,
                 drop_last: bool = True,
-                scale: bool = False,          
+                    scale: bool = False,
+                usecols: list = [1,2]          
                 ):
         super().__init__()
         self.data_dir = data_dir
@@ -447,7 +448,7 @@ class SequenceToLabelDataModule(GroupStratifiedNestedCVDataModule, BaseGazeDataM
         self.pin_memory = pin_memory
         self.drop_last = drop_last
         self.scale = scale
-
+        self.usecols=usecols
 
     def prepare_data(self):
         '''
@@ -463,7 +464,8 @@ class SequenceToLabelDataModule(GroupStratifiedNestedCVDataModule, BaseGazeDataM
                 label_mapper=self.label_mapper, 
                 transform_x=self.x_transforms, 
                 transform_y=self.y_transforms, 
-                scale=self.scale)
+                scale=self.scale,
+                usecols=self.usecols)
             if self.load_setup_path:
                 self.load_setup(dataset)
             else:
@@ -484,7 +486,8 @@ class SequenceToLabelDataModule(GroupStratifiedNestedCVDataModule, BaseGazeDataM
                 file_mapper=self.file_mapper, 
                 label_mapper=self.label_mapper, 
                 transform_x=self.x_transforms, 
-                transform_y=self.y_transforms)
+                transform_y=self.y_transforms,
+                usecols=self.usecols)
             
             assert self.test_dataset is not None
 
@@ -519,6 +522,8 @@ class SequenceToLabelDataModule(GroupStratifiedNestedCVDataModule, BaseGazeDataM
         group.add_argument("--label_col", type=str)
         group.add_argument("--sequence_length", type=int, default=500)
         group.add_argument("--scale", action='store_true')
+        group.add_argument("--usecols", type=list, default=[1,2])
+
         return parent_parser
 
     @property
@@ -587,7 +592,8 @@ class BaseSequenceToSequenceDataModule(BaseGazeDataModule):
             label_mapper=self.label_mapper, 
             transform_x=self.x_transforms, 
             transform_y=self.y_transforms, 
-            usecols=[1,2]) #TODO: these are hardcoded, but the default is 1,2. 2,3 is getting YAvg and event for my files with no idenx col, but ricks had index col
+            usecols=[1,2]
+            ) #TODO: these are hardcoded, but the default is 1,2. 2,3 is getting YAvg and event for my files with no idenx col, but ricks had index col
             if self.load_setup_path:
                 self.load_setup(dataset)
             else:
@@ -926,6 +932,8 @@ class SequenceToMultiLabelDataModule(SequenceToSequenceDataModule, SequenceToLab
                 std_gaze_xy: Optional[list]=[4.15, 3.286],
                 mean_sample_label: Optional[float]=0.0,
                 std_sample_label: Optional[float]=1.0,
+                usecols: Optional[list]=[1,2],
+
                 ):
         super().__init__(data_dir=data_dir, 
                         label_filepath=label_filepath, 
@@ -957,6 +965,7 @@ class SequenceToMultiLabelDataModule(SequenceToSequenceDataModule, SequenceToLab
         self.std_gaze_xy=std_gaze_xy
         self.mean_sample_label=mean_sample_label
         self.std_sample_label=std_sample_label
+        self.usecols=usecols
 
     def setup(self, stage: Optional[str] = None):
         if stage in ("fit", "predict", None):
@@ -969,7 +978,8 @@ class SequenceToMultiLabelDataModule(SequenceToSequenceDataModule, SequenceToLab
                     transform_y=self.y_transforms,
                     gaze_scaler=self.gaze_scaler if self.scale_gaze else None,
                     file_label_scaler=self.file_label_scaler if self.scale_file_label else None,
-                    sample_label_scaler=self.sample_label_scaler if self.scale_sample_label else None)
+                    sample_label_scaler=self.sample_label_scaler if self.scale_sample_label else None,
+                    usecols=self.usecols)
             else:
                 dataset = SequenceLabelDataset(
                 self.data_dir, 
@@ -979,6 +989,7 @@ class SequenceToMultiLabelDataModule(SequenceToSequenceDataModule, SequenceToLab
                     transform_y=self.y_transforms, 
                     scale_gaze=self.scale_gaze,
                     gaze_scaler=self.gaze_scaler if self.scale_gaze else None,
+                    usecols=self.usecols
                     )
             if self.load_setup_path:
                 self.load_setup(dataset)
@@ -1082,6 +1093,7 @@ class SequenceToMultiLabelDataModule(SequenceToSequenceDataModule, SequenceToLab
         group.add_argument("--std_gaze_xy",nargs='*', default=None)
         group.add_argument("--mean_sample_label", type=float, default=0.0)
         group.add_argument("--std_sample_label", type=float, default=1.0)
+        group.add_argument("--usecols", type=list, default=[1,2])
         return parent_parser
     @property
     def x_transforms(self):

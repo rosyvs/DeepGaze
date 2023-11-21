@@ -123,3 +123,6 @@ data:
   drop_last: true
   min_scanpath_length: 500
   contrastive: true
+  usecols: # which columns in gaze data contain x and y
+  - 2
+  - 3

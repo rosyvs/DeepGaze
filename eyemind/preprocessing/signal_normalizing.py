@@ -80,7 +80,7 @@ def preprocess_data(
         df = pd.read_csv(file_path,usecols=cols)
         sampled_df = convert_to_sample_rate(df,current_frequency,target_frequency)
         pixels_per_deg = get_pixels_per_degree(screen_res,screen_size,subject_dist)
-        sampled_df = convert_to_angle(sampled_df,(screen_res[0]//2,screen_res[1]//2),pixels_per_deg)
+        sampled_df = convert_to_angle(sampled_df,screen_center=(screen_res[0]//2,screen_res[1]//2),pixel_degrees=pixels_per_deg)
         # Set off screen gaze to NA_FLAG = -180 
         x_lim, y_lim = get_screen_limits(screen_res,pixels_per_deg)
         sampled_df.loc[sampled_df['XAvg'] < -x_lim - off_screen_buf, 'XAvg'] = NA_FLAG
