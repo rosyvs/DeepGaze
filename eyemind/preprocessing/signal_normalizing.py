@@ -43,8 +43,11 @@ def write_file_event(df,output_path):
         name = f'{temp_df["ParticipantID"].iloc[0]}-{event}.csv'
         temp_df.to_csv(Path(output_path, name),index=False)
 
-def plot_scanpath(df,event,exclude=None):
-    temp_df = df.loc[df['event']==event]
+def plot_scanpath(df,event=None,exclude=None):
+    if event:
+        temp_df = df.loc[df['event']==event]
+    else: 
+        temp_df=df
     if exclude: # filter out flag vals
         temp_df=temp_df[(temp_df["XAvg"]!=exclude) & (temp_df["YAvg"]!=exclude)]
     # plt.plot(temp_df["t"], temp_df["XAvg"], label="x")

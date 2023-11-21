@@ -14,6 +14,26 @@ def plot_figures(preds, targets):
             ax.step(np.arange(len(preds[0])),targets[j * i].numpy(), preds[j * i].numpy())
     plt.show()
 
+def plot_scanpath_labels(df,event=None,exclude=None, label=None):
+    if event:
+        temp_df = df.loc[df['event']==event]
+    else: 
+        temp_df=df
+    if exclude: # filter out flag vals
+        temp_df=temp_df[(temp_df["XAvg"]!=exclude) & (temp_df["YAvg"]!=exclude)]
+    plt.plot(temp_df["XAvg"], -temp_df["YAvg"], color='k')
+    if label:
+        groups = temp_df.groupby(label)
+        # colors = cm.rainbow(np.linspace(0, 1, len(ys)))
+        for name, group in groups:
+            plt.scatter(group.XAvg, -group.YAvg, s=(15 if name>0 else 1), alpha=.4, label=name)
+      # for y, c in zip(ys, colors):
+      #     plt.scatter(x, y, color=c)
+        plt.legend(title=label)
+    name = f'{temp_df["ParticipantID"].iloc[0]} {temp_df["event"].iloc[0]}'
+    plt.title(name)
+    plt.show() 
+
 def viz_coding(inputs, preds, title):
     """
     

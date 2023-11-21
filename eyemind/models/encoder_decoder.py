@@ -222,8 +222,8 @@ class VariableSequenceLengthEncoderDecoderModel(EncoderDecoderModel):
 class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
     def __init__(
         self, 
-        tasks: List[str]=["fi", "pc", "cl", "rc"], s
-        equence_length: int=250, 
+        tasks: List[str]=["fi", "pc", "cl", "rc"], 
+        sequence_length: int=250, 
         pred_length: int=100, 
         hidden_dim: int=128, 
         class_weights: List[float]=[3.,1.], 
@@ -239,15 +239,12 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
         self.encoder, fi_decoder = create_encoder_decoder(hidden_dim, out_dim=num_classes, use_conv, input_seq_length=sequence_length)
         #self.decoders = {}
         self.decoders = []
-        self.criterions = []
+        self.criterions = [] 
         self.num_classes = num_classes
         self.metrics = []
         if "fi" in tasks:
-            #self.decoders["fi"] = fi_decoder
             self.fi_decoder = fi_decoder
             self.decoders.append(fi_decoder)
-            # self.criterions["fi"] = nn.CrossEntropyLoss(torch.Tensor(class_weights))
-            # self.metrics["fi"] = torchmetrics.AUROC(num_classes=num_classes, average="weighted")
             self.fi_criterion = nn.CrossEntropyLoss(torch.Tensor(class_weights))
             self.fi_metric = torchmetrics.AUROC(num_classes=num_classes, average="weighted")
         if "fm" in tasks:
