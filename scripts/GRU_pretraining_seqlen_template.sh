@@ -4,7 +4,7 @@
 #SBATCH --time=4:00:00 
 #SBATCH --partition=aa100
 #SBATCH --ntasks=1
-#SBATCH --gres=gpu:2
+#SBATCH --gres=gpu
 #SBATCH --job-name=GRUpreseqlen
 #SBATCH --cpus-per-task=8
 #SBATCH --output=slurm_logs/GRUpreseqlen.%j.out

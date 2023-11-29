@@ -4,7 +4,7 @@
 #SBATCH --time=4:00:00
 #SBATCH --partition=aa100
 #SBATCH --ntasks=1
-#SBATCH --gres=gpu:2
+#SBATCH --gres=gpu
 #SBATCH --job-name=multitask-informer-comp-fold-%j
 #SBATCH --cpus-per-task=1
 #SBATCH --output=slurm_logs/multitask-informer-comp-exp-fold.%j.out
