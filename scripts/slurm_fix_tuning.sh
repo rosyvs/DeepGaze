@@ -5,7 +5,7 @@
 #SBATCH --partition=sgpu
 #SBATCH --ntasks=1
 #SBATCH --job-name=fix-tune
-#SBATCH --cpus-per-task=4
+#SBATCH --cpus-per-task=1
 #SBATCH --output=fix-tune-exp.%j.out
 
 module load cuda/11.2

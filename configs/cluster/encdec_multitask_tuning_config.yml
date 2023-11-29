@@ -1,4 +1,4 @@
-seed_everything: 42
+seed_everything: 21
 trainer:
   checkpoint_callback: null
   enable_checkpointing: true

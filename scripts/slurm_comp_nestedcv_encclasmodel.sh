@@ -5,7 +5,7 @@
 #SBATCH --partition=sgpu
 #SBATCH --ntasks=1
 #SBATCH --job-name=comprehension-tune-sub
-#SBATCH --cpus-per-task=4
+#SBATCH --cpus-per-task=1
 #SBATCH --output=comprehension-tune-sub-exp.%j.out
 
 module load cuda/11.2

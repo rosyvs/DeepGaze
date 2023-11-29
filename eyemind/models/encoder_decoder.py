@@ -104,10 +104,10 @@ class EncoderDecoderModel(LightningModule):
         accuracy = self.accuracy_metric(probs, y)
         if not step_type == 'train': 
             auroc = self.auroc_metric(probs, y) # TODO: put this only at end epoch, possiblr cause of memory leak
-            self.log(f"{step_type}_auroc", auroc, on_step=False, on_epoch=True, prog_bar=True, logger=True)        
+            self.log(f"{step_type}_auroc", auroc, on_step=False, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)        
         self.logger.experiment.add_scalars("losses", {f"{step_type}": loss}, self.global_step)        
-        self.log(f"{step_type}_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        self.log(f"{step_type}_accuracy", accuracy, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log(f"{step_type}_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
+        self.log(f"{step_type}_accuracy", accuracy, on_step=True, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
         return loss
 
     def configure_optimizers(self):
@@ -191,10 +191,10 @@ class VariableSequenceLengthEncoderDecoderModel(EncoderDecoderModel):
         accuracy = self.accuracy_metric(probs, y)
         auroc = self.auroc_metric(probs, y)
         self.logger.experiment.add_scalars("losses", {f"{step_type}": loss}, self.global_step)        
-        self.log(f"{step_type}_fixations_fraction", {"predicted": preds.float().mean(), "gt": y.float().mean()}, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        self.log(f"{step_type}_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        self.log(f"{step_type}_accuracy", accuracy, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        self.log(f"{step_type}_auroc", auroc, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.log(f"{step_type}_fixations_fraction", {"predicted": preds.float().mean(), "gt": y.float().mean()}, on_step=True, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
+        self.log(f"{step_type}_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
+        self.log(f"{step_type}_accuracy", accuracy, on_step=True, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
+        self.log(f"{step_type}_auroc", auroc, on_step=False, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
         return loss
 
     def fixation_loss(self, logits, targets):
@@ -416,10 +416,10 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
                 #task_metric = self.rc_metric(logits, X)               
             else:
                 raise ValueError("Task not recognized.")
-            self.log(f"{step_type}_{task}_loss", task_loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-            self.log(f"{step_type}_{task}_metric", task_metric, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+            self.log(f"{step_type}_{task}_loss", task_loss, on_step=True, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
+            self.log(f"{step_type}_{task}_metric", task_metric, on_step=False, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
             total_loss += task_loss
-        self.log(f"{step_type}_loss", total_loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log(f"{step_type}_loss", total_loss, on_step=True, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
         return total_loss
 
     def configure_optimizers(self):

@@ -232,8 +232,8 @@ class InformerEncoderDecoderModel(LightningModule):
         logits = self.scaler.inverse_transform(logits)
         Y_pc = self.scaler.inverse_transform(Y_pc)
         task_metric = self.pc_metric(logits[mask], Y_pc[mask])
-        self.log(f"{step_type}_loss", task_loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        self.log(f"{step_type}_pc_metric", task_metric, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log(f"{step_type}_loss", task_loss, on_step=True, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
+        self.log(f"{step_type}_pc_metric", task_metric, on_step=True, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
         return task_loss
 
     def configure_optimizers(self):
@@ -391,8 +391,8 @@ class InformerEncoderFixationModel(LightningModule):
         targets = targets.int()
         auroc = self.fi_metric(probs, targets)
         self.logger.experiment.add_scalars("losses", {f"{step_type}": loss}, self.current_epoch)        
-        self.log(f"{step_type}_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        self.log(f"{step_type}_auroc", auroc, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.log(f"{step_type}_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
+        self.log(f"{step_type}_auroc", auroc, on_step=False, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
         return loss        
 
     def configure_optimizers(self):
@@ -619,10 +619,10 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
                 del seq_y
             else:
                 raise ValueError(f"Task {task} not recognized.")
-            self.log(f"{step_type}_{task}_loss", task_loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-            self.log(f"{step_type}_{task}_metric", task_metric, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+            self.log(f"{step_type}_{task}_loss", task_loss, on_step=True, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
+            self.log(f"{step_type}_{task}_metric", task_metric, on_step=False, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
             total_loss += task_loss
-        self.log(f"{step_type}_loss", total_loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log(f"{step_type}_loss", total_loss, on_step=True, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
         return total_loss
 
     def configure_optimizers(self):
@@ -788,9 +788,9 @@ class InformerClassifierModel(LightningModule):
         accuracy = self.accuracy_metric(probs, y)
         auroc = self.auroc_metric(probs, y)
         self.logger.experiment.add_scalars("losses", {f"{step_type}_loss": loss}, self.current_epoch)        
-        self.log(f"{step_type}_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        self.log(f"{step_type}_accuracy", accuracy, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        self.log(f"{step_type}_auroc", auroc, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.log(f"{step_type}_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
+        self.log(f"{step_type}_accuracy", accuracy, on_step=True, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
+        self.log(f"{step_type}_auroc", auroc, on_step=False, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
         return loss
 
     def configure_optimizers(self):
@@ -867,8 +867,8 @@ class InformerEncoderMulticlassModel(InformerEncoderFixationModel):
             targets = targets.int()
             metric = self.fm_metric(probs, targets)
             self.logger.experiment.add_scalars("losses", {f"{step_type}": loss}, self.current_epoch)        
-            self.log(f"{step_type}_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-            self.log(f"{step_type}_metric", metric, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+            self.log(f"{step_type}_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
+            self.log(f"{step_type}_metric", metric, on_step=False, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
             return loss   
         
     @staticmethod
@@ -1011,8 +1011,8 @@ class InformerEncoderScalarRegModel(LightningModule):
         preds = self._get_preds(logits)#TODO: not probsbility
         accuracy = self.accuracy_metric(preds, y) 
         self.logger.experiment.add_scalars("losses", {f"{step_type}_loss": loss}, self.current_epoch)        
-        self.log(f"{step_type}_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        self.log(f"{step_type}_accuracy", accuracy, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log(f"{step_type}_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
+        self.log(f"{step_type}_accuracy", accuracy, on_step=True, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
         return loss
 
     def configure_optimizers(self):

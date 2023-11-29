@@ -6,7 +6,7 @@
 #SBATCH --ntasks=1
 #SBATCH --gres=gpu:1
 #SBATCH --job-name=multitask-test-alpine
-#SBATCH --cpus-per-task=4
+#SBATCH --cpus-per-task=1
 #SBATCH --output=multitask-test-alpine-exp.%j.out
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=roso8920@colorado.edu

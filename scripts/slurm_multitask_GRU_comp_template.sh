@@ -6,7 +6,7 @@
 #SBATCH --ntasks=1
 #SBATCH --gres=gpu:2
 #SBATCH --job-name=GRUcomp-fold-%j
-#SBATCH --cpus-per-task=4
+#SBATCH --cpus-per-task=1
 #SBATCH --output=slurm_logs/GRUcomp.%j.out
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=roso8920@colorado.edu

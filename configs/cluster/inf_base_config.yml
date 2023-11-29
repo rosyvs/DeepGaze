@@ -1,4 +1,4 @@
-seed_everything: 42
+seed_everything: 21
 num_folds: 4
 export_path: lightning_logs/version_26
 trainer:
