@@ -5,7 +5,7 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu
 #SBATCH --job-name=multitask-informer-pretraining-folds
-#SBATCH --cpus-per-task=1
+#SBATCH --cpus-per-task=8
 #SBATCH --output=multitask-informer-pretraining-exp-folds.%j.out
 
 module load cudnn/8.1

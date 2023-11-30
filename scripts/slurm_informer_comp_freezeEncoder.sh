@@ -4,7 +4,7 @@
 #SBATCH --time=4:00:00
 #SBATCH --partition=aa100
 #SBATCH --ntasks=1
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu
 #SBATCH --job-name=informer-comp
 #SBATCH --cpus-per-task=1
 #SBATCH --output=informer-comp-exp.%j.out

@@ -4,9 +4,9 @@
 #SBATCH --time=12:00:00
 #SBATCH --partition=aa100
 #SBATCH --ntasks=1
-#SBATCH --gres=gpu:3
+#SBATCH --gres=gpu
 #SBATCH --job-name=multitask-informer
-#SBATCH --cpus-per-task=1
+#SBATCH --cpus-per-task=4
 #SBATCH --output=multitask-informer-exp.%j.out
 
 module load cudnn/8.1

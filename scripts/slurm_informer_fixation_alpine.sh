@@ -4,9 +4,9 @@
 #SBATCH --time=10:00:00
 #SBATCH --partition=aa100
 #SBATCH --ntasks=1
-#SBATCH --gres=gpu:3
+#SBATCH --gres=gpu
 #SBATCH --job-name=informer-fixation-alpine
-#SBATCH --cpus-per-task=1
+#SBATCH --cpus-per-task=4
 #SBATCH --output=informer-fixation-alpine-exp.%j.out
 
 module load cudnn/8.1
