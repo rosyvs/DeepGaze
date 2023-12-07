@@ -8,7 +8,7 @@ from pathlib import Path
 #e.g.
 # python scripts/run_slurm_multitask_informer_comp.py \
 # -c configs/cluster/new_multitask_informer_comp_.yml \
-# -f 0 1 2 3 --seed 21 \
+# -f 0 1 2 3 \
 # --encoder_dir lightning_logs/new_multitsk_informer_pretraining/ \
 # --label_col Rote_X
 
@@ -49,5 +49,6 @@ if __name__=="__main__":
     parser.add_argument("-c", "--config", type=str, default="", help="Path to the yaml of hyperparameters (should end _folds.yml)")
     parser.add_argument("-d", "--encoder_dir", required=True, help="encoder_ckpt base directory path")
     parser.add_argument("-y", "--label_col", default="Rote_X" ,help="Comprehension label column name. ALL for all")
+    parser.add_argument("-l","--last_ckpt", action='store_true', help="If you want to use the last checkpoint instead of the best saved one")
     args = parser.parse_args()
     main(args)
