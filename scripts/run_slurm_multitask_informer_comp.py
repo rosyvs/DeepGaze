@@ -7,7 +7,7 @@ from pathlib import Path
 
 #e.g.
 # python scripts/run_slurm_multitask_informer_comp.py \
-# -s scripts/slurm_multitask_informer_comp_template.sh \
+# -c configs/cluster/new_multitask_informer_comp_.yml \
 # -f 0 1 2 3 --seed 21 \
 # --encoder_dir lightning_logs/new_multitsk_informer_pretraining/ \
 # --label_col Rote_X
