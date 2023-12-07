@@ -9,7 +9,7 @@ from pathlib import Path
 # python scripts/run_slurm_multitask_informer_comp.py \
 # -s scripts/slurm_multitask_informer_comp_template.sh \
 # -f 0 1 2 3 --seed 21 \
-# --encoder_dir lightning_logs/informer_pretraining_seed21/ \
+# --encoder_dir lightning_logs/new_multitsk_informer_pretraining/ \
 # --label_col Rote_X
 
 def main(args):

@@ -1,15 +1,15 @@
 # pytorch_lightning==1.7.6
 seed_everything: 21
 fold_number: 0
-split_filepath: ./data_splits/4fold_participant.yml
+split_filepath: ./data_splits/4fold_participant/seed21.yml
 num_folds: 4
 trainer:
   logger:
     class_path: pytorch_lightning.loggers.TensorBoardLogger
     init_args:
       save_dir: ./lightning_logs
-      name: informer_rotex
-      version: fold2
+      name: new_informer_comp
+      version: foldx
   enable_checkpointing: true
   callbacks: 
     - class_path: pytorch_lightning.callbacks.ModelCheckpoint
