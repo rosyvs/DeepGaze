@@ -40,7 +40,7 @@ def main(args):
             cmd_list = cmd.split(" ")
             result = subprocess.run(cmd_list, capture_output=True, text=True, check=True)
             print("stdout:", result.stdout)
-            # print("stderr:", result.stderr)
+            print("stderr:", result.stderr)
 
 
 if __name__=="__main__":

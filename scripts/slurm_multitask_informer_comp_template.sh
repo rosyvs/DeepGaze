@@ -23,14 +23,14 @@ cd /projects/$USER/DeepGaze
 
 conda init bash
 conda activate dg
-# pip install -e . # surely this doesnt need to be done as conda env already has eyemind?? 
+pip install -e . # surely this doesnt need to be done as conda env already has eyemind?? 
 config=${2}
 
 echo "Fold: $1"
 echo $config
 echo "Encoder Checkpoint: $3"
 echo "Label Column: $4"
-name="informer_${4}"
+name="new_informer_${4}"
 version="fold${1}"
 
 echo $name
