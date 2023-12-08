@@ -429,7 +429,9 @@ class SequenceToLabelDataModule(GroupStratifiedNestedCVDataModule, BaseGazeDataM
                 batch_size: int = 8,
                 pin_memory: bool = True,
                 drop_last: bool = True,
-                    scale: bool = False,
+                scale_gaze: Optional[bool] = False,
+                mean_gaze_xy: Optional[list]=[-0.698, -1.940],
+                std_gaze_xy: Optional[list]=[4.15, 3.286],
                 usecols: list = [1,2]          
                 ):
         super().__init__()
@@ -447,7 +449,9 @@ class SequenceToLabelDataModule(GroupStratifiedNestedCVDataModule, BaseGazeDataM
         self.num_workers = num_workers
         self.pin_memory = pin_memory
         self.drop_last = drop_last
-        self.scale = scale
+        self.scale_gaze =scale_gaze
+        self.mean_gaze_xy=mean_gaze_xy
+        self.std_gaze_xy=std_gaze_xy        
         self.usecols=usecols
 
     def prepare_data(self):
@@ -464,7 +468,7 @@ class SequenceToLabelDataModule(GroupStratifiedNestedCVDataModule, BaseGazeDataM
                 label_mapper=self.label_mapper, 
                 transform_x=self.x_transforms, 
                 transform_y=self.y_transforms, 
-                scale=self.scale,
+                gaze_scaler=self.gaze_scaler if self.scale_gaze else None,
                 usecols=self.usecols)
             if self.load_setup_path:
                 self.load_setup(dataset)
@@ -487,6 +491,8 @@ class SequenceToLabelDataModule(GroupStratifiedNestedCVDataModule, BaseGazeDataM
                 label_mapper=self.label_mapper, 
                 transform_x=self.x_transforms, 
                 transform_y=self.y_transforms,
+                scale_gaze=self.scale_gaze,
+                gaze_scaler=self.gaze_scaler if self.scale_gaze else None,
                 usecols=self.usecols)
             
             assert self.test_dataset is not None
@@ -521,9 +527,10 @@ class SequenceToLabelDataModule(GroupStratifiedNestedCVDataModule, BaseGazeDataM
         group.add_argument("--label_filepath", type=str)
         group.add_argument("--label_col", type=str)
         group.add_argument("--sequence_length", type=int, default=500)
-        group.add_argument("--scale", action='store_true')
         group.add_argument("--usecols", type=list, default=[1,2])
-
+        group.add_argument("--scale_gaze", type=bool, default=False)
+        group.add_argument("--mean_gaze_xy",nargs='*', default=None)
+        group.add_argument("--std_gaze_xy",nargs='*', default=None)
         return parent_parser
 
     @property
@@ -542,6 +549,15 @@ class SequenceToLabelDataModule(GroupStratifiedNestedCVDataModule, BaseGazeDataM
     def file_mapper(self):
         return partial(get_filenames_for_dataset,label_df=self.label_df, label_col=self.label_col)
 
+    @property
+    def gaze_scaler(self):
+        if self.scale_gaze:
+            scaler=partial(GazeScaler(mean=self.mean_gaze_xy, std=self.std_gaze_xy))
+        else:
+            scaler=None
+        return scaler
+
+        
 class BaseSequenceToSequenceDataModule(BaseGazeDataModule):
 
     def __init__(self,

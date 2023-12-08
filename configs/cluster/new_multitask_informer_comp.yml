@@ -95,4 +95,4 @@ data:
   batch_size: 32
   pin_memory: true
   drop_last: true
-  scale: true
+  scale_gaze: true
