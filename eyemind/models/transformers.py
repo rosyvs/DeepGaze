@@ -705,7 +705,7 @@ class InformerClassifierModel(LightningModule):
         # Loss function
         self.criterion = nn.BCEWithLogitsLoss()
         # Metrics
-        self.auroc_metric = torchmetrics.AUROC()
+        self.auroc_metric = torchmetrics.AUROC(task="binary")
         self.accuracy_metric = torchmetrics.Accuracy()
         # Encoding
         if encoder_ckpt:
