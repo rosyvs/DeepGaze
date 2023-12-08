@@ -90,7 +90,6 @@ data:
   test_dataset: null
   train_fold: null
   val_fold: null
-  min_scanpath_length: 500
   sequence_length: 500
   num_workers: 4
   batch_size: 32
