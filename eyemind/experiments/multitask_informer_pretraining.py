@@ -12,11 +12,17 @@ if __name__ == "__main__":
                             seed_everything_default=21, 
                             save_config_overwrite=True)
     cli.datamodule.setup()
-    if cli.config.num_folds != -1:
+    # try to load folds from file, otherwise setup the folds 
+    try:
+        cli.datamodule.load_folds(cli.config.split_filepath)
+        print(f'loaded existing folds from split_filepath {cli.config.split_filepath}')
+    except Exception as e:        
+        print(e)
+        print(f'unable to load folds from split_filepath {cli.config.split_filepath}')
         cli.datamodule.setup_folds(cli.config.num_folds)
         cli.datamodule.save_folds(cli.config.split_filepath)
-    else:
-        cli.datamodule.load_folds(cli.config.split_filepath)
+        print(f'generated folds and saved them in split_filepath {cli.config.split_filepath}')
+
     cli.datamodule.setup_fold_index(cli.config.fold_number)
     cli.trainer.fit(cli.model, datamodule=cli.datamodule)
     

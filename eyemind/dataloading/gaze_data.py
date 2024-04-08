@@ -247,7 +247,8 @@ class BaseKFoldDataModule(LightningDataModule, ABC):
         pass
 
     def save_folds(self, path):
-        file_folds = [(self.train_dataset.dataset.get_files_from_indices(split[0]), self.train_dataset.dataset.get_files_from_indices(split[1])) for split in self.splits]
+        file_folds = [(self.train_dataset.dataset.get_files_from_indices(split[0]), 
+            self.train_dataset.dataset.get_files_from_indices(split[1])) for split in self.splits]
         write_splits(file_folds, path, folds=True)
 
     def load_folds(self, path):
