@@ -164,7 +164,7 @@ class SequenceMultiLabelDataset(SequenceLabelDataset):
                 sample_label=self.sample_label_scaler(sample_label)
             if self.transform_y:
                 sample_label = self.transform_y(sample_label)
-                file_label = self.transform_y(file_label)
+                # file_label = self.transform_y(file_label)
             label = (sample_label, file_label)
             return x_data, label
         else:

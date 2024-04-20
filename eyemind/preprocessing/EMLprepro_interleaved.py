@@ -36,7 +36,7 @@ debug=False
 raw_data_path='/Users/roso8920/Dropbox (Emotive Computing)/EyeMindLink/GuojingData/sample'
 
 #%%
-PREPRO_DONE=False
+PREPRO_DONE=True
 if not PREPRO_DONE:
     for file_path in tqdm(Path(raw_data_path).glob('*.csv'), total=len(list(Path(raw_data_path).glob('*.csv')))):
         print(f"Processing File Path: {file_path}")
@@ -103,13 +103,13 @@ label_df["filename_base"] = label_df.apply(lambda row: f"{row['ParticipantID']}-
 label_df[label_name]=1
 grouped = label_df.groupby("filename_base")
 fix_stats=[]
-for filename_base, df_group in grouped:
+for filename_base, df_group in tqdm(grouped, total=len(grouped)):
     for i in range(sample_every):
         filename = f"{filename_base}-i{i}.csv"
         try:
             gaze_df = pd.read_csv(os.path.join(gaze_path,filename))
         except Exception as e:
-            print(f"Couldn't read file: {os.path.join(gaze_path,filename)} because of {e}")
+            # print(f"Couldn't read file: {os.path.join(gaze_path,filename)} because of {e}")
             continue
         labeled_df = label_gaze_timeseries( gaze_df, df_group,label_name,onset_col, offset_col,time_col)
         if labeled_df is not None:
@@ -131,7 +131,6 @@ print(100*(fix_stats[classes]/fix_stats['n']).mean())
 #%% apply fixation/regression 3-class label
 # 3-class label (2=regression, 1= other fixation, 0=not a fixation)
 gaze_path = os.path.join(repodir,"data/EML/gaze+fix_interleaved16") # apply labels to the df with binary fix labels already
-
 labelled_folder = os.path.join(repodir,"data/EML/gaze+fix+reg_interleaved16")
 os.makedirs(labelled_folder, exist_ok=True)
 label_name='regression_label'

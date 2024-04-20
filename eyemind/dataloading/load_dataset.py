@@ -122,6 +122,11 @@ def limit_sequence_len(x_data,sequence_len=3000,random_part=True):
 def get_samplers():
     pass
 
+def binarize_labels(y_data, threshold=0.5):
+    # generate 0 if below threshold, 1 if above
+    y_data = np.where(y_data > threshold, 1, 0)
+    return y_data
+
 # def stratified_group_split(X, y, folds=4):
 #     enc = LabelEncoder()
 #     groups = enc.fit_transform(y)
