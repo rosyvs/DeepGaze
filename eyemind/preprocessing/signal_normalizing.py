@@ -12,6 +12,11 @@ def convert_to_sample_rate(df,current,target):
     sampled_df = df.iloc[np.arange(0,num_rows,step=step_size)]
     return sampled_df
 
+def interleave_samples(df,step_size):
+    num_rows=len(df)
+    interleaved_dfs = [df.iloc[np.arange(i,num_rows,step=step_size)] for i in range(step_size)]
+    return interleaved_dfs 
+
 # They seem to only use the y_axis to compute the visual angle, but this seems like it could be a problem?
 def get_pixels_per_degree(screen_res,screen_size,subject_dist):
     x_pixels_per_degree = screen_res[0]/math.degrees(2*np.arctan2(screen_size[0],(2*subject_dist)))
@@ -36,11 +41,13 @@ def get_time_signal(df): # restart timestamps at each event change
     res_df['t'] = res_df['tSample'] - res_df['min_tSample']
     return res_df
 
-
-def write_file_event(df,output_path):
+def write_file_event(df,output_path, output_filename=None):
     for event in df.event.unique():
         temp_df = df.loc[df['event']==event]  
-        name = f'{temp_df["ParticipantID"].iloc[0]}-{event}.csv'
+        if output_filename:
+            name = f'{output_filename}-{event}.csv'
+        else:
+            name = f'{temp_df["ParticipantID"].iloc[0]}-{event}.csv'
         temp_df.to_csv(Path(output_path, name),index=False)
 
 def plot_scanpath(df,event=None,exclude=None):

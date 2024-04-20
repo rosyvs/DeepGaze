@@ -156,7 +156,7 @@ print(f"saccade %: {100*rate_sac:.2f}")
 ################
 
 
-# # %% load fixation labels: TODO: use recomputed
+# # %% load fixation labels: NOTE: using recomputed above instead
 # fixation_path = '/Users/roso8920/Dropbox (Emotive Computing)/BE15/Data/Fixations/BE15-fixations_Avg-Filtered.txt'
 # fix_labels_all = pd.read_csv(fixation_path, sep='\t', \
 #     usecols=['ParticipantID', 'FixationIndex','StartTimestamp','EndTimestamp',]).rename(
