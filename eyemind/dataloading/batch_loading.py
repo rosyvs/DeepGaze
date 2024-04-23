@@ -17,7 +17,7 @@ def collate_fn_pad(batch, sequence_length):
     X_padded = torch.nn.utils.rnn.pad_sequence(X, batch_first=True, padding_value=-181.)
     y_padded = torch.nn.utils.rnn.pad_sequence(y, batch_first=True, padding_value=-181.)
     # Split
-    torch.split(X_padded, sequence_length, )
+    torch.split(X_padded, sequence_length, ) #TODO this doing antyhing?? 
     ## compute mask
     return X_padded, y_padded, X_lengths, y_lengths
 
@@ -233,3 +233,94 @@ def fixation_batch(input_length, label_length, pred_length, X, y, padding=-1.):
     decoder_inp[:, :label_length] = y[:,:label_length]
     return decoder_inp, targets    
 
+
+
+
+
+
+# full-sequence collate functions
+def variable_length_random_collate_fn(sequence_length, batch,  min_seq=1.0, max_seq=1.0):
+    X, fix_y = zip(*batch)
+    bs = len(X)
+    fs = X[0].shape[-1]
+    if min_seq != max_seq:
+        sequence_length = random.randrange(int(min_seq*sequence_length), int(max_seq*sequence_length))
+    X_batched = torch.zeros((bs,sequence_length,fs))
+    fix_y_batched = torch.zeros((bs, sequence_length))
+    for i in range(bs):
+        full_sl = X[i].shape[0]
+        start_ind = random.randrange(0,full_sl-sequence_length)
+        end_ind = start_ind + sequence_length 
+        X_batched[i] = X[i][start_ind:end_ind,:]
+        fix_y_batched[i] = fix_y[i][start_ind:end_ind]
+    return X_batched, fix_y_batched
+    
+def variable_length_random_multitask_collate_fn(sequence_length, batch, min_seq=1.0, max_seq=1.0):
+    """
+    Takes variable length scanpaths and selects a random part of sequence length and batches them
+    """
+    X, fix_y = zip(*batch)
+    bs = len(X)
+    fs = X[0].shape[-1]
+    if min_seq != max_seq:
+        sequence_length = random.randrange(int(min_seq*sequence_length), int(max_seq*sequence_length))
+    X_batched = torch.zeros((bs,sequence_length,fs))
+    fix_y_batched = torch.zeros((bs, sequence_length))
+    X2_batched = torch.zeros((bs,sequence_length,fs))
+    cl_y_batched = torch.randint(0,2,(bs,))
+    for i in range(bs):
+        full_sl = X[i].shape[0]
+        start_ind = random.randrange(0,full_sl-sequence_length)
+        end_ind = start_ind + sequence_length 
+        X_batched[i] = X[i][start_ind:end_ind,:] # choose random interval within sequence
+        fix_y_batched[i] = fix_y[i][start_ind:end_ind]
+        if cl_y_batched[i] == 0:
+            j = i
+            while j == i:
+                j = random.randrange(0,bs)
+            full_sl = X[j].shape[0]
+            start_ind = random.randrange(0,full_sl-sequence_length)
+            end_ind = start_ind + sequence_length
+            X2_batched[i] = X[j][start_ind:end_ind,:]
+        else:
+            start_ind = random.randrange(0,full_sl-sequence_length)
+            end_ind = start_ind + sequence_length
+            X2_batched[i] = X[i][start_ind:end_ind,:]
+    return X_batched, fix_y_batched, X2_batched, cl_y_batched.float()
+
+def variable_length_random_multilabel_multitask_collate_fn(sequence_length, batch, min_seq=1.0, max_seq=1.0):
+    """
+    Takes variable length scanpaths and selects a random part of sequence length and batches them
+    For multilabel data (sequence and fixation labels) for use with class SequenceToMultilabelDataModule
+    """
+    X, Y  = zip(*batch) # todo perhaps unpack y first then split into fix and seq? 
+    fix_y, seq_y = zip(*Y)
+    bs = len(X)
+    fs = X[0].shape[-1]
+    if min_seq != max_seq:
+        sequence_length = random.randrange(int(min_seq*sequence_length), int(max_seq*sequence_length))
+    X_batched = torch.zeros((bs,sequence_length,fs))
+    fix_y_batched = torch.zeros((bs, sequence_length))
+    X2_batched = torch.zeros((bs,sequence_length,fs))
+    cl_y_batched = torch.randint(0,2,(bs,)) # randomly set each item in batch to have same or diff source for CL
+    seq_y_batched=torch.zeros((bs,1)) # needs to be converted from tuple to tensor for batch
+    for i in range(bs): # loop over batch
+        full_sl = X[i].shape[0]
+        start_ind = random.randrange(0,full_sl-sequence_length) # randomly choose sequence start
+        end_ind = start_ind + sequence_length 
+        X_batched[i] = X[i][start_ind:end_ind,:] # choose random interval within sequence
+        fix_y_batched[i] = fix_y[i][start_ind:end_ind]
+        seq_y_batched[i,] = seq_y[i]
+        if cl_y_batched[i] == 0:
+            j = i
+            while j == i:
+                j = random.randrange(0,bs) # choose another item from batch to pair this x with
+            full_sl = X[j].shape[0]
+            start_ind = random.randrange(0,full_sl-sequence_length)
+            end_ind = start_ind + sequence_length
+            X2_batched[i] = X[j][start_ind:end_ind,:]
+        else: # simply choose another random subsequence from same seq (can overlap)
+            start_ind = random.randrange(0,full_sl-sequence_length)
+            end_ind = start_ind + sequence_length
+            X2_batched[i] = X[i][start_ind:end_ind,:] 
+    return X_batched, fix_y_batched, seq_y_batched, X2_batched, cl_y_batched.float()

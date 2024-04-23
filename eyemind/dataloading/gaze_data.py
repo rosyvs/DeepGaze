@@ -164,7 +164,7 @@ class SequenceMultiLabelDataset(SequenceLabelDataset):
                 sample_label=self.sample_label_scaler(sample_label)
             if self.transform_y:
                 sample_label = self.transform_y(sample_label)
-                # file_label = self.transform_y(file_label)
+                file_label = self.transform_y(file_label)
             label = (sample_label, file_label)
             return x_data, label
         else:
@@ -576,7 +576,7 @@ class BaseSequenceToSequenceDataModule(BaseGazeDataModule):
                 pin_memory: bool = True,
                 drop_last: bool = True,
                 contrastive: bool = False,
-                min_scanpath_length: int = 500,            
+                min_sequence_length: int = 500,            
                 ):
         super().__init__()
         self.data_dir = data_dir
@@ -593,7 +593,7 @@ class BaseSequenceToSequenceDataModule(BaseGazeDataModule):
         self.pin_memory = pin_memory
         self.drop_last = drop_last
         self.contrastive = contrastive
-        self.min_scanpath_length = min_scanpath_length
+        self.min_sequence_length = min_sequence_length
 
     def prepare_data(self):
         '''
@@ -670,7 +670,7 @@ class BaseSequenceToSequenceDataModule(BaseGazeDataModule):
         group.add_argument("--sample_label_col", type=str)
         group.add_argument("--sequence_length", type=int, default=500)
         group.add_argument("--contrastive", type=bool, default=False)
-        group.add_argument("--min_scanpath_length", type=int, default=500)
+        group.add_argument("--min_sequence_length", type=int, default=500)
         return parent_parser
 
     @property
@@ -687,7 +687,7 @@ class BaseSequenceToSequenceDataModule(BaseGazeDataModule):
     
     @property
     def file_mapper(self):
-        return partial(filter_files_by_seqlen, self.label_df, min_sequence_length=self.min_scanpath_length)
+        return partial(filter_files_by_seqlen, self.label_df, min_sequence_length=self.min_sequence_length)
 
 class SequenceToSequenceDataModule(GroupStratifiedKFoldDataModule, BaseGazeDataModule):
 
@@ -940,7 +940,7 @@ class SequenceToMultiLabelDataModule(SequenceToSequenceDataModule, SequenceToLab
                 drop_last: bool = True,   
                 label_length: int = 48,
                 pred_length: Optional[int] = None,    
-                min_scanpath_length: int = 500,
+                min_sequence_length: int = 500,
                 contrastive: bool = True,    
                 scale_file_label: Optional[bool] = True,
                 scale_sample_label: Optional[bool] = False,
@@ -967,7 +967,7 @@ class SequenceToMultiLabelDataModule(SequenceToSequenceDataModule, SequenceToLab
         self.train_fold = train_fold
         self.val_fold = val_fold
         self.sequence_length = sequence_length
-        self.min_scanpath_length = min_scanpath_length
+        self.min_sequence_length = min_sequence_length
         self.pred_length = pred_length
         self.label_length = label_length
         self.contrastive = contrastive
@@ -1101,7 +1101,7 @@ class SequenceToMultiLabelDataModule(SequenceToSequenceDataModule, SequenceToLab
         group.add_argument("--sample_label_col", type=str)
         group.add_argument("--file_label_col", type=str, default=None)
         group.add_argument("--sequence_length", type=int, default=500)
-        group.add_argument("--min_scanpath_length", type=int, default=500)
+        group.add_argument("--min_sequence_length", type=int, default=500)
         group.add_argument("--contrastive", type=bool, default=False)
         group.add_argument("--scale_file_label", type=bool, default=False)
         group.add_argument("--scale_sample_label", type=bool, default=False)
@@ -1120,7 +1120,7 @@ class SequenceToMultiLabelDataModule(SequenceToSequenceDataModule, SequenceToLab
         return ToTensor()
     @property
     def file_mapper(self):
-        return partial(filter_files_by_seqlen, self.label_df, min_sequence_length=self.min_scanpath_length)
+        return partial(filter_files_by_seqlen, self.label_df, min_sequence_length=self.min_sequence_length)
     @property
     def label_mapper(self):
         if self.file_label_col:
@@ -1151,3 +1151,29 @@ class SequenceToMultiLabelDataModule(SequenceToSequenceDataModule, SequenceToLab
         else:
             scaler=None
         return scaler
+
+class VariableSequenceToSequenceDataModule(SequenceToSequenceDataModule):
+    # initialise supercass
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # remove sequence_length
+        self.sequence_length = None # because it is determined by min and max sequence length now
+        # add min and max sequence length
+        self.min_sequence_length = kwargs.get("min_sequence_length", 500)
+        self.max_sequence_length = kwargs.get("max_sequence_length", 500)
+
+    def get_dataloader(self, dataset: Dataset):
+        return DataLoader(
+            dataset, 
+            batch_size=self.batch_size, 
+            num_workers=self.num_workers, 
+            drop_last=self.drop_last, 
+            pin_memory=self.pin_memory,
+            collate_fn=partial(variable_sequence_collate_fn, self.min_sequence_length, self.max_sequence_length))
+
+    @staticmethod
+    def add_datamodule_specific_args(parent_parser):
+        group = parent_parser.add_argument_group("VariableSequenceToSequenceDataModule")
+        group.add_argument("--min_sequence_length", type=int, default=500)
+        group.add_argument("--max_sequence_length", type=int, default=500)
+        return parent_parser

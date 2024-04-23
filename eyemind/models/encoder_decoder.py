@@ -10,6 +10,7 @@ import torch.nn.functional as F
 import torch
 from eyemind.dataloading.batch_loading import contrastive_batch, predictive_coding_batch, reconstruction_batch
 from eyemind.models.loss import RMSELoss
+from eyemind.dataloading.load_dataset import binarize_labels
 
 from eyemind.obf.model import ae
 from eyemind.obf.model import creator
@@ -227,6 +228,7 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
         pred_length: int=100, 
         hidden_dim: int=128, 
         class_weights: List[float]=[3.,1.], 
+        binarize_threshold: float=0.5,
         max_rmse_err: float=70., 
         num_classes: int=2, 
         use_conv: bool=True, 
@@ -246,7 +248,7 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
             self.fi_decoder = fi_decoder
             self.decoders.append(fi_decoder)
             self.fi_criterion = nn.CrossEntropyLoss(torch.Tensor(class_weights))
-            self.fi_metric = torchmetrics.AUROC(num_classes=num_classes, average="weighted")
+            self.fi_metric = torchmetrics.AveragePrecision(task="multiclass",num_classes=2)
         if "fm" in tasks:
             if "fi" in tasks:
                 raise Exception("You can only use one of 'fi' and 'fm' as pretraining tasks, both were provided")
@@ -303,7 +305,7 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
             enc = self.encoder(X)
             logits = self.fi_decoder(enc).squeeze()
             preds = self._get_preds(logits)
-            targets = fix_y
+            targets = binarize_labels(fix_y.reshape(-1).long(), self.binarize_threshold) # ensures labels are binary even if mroe classes in file. 
         elif task == "fm":
             enc = self.encoder(X)
             logits = self.fm_decoder(enc).squeeze()
@@ -382,7 +384,7 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
             elif task == "fi":
                 enc = self.encoder(X)
                 logits = self.fi_decoder(enc).squeeze().reshape(-1,2)
-                targets_fi = fix_y.reshape(-1).long()
+                targets_fi = binarize_labels(fix_y.reshape(-1).long(), self.binarize_threshold) # ensures labels are binary even if mroe classes in file. 
                 task_loss = self.fi_criterion(logits, targets_fi)
                 probs = self._get_probs(logits)
                 task_metric = self.fi_metric(probs, targets_fi.int())

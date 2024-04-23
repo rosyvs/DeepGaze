@@ -96,4 +96,4 @@ data:
   batch_size: 64
   pin_memory: true
   drop_last: true
-  min_scanpath_length: 500
+  min_sequence_length: 500

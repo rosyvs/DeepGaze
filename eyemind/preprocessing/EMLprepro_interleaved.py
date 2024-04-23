@@ -27,14 +27,15 @@ subject_dist = 989
 sample_every= 16
 current_frequency=1000
 target_frequency=1000.0/sample_every
-output_folder = os.path.join(repodir,"data/EML/gaze_interleaved16")
-os.makedirs(output_folder, exist_ok=True)
+
 NA_FLAG=-180
 off_screen_buf=5
 label_cols=[]
 debug=False
 raw_data_path='/Users/roso8920/Dropbox (Emotive Computing)/EyeMindLink/GuojingData/sample'
-
+repodir = '/Users/roso8920/Dropbox (Emotive Computing)/EyeMindLink/Processed/Gaze/Timeseries/DeepGaze/'
+output_folder = os.path.join(repodir,"EML","gaze_interleaved16")
+os.makedirs(output_folder, exist_ok=True)
 #%%
 PREPRO_DONE=True
 if not PREPRO_DONE:
@@ -83,14 +84,15 @@ if not PREPRO_DONE:
 
 
 #%% load labels for fixations
-regressions_path = Path(f"{repodir}/data/regressions_info/regressions_reading_pages.csv")
+regressions_path = os.path.join(repodir,"EML","regressions_info","regressions_reading_pages.csv")
 reg_df = pd.read_csv(regressions_path)
 reg_df['filename'] = reg_df['ParticipantID']+ '-' + reg_df['identifier']
-gaze_path = os.path.join(repodir,'data/EML/gaze_interleaved16')
 
 #%% apply fixation binary label
+# gaze_path = os.path.join(repodir,'EML/gaze_interleaved16')
+
 # # FIXATION LABEL (uses regression df)
-# labelled_folder = os.path.join(repodir,"data/EML/gaze+fix_interleaved16")
+# labelled_folder = os.path.join(repodir,"EML/gaze+fix_interleaved16")
 # os.makedirs(labelled_folder, exist_ok=True)
 # # apply_label_df(regressions_path, gaze_path, labelled_folder, label_name='fixation_label', onset_col='CURRENT_FIX_START',offset_col='CURRENT_FIX_END', time_col='t' )
 # label_name='fixation_label'
@@ -130,10 +132,9 @@ gaze_path = os.path.join(repodir,'data/EML/gaze_interleaved16')
 
 #%% apply fixation/regression 3-class label
 # 3-class label (2=regression, 1= other fixation, 0=not a fixation)
-gaze_path = os.path.join(repodir,"data/EML/gaze_interleaved16") # apply labels to the df with binary fix labels already
-labelled_folder = os.path.join(repodir,"data/EML/gaze+fix+reg_interleaved16")
+gaze_path = os.path.join(repodir,"EML/gaze_interleaved16") # apply labels to the df with binary fix labels already
+labelled_folder = os.path.join(repodir,"EML/gaze+fix+reg_interleaved16")
 os.makedirs(labelled_folder, exist_ok=True)
-label_name='regression_label'
 onset_col='CURRENT_FIX_START'
 offset_col='CURRENT_FIX_END'
 time_col='t' 
@@ -142,11 +143,11 @@ label_file=regressions_path
 
 label_df = pd.read_csv(label_file)
 label_df["filename_base"] = label_df.apply(lambda row: f"{row['ParticipantID']}-{row['identifier']}",axis=1)
-label_df[label_name]=1+label_df['LOCAL_REGRESSION']# after adding 1, 2 if regression, 1 if on-text, NaN if fixation not in IA
-label_df[label_name]=label_df[label_name].fillna(1) # all non-regression fixations now have label 1
+label_df['regression_label']=1+label_df['LOCAL_REGRESSION']# after adding 1, 2 if regression, 1 if on-text, NaN if fixation not in IA
+label_df['regression_label']=label_df['regression_label'].fillna(1) # all non-regression fixations now have label 1
 grouped = label_df.groupby("filename_base")
 reg_stats=[]
-for filename_base, df_group in grouped:
+for filename_base, df_group in tqdm(grouped, total=len(grouped)):
     for i in range(sample_every):
         filename = f"{filename_base}-i{i}.csv"
         try:
@@ -154,12 +155,14 @@ for filename_base, df_group in grouped:
         except Exception as e:
             # print(f"Couldn't read file: {os.path.join(gaze_path,filename)} because of {e}")
             continue
-        labeled_df = label_gaze_timeseries( gaze_df, df_group, label_name,onset_col, offset_col,time_col)
+        labeled_df = label_gaze_timeseries( gaze_df, df_group, 'regression_label',onset_col, offset_col,time_col)
+
         if labeled_df is not None:
-            labeled_df[label_name] = labeled_df[label_name].fillna(0).astype(int) # third category is non-fixations
+            labeled_df['regression_label'] = labeled_df['regression_label'].fillna(0).astype(int) # third category is non-fixations
+            labeled_df['fixation_label'] = (labeled_df['regression_label']>0.5).astype(int) # binary fixation_label
             # labeled_df[label_name] = labeled_df[label_name].replace({0:'fix_other',1:'fix_reg',2:'not_fix'})
             labeled_df.to_csv(Path(labelled_folder, filename),index=False)
-            reg_stats.append(labeled_df[label_name].value_counts().sort_index().rename(filename.replace('.csv','')))
+            reg_stats.append(labeled_df['regression_label'].value_counts().sort_index().rename(filename.replace('.csv','')))
 
 print('regression class %')
 reg_stats=pd.DataFrame(reg_stats)
@@ -174,16 +177,16 @@ print(round(100*reg_stats[classes].sum()/reg_stats['n'].sum(),1))
 # print(100*(reg_stats[classes]/reg_stats['n']).mean())
 
 #%% select instances and get summary stats
-data_path =  os.path.join(repodir,'data/processed/EML1_pageLevel_500+_matchEDMinstances.csv')
+data_path =  os.path.join(repodir,'EML/EML1_pageLevel_500+_matchEDMinstances.csv')
 instances = pd.read_csv(data_path)
 # add reading speed labels to gaze data
-text=pd.read_csv(os.path.join(repodir,'data/EML/texts-char-word-counts.csv')).rename(columns={'text':'Text','pageNum':'PageNum'})
+text=pd.read_csv(os.path.join(repodir,'EML/texts-char-word-counts.csv')).rename(columns={'text':'Text','pageNum':'PageNum'})
 instances=instances.merge(text,how='left',on=['Text','PageNum'])
 instances['readWPM']=instances['wordCount']/instances['readtime']*60
 
 instances.rename(columns={'filename':'filename_base'},inplace=True)
 
-reg_stats = pd.read_csv(os.path.join(repodir,"data/EML/gaze+fix+reg_interleaved16_counts.csv")).rename(columns={'Unnamed: 0':'filename'})
+reg_stats = pd.read_csv(os.path.join(repodir,"EML/gaze+fix+reg_interleaved16_counts.csv")).rename(columns={'Unnamed: 0':'filename'})
 classes=list(reg_stats.drop('filename', axis=1).columns)
 reg_stats['n']=reg_stats.sum(axis=1,numeric_only=True)
 # add filename_base column to reg stats and merge with instances to get interleaved instances
@@ -202,12 +205,13 @@ weights=get_class_weights(fix_instances_interleaved[['fix0','fix1']].sum()/fix_i
 print(f'fixation class ratio in selected instances: {list(round(fix_instances_interleaved[["fix0","fix1"]].sum()/fix_instances_interleaved["n"].sum(),3))}')
 print(f'fixation class weights: {weights}')
 
-instances_interleaved.to_csv(os.path.join(repodir,'data/processed/EML1_pageLevel_500+_matchEDMinstances_interleaved16.csv'),index=False)
+instances_interleaved.to_csv(os.path.join(repodir,'EML/EML1_pageLevel_500+_matchEDMinstances_interleaved16.csv'),index=False)
 
 #%% compute gaze coordinate mean and sd
 from eyemind.preprocessing.standardizing import get_stats
-data_path =  os.path.join(repodir,'data/processed/EML1_pageLevel_500+_matchEDMinstances_interleaved16.csv')
+data_path =  os.path.join(repodir,'EML/EML1_pageLevel_500+_matchEDMinstances_interleaved16.csv')
 instances = pd.read_csv(data_path)
-mean,std=get_stats(os.path.join(repodir,"data/EML/gaze+fix+reg_interleaved16"), filenames=list(instances['filename']))
+mean,std=get_stats(os.path.join(repodir,"EML/gaze+fix+reg_interleaved16"), filenames=list(instances['filename']))
 print(f"mean: {mean}, std: {std}")
-# %%
+
+# %% TODO: instance lsit not liimited to EDMinstances

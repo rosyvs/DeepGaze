@@ -17,6 +17,7 @@ from eyemind.models.informer.models.decoder import Decoder, DecoderLayer
 from eyemind.models.informer.models.attn import FullAttention, ProbAttention, AttentionLayer
 from eyemind.models.informer.models.embed import GazeEmbedding
 from eyemind.models.loss import RMSELoss
+from eyemind.dataloading.load_dataset import binarize_labels
 
 class InformerEncoder(nn.Module):
     def __init__(self,
@@ -468,6 +469,7 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
                 distil: bool=True, 
                 mix: bool=True, 
                 class_weights: List[float]=[3.,1.],
+                binarize_threshold: float=0.5,
                 learning_rate: float=1e-3, 
                 freeze_encoder: bool=False):
         super().__init__()
@@ -569,7 +571,7 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
             elif task == "fi":
                 enc = self.encoder(X)
                 logits = self.fi_decoder(enc).squeeze().reshape(-1,2)
-                targets_fi = fix_y.reshape(-1).long()
+                targets_fi = binarize_labels(fix_y.reshape(-1).long(), self.binarize_threshold) # ensures labels are binary even if mroe classes in file. 
                 task_loss = self.fi_criterion(logits, targets_fi)
                 probs = self._get_probs(logits)
                 task_metric = self.fi_metric(probs, targets_fi.int())

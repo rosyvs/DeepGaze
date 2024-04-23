@@ -34,7 +34,7 @@ class InformerDataModule(BaseSequenceToSequenceDataModule, ParticipantKFoldDataM
                 batch_size: int = 8,
                 pin_memory: bool = True,
                 drop_last: bool = True,
-                min_scanpath_length: int = 500,
+                min_sequence_length: int = 500,
                 contrastive: bool = False,
                 ):
         super().__init__(data_dir,
@@ -51,7 +51,7 @@ class InformerDataModule(BaseSequenceToSequenceDataModule, ParticipantKFoldDataM
                         pin_memory,
                         drop_last,
                         False,
-                        min_scanpath_length,
+                        min_sequence_length,
                         )
         self.train_fold = train_fold
         self.val_fold = val_fold
@@ -137,7 +137,7 @@ class InformerDataModule(BaseSequenceToSequenceDataModule, ParticipantKFoldDataM
         group.add_argument("--sample_label_col", type=str)
         group.add_argument("--file_label_col", type=str)
         group.add_argument("--sequence_length", type=int, default=250)
-        group.add_argument("--min_scanpath_length", type=int, default=500)
+        group.add_argument("--min_sequence_length", type=int, default=500)
         group.add_argument("--contrastive", type=bool, default=False)
         return parent_parser
 
@@ -155,7 +155,7 @@ class InformerDataModule(BaseSequenceToSequenceDataModule, ParticipantKFoldDataM
     
     @property
     def file_mapper(self):
-        return partial(filter_files_by_seqlen, self.label_df, min_sequence_length=self.min_scanpath_length)
+        return partial(filter_files_by_seqlen, self.label_df, min_sequence_length=self.min_sequence_length)
 
 class InformerMultiLabelDatamodule(SequenceToMultiLabelDataModule):
     pass
