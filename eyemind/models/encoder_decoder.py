@@ -225,8 +225,9 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
         self, 
         tasks: List[str]=["fi", "pc", "cl", "rc"], 
         sequence_length: int=250, 
+        pc_seq_len: int=250,
         pred_length: int=100, 
-        hidden_dim: int=128, 
+        hidden_dim: int=128, # aka d_model in informer
         class_weights: List[float]=[3.,1.], 
         binarize_threshold: float=0.5,
         max_rmse_err: float=70., 
@@ -257,34 +258,24 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
             self.fm_criterion = nn.CrossEntropyLoss(weight=torch.Tensor(class_weights))
             self.fm_metric = torchmetrics.AveragePrecision(num_classes=num_classes, average="macro", thresholds=20)
         if "pc" in tasks:
-            #self.decoders['pc'] = create_decoder(hidden_dim,output_seq_length=pred_length)
             self.pc_decoder = create_decoder(hidden_dim,output_seq_length=pred_length)
             self.decoders.append(self.pc_decoder)
             self.pc_criterion = RMSELoss()
             self.pc_metric = torchmetrics.MeanSquaredError(squared=False)
-            # self.criterions["pc"] = RMSELoss()
-            # self.metrics["pc"] = torchmetrics.MeanSquaredError()
         if "cl" in tasks:
             cl_input_dim = hidden_dim * 2
             cl_decoder = ae.MLP(input_dim=cl_input_dim,
                                 layers=[128, 2],
                                 batch_norm=True)
-            #self.decoders["cl"] = cl_decoder
             self.cl_decoder = cl_decoder
             self.decoders.append(self.cl_decoder)
             self.cl_criterion = nn.CrossEntropyLoss()
             self.cl_metric = torchmetrics.Accuracy(num_classes=2)
-
-            # self.criterions["cl"] = nn.CrossEntropyLoss()
-            # self.metrics["cl"] = torchmetrics.Accuracy(num_classes=num_classes)
         if "rc" in tasks:
-            #self.decoders["rc"] = create_decoder(hidden_dim,output_seq_length=sequence_length)
             self.rc_decoder = create_decoder(hidden_dim,output_seq_length=2)
             self.decoders.append(self.rc_decoder)
             self.rc_criterion = RMSELoss()
-            self.rc_metric = torchmetrics.MeanSquaredError(squared=False)
-            # self.criterions["rc"] = RMSELoss()
-            # self.metrics["rc"] = torchmetrics.MeanSquaredError()         
+            self.rc_metric = torchmetrics.MeanSquaredError(squared=False)     
         self.decoders = nn.ModuleList(self.decoders)
 
     def forward(self, X, task_name):
@@ -292,37 +283,37 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
         logits = self.decoders[task_name](enc)
         return logits
 
-    def predict_task(self, batch, task):
-        X, fix_y, X2, cl_y = batch
-        if task == "cl":
-            enc1 = self.encoder(X)
-            enc2 = self.encoder(X2)
-            embed = torch.abs(enc1 - enc2)
-            logits = self.cl_decoder(embed).squeeze()
-            preds = self._get_preds(logits)
-            targets = cl_y
-        elif task == "fi":
-            enc = self.encoder(X)
-            logits = self.fi_decoder(enc).squeeze()
-            preds = self._get_preds(logits)
-            targets = binarize_labels(fix_y.reshape(-1).long(), self.binarize_threshold) # ensures labels are binary even if mroe classes in file. 
-        elif task == "fm":
-            enc = self.encoder(X)
-            logits = self.fm_decoder(enc).squeeze()
-            preds = self._get_preds(logits)
-            targets = fix_y
-        elif task == "pc":
-            X_pc, y_pc = self.predictive_coding_batch(batch[0])
-            enc = self.encoder(X_pc)
-            logits = self.pc_decoder(enc).squeeze()
-            targets = y_pc
-        elif task == "rc":
-            enc = self.encoder(X)
-            logits = self.rc_decoder(enc).squeeze()
-            targets = X
-        else:
-            raise ValueError("Task not recognized.")        
-        return preds, targets
+    # def predict_task(self, batch, task):
+    #     X, fix_y, X2, cl_y = batch
+    #     if task == "cl":
+    #         enc1 = self.encoder(X)
+    #         enc2 = self.encoder(X2)
+    #         embed = torch.abs(enc1 - enc2)
+    #         logits = self.cl_decoder(embed).squeeze()
+    #         preds = self._get_preds(logits)
+    #         targets = cl_y
+    #     elif task == "fi":
+    #         enc = self.encoder(X)
+    #         logits = self.fi_decoder(enc).squeeze()
+    #         preds = self._get_preds(logits)
+    #         targets = binarize_labels(fix_y.reshape(-1).long(), self.binarize_threshold) # ensures labels are binary even if mroe classes in file. 
+    #     elif task == "fm":
+    #         enc = self.encoder(X)
+    #         logits = self.fm_decoder(enc).squeeze()
+    #         preds = self._get_preds(logits)
+    #         targets = fix_y
+    #     elif task == "pc":
+    #         X_pc, y_pc = self.predictive_coding_batch(batch[0])
+    #         enc = self.encoder(X_pc)
+    #         logits = self.pc_decoder(enc).squeeze()
+    #         targets = y_pc
+    #     elif task == "rc":
+    #         enc = self.encoder(X)
+    #         logits = self.rc_decoder(enc).squeeze()
+    #         targets = X
+    #     else:
+    #         raise ValueError("Task not recognized.")        
+    #     return preds, targets
 
     def predict_step(self, batch, batch_idx):
         X, fix_y, X2, cl_y = batch
@@ -349,7 +340,7 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
                 task_predictions["fm"] = preds
                 del enc
             elif task == "pc":
-                X_pc, y_pc = self.predictive_coding_batch(batch[0])
+                X_pc, y_pc = predictive_coding_batch(X, self.hparams.pc_seq_len, self.hparams.pred_length, self.hparams.label_length)
                 enc = self.encoder(X_pc)
                 logits = self.pc_decoder(enc).squeeze()
                 assert(logits.shape == y_pc.shape)
@@ -398,7 +389,7 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
                 task_metric = self.fm_metric(probs, targets_fm)
                 del enc, probs, targets_fm, fix_y
             elif task == "pc":
-                X_pc, y_pc = self.predictive_coding_batch(batch[0])
+                X_pc, y_pc = predictive_coding_batch(X, self.hparams.pc_seq_len, self.hparams.pred_length, self.hparams.label_length)
                 enc = self.encoder(X_pc)
                 logits = self.pc_decoder(enc).squeeze()
                 assert(logits.shape == y_pc.shape)
@@ -412,8 +403,8 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
                 enc = self.encoder(X)
                 logits = self.rc_decoder(enc).squeeze()
                 mask = X > -180
-                task_loss = self.pc_criterion(logits[mask], X[mask])
-                task_metric = self.pc_metric(logits[mask], X[mask])
+                task_loss = self.rc_criterion_criterion(logits[mask], X[mask])
+                task_metric = self.rc_metric(logits[mask], X[mask])
                 #task_loss = torch.clamp(self.rc_criterion(logits, X), max=self.hparams.max_rmse_err)
                 #task_metric = self.rc_metric(logits, X)               
             else:
@@ -433,37 +424,46 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
         res['lr_scheduler'] = {"scheduler": torch.optim.lr_scheduler.StepLR(optimizer, step_size=max(1,int(self.trainer.max_epochs / 5)), gamma=0.5)}
         return res    
 
+    # TODO: why are the 2 definitions so different? First is method, second is imported func that informer uses
+    # Id rather import these as funcs from batch_loading for consistency
     def predictive_coding_batch(self, X_batch):
+        # no label_length arg? 
         input_length = self.hparams.sequence_length - self.hparams.pred_length
         X_seq = X_batch[:,:input_length,:]
         y_seq = X_batch[:,input_length:input_length+self.hparams.pred_length,:]
         return X_seq, y_seq
 
-    def contrastive_batch(self, X_batch, cl_y):
-        n,_,fs = X_batch.shape
-        cl_seq_len=self.hparams.sequence_length//2
-        x1 = torch.zeros((n, cl_seq_len, fs), device=self.device)
-        x2 = torch.zeros((n, cl_seq_len, fs), device=self.device)
-        # Random 0 (different scanpath) or 1 (same scanpath)
-        y = torch.randint(low=0, high=2,size=(n,))
-        for i in range(n):
-            # Pick sequence from different cl_y label
-            start_ind = random.randrange(0,cl_seq_len)
-            if y[i] == 0:
-                # Select sequences with different label
-                X_dif_label = X_batch[cl_y != cl_y[i]]
-                # Set the contrastive sequence to be one of those labels with different sequence
-                x2[i] = X_dif_label[random.randrange(0, X_dif_label.shape[0]), start_ind:start_ind+cl_seq_len]
-            # Choose from same scanpath
-            elif y[i] == 1:
-                # Get indices of X where subsequences in same scanpath
-                indices = torch.arange(n)[cl_y == cl_y[i]]
-                # Exclude own index
-                #indices = indices[indices!=i]
-                x2[i] = X_batch[indices[random.randrange(0, indices.shape[0])],start_ind:start_ind+cl_seq_len]
-            else:
-                raise ValueError("y label can only be 0 or 1 for contrastive learning")
-        return x1, x2, y.float()
+    # note that this gets called with input_length = hparams.sequence_length 
+    def predictive_coding_batch(X_batch, input_length, pred_length, label_length):
+        X_seq = X_batch[:,:input_length,:]
+        y_seq = X_batch[:,input_length-label_length:input_length+pred_length,:] # taken from later in the sequence, this is the target
+        return X_seq, y_seq
+
+    # def contrastive_batch(self, X_batch, cl_y):
+    #     n,_,fs = X_batch.shape
+    #     cl_seq_len=self.hparams.sequence_length//2
+    #     x1 = torch.zeros((n, cl_seq_len, fs), device=self.device)
+    #     x2 = torch.zeros((n, cl_seq_len, fs), device=self.device)
+    #     # Random 0 (different scanpath) or 1 (same scanpath)
+    #     y = torch.randint(low=0, high=2,size=(n,))
+    #     for i in range(n):
+    #         # Pick sequence from different cl_y label
+    #         start_ind = random.randrange(0,cl_seq_len)
+    #         if y[i] == 0:
+    #             # Select sequences with different label
+    #             X_dif_label = X_batch[cl_y != cl_y[i]]
+    #             # Set the contrastive sequence to be one of those labels with different sequence
+    #             x2[i] = X_dif_label[random.randrange(0, X_dif_label.shape[0]), start_ind:start_ind+cl_seq_len]
+    #         # Choose from same scanpath
+    #         elif y[i] == 1:
+    #             # Get indices of X where subsequences in same scanpath
+    #             indices = torch.arange(n)[cl_y == cl_y[i]]
+    #             # Exclude own index
+    #             #indices = indices[indices!=i]
+    #             x2[i] = X_batch[indices[random.randrange(0, indices.shape[0])],start_ind:start_ind+cl_seq_len]
+    #         else:
+    #             raise ValueError("y label can only be 0 or 1 for contrastive learning")
+    #     return x1, x2, y.float()
 
     @staticmethod
     def add_model_specific_args(parent_parser):

@@ -8,13 +8,13 @@ from eyemind.models.informer.models.attn import FullAttention, ProbAttention, At
 from eyemind.models.informer.models.embed import DataEmbedding
 
 class Informer(nn.Module):
-    def __init__(self, enc_in, dec_in, c_out, seq_len, label_len, out_len, 
+    def __init__(self, enc_in, dec_in, c_out, seq_len, label_length, out_len, 
                 factor=5, d_model=512, n_heads=8, e_layers=3, d_layers=2, d_ff=512, 
                 dropout=0.0, attn='prob', embed='fixed', freq='h', activation='gelu', 
                 output_attention = False, distil=True, mix=True,
                 device=torch.device('cuda:0')):
         super(Informer, self).__init__()
-        self.pred_len = out_len
+        self.pred_length = out_len
         self.attn = attn
         self.output_attention = output_attention
 
@@ -59,7 +59,7 @@ class Informer(nn.Module):
             ],
             norm_layer=torch.nn.LayerNorm(d_model)
         )
-        # self.end_conv1 = nn.Conv1d(in_channels=label_len+out_len, out_channels=out_len, kernel_size=1, bias=True)
+        # self.end_conv1 = nn.Conv1d(in_channels=label_length+out_len, out_channels=out_len, kernel_size=1, bias=True)
         # self.end_conv2 = nn.Conv1d(in_channels=d_model, out_channels=c_out, kernel_size=1, bias=True)
         self.projection = nn.Linear(d_model, c_out, bias=True)
         
@@ -75,19 +75,19 @@ class Informer(nn.Module):
         # dec_out = self.end_conv1(dec_out)
         # dec_out = self.end_conv2(dec_out.transpose(2,1)).transpose(1,2)
         if self.output_attention:
-            return dec_out[:,-self.pred_len:,:], attns
+            return dec_out[:,-self.pred_length:,:], attns
         else:
-            return dec_out[:,-self.pred_len:,:] # [B, L, D]
+            return dec_out[:,-self.pred_length:,:] # [B, L, D]
 
 
 class InformerStack(nn.Module):
-    def __init__(self, enc_in, dec_in, c_out, seq_len, label_len, out_len, 
+    def __init__(self, enc_in, dec_in, c_out, seq_len, label_length, out_len, 
                 factor=5, d_model=512, n_heads=8, e_layers=[3,2,1], d_layers=2, d_ff=512, 
                 dropout=0.0, attn='prob', embed='fixed', freq='h', activation='gelu',
                 output_attention = False, distil=True, mix=True,
                 device=torch.device('cuda:0')):
         super(InformerStack, self).__init__()
-        self.pred_len = out_len
+        self.pred_length = out_len
         self.attn = attn
         self.output_attention = output_attention
 
@@ -136,7 +136,7 @@ class InformerStack(nn.Module):
             ],
             norm_layer=torch.nn.LayerNorm(d_model)
         )
-        # self.end_conv1 = nn.Conv1d(in_channels=label_len+out_len, out_channels=out_len, kernel_size=1, bias=True)
+        # self.end_conv1 = nn.Conv1d(in_channels=label_length+out_len, out_channels=out_len, kernel_size=1, bias=True)
         # self.end_conv2 = nn.Conv1d(in_channels=d_model, out_channels=c_out, kernel_size=1, bias=True)
         self.projection = nn.Linear(d_model, c_out, bias=True)
         
@@ -152,6 +152,6 @@ class InformerStack(nn.Module):
         # dec_out = self.end_conv1(dec_out)
         # dec_out = self.end_conv2(dec_out.transpose(2,1)).transpose(1,2)
         if self.output_attention:
-            return dec_out[:,-self.pred_len:,:], attns
+            return dec_out[:,-self.pred_length:,:], attns
         else:
-            return dec_out[:,-self.pred_len:,:] # [B, L, D]
+            return dec_out[:,-self.pred_length:,:] # [B, L, D]

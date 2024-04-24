@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchmetrics
 from eyemind.analysis.predictions import get_encoder_from_checkpoint
-from eyemind.dataloading.batch_loading import fixation_batch, predictive_coding_batch
+from eyemind.dataloading.batch_loading import predictive_coding_batch
 from eyemind.obf.model import ae
 from ..dataloading.transforms import GazeScaler
 from eyemind.models.informer.models.model import InformerStack
@@ -102,12 +102,12 @@ class InformerDecoder(nn.Module):
         )
         self.projection = nn.Linear(d_model, c_out, bias=True)
 
-    def forward(self, enc_out, x_dec, dec_self_mask=None, dec_enc_mask=None, pred_len=0):
+    def forward(self, enc_out, x_dec, dec_self_mask=None, dec_enc_mask=None, pred_length=0):
         dec_out = self.dec_embedding(x_dec)
         dec_out = self.decoder(dec_out, enc_out, x_mask=dec_self_mask, cross_mask=dec_enc_mask)
         dec_out = self.projection(dec_out)
-        if pred_len:
-            return dec_out[:, -pred_len:]
+        if pred_length:
+            return dec_out[:, -pred_length:]
         else:                     
             return dec_out
 
@@ -116,9 +116,9 @@ class InformerEncoderDecoderModel(LightningModule):
                 enc_in: int=2, 
                 dec_in: int=1, 
                 c_out: int=2, 
-                seq_len: int=250, 
-                label_len: int=100, 
-                pred_len: int=150,
+                pc_seq_len: int=250, 
+                label_length: int=100, 
+                pred_length: int=150,
                 padding: int=0,
                 factor: int=5, 
                 d_model: int=512, 
@@ -186,7 +186,7 @@ class InformerEncoderDecoderModel(LightningModule):
             ],
             norm_layer=torch.nn.LayerNorm(d_model)
         )
-        # self.end_conv1 = nn.Conv1d(in_channels=label_len+out_len, out_channels=out_len, kernel_size=1, bias=True)
+        # self.end_conv1 = nn.Conv1d(in_channels=label_length+out_len, out_channels=out_len, kernel_size=1, bias=True)
         # self.end_conv2 = nn.Conv1d(in_channels=d_model, out_channels=c_out, kernel_size=1, bias=True)
         self.projection = nn.Linear(d_model, c_out, bias=True)
         
@@ -199,9 +199,9 @@ class InformerEncoderDecoderModel(LightningModule):
         # dec_out = self.end_conv1(dec_out)
         # dec_out = self.end_conv2(dec_out.transpose(2,1)).transpose(1,2)
         if self.hparams.output_attention:
-            return dec_out[:,-self.hparams.pred_len:,:], attns
+            return dec_out[:,-self.hparams.pred_length:,:], attns
         else:
-            return dec_out[:,-self.hparams.pred_len:,:] # [B, L, D]
+            return dec_out[:,-self.hparams.pred_length:,:] # [B, L, D]
 
     def training_step(self, batch, batch_idx):
         return self._step(batch, batch_idx, step_type="train")
@@ -220,7 +220,7 @@ class InformerEncoderDecoderModel(LightningModule):
             raise e
 
         # Predictive Coding:
-        X_pc, Y_pc = predictive_coding_batch(X, self.hparams.seq_len, self.hparams.pred_len, self.hparams.label_len)
+        X_pc, Y_pc = predictive_coding_batch(X, self.hparams.pc_seq_len, self.hparams.pred_length, self.hparams.label_length)
         if self.hparams.output_attention:
             logits = self(X_pc, Y_pc)[0]
         else:
@@ -264,8 +264,8 @@ class InformerEncoderDecoderModel(LightningModule):
         parser = parent_parser.add_argument_group("InformerEncoderDecoderModel")
         parser.add_argument('--learning_rate', type=float, default=0.001)
         parser.add_argument('--sequence_length', type=int, default=250)
-        parser.add_argument('--label_len', type=int, default=100, help='start token length of Informer decoder')
-        parser.add_argument('--pred_len', type=int, default=150, help='prediction sequence length')
+        parser.add_argument('--label_length', type=int, default=100, help='start token length of Informer decoder')
+        parser.add_argument('--pred_length', type=int, default=150, help='prediction sequence length')
         parser.add_argument('--enc_in', type=int, default=2, help='encoder input size')
         parser.add_argument('--dec_in', type=int, default=1, help='decoder input size')
         parser.add_argument('--c_out', type=int, default=2, help='output size')
@@ -293,9 +293,9 @@ class InformerEncoderFixationModel(LightningModule):
                 enc_in: int=2, # one neuron for each of X and Y coord
                 dec_in: int=1, 
                 c_out: int=2, # one neuron for each of X and Y coord
-                seq_len: int=250, 
-                label_len: int=100, 
-                pred_len: int=150,
+                sequence_length: int=250, 
+                label_length: int=100, 
+                pred_length: int=150,
                 padding: int=0,
                 factor: int=5, 
                 d_model: int=512, 
@@ -345,7 +345,7 @@ class InformerEncoderFixationModel(LightningModule):
             ] if distil else None,
             norm_layer=torch.nn.LayerNorm(d_model)
         )
-        # self.end_conv1 = nn.Conv1d(in_channels=label_len+out_len, out_channels=out_len, kernel_size=1, bias=True)
+        # self.end_conv1 = nn.Conv1d(in_channels=label_length+out_len, out_channels=out_len, kernel_size=1, bias=True)
         # self.end_conv2 = nn.Conv1d(in_channels=d_model, out_channels=c_out, kernel_size=1, bias=True)
         self.decoder = nn.Linear(d_model, c_out, bias=True)
         
@@ -423,8 +423,8 @@ class InformerEncoderFixationModel(LightningModule):
         parser = parent_parser.add_argument_group("InformerEncoderDecoderModel")
         parser.add_argument('--learning_rate', type=float, default=0.001)
         parser.add_argument('--sequence_length', type=int, default=250)
-        parser.add_argument('--label_len', type=int, default=100, help='start token length of Informer decoder')
-        parser.add_argument('--pred_len', type=int, default=150, help='prediction sequence length')
+        parser.add_argument('--label_length', type=int, default=100, help='start token length of Informer decoder')
+        parser.add_argument('--pred_length', type=int, default=150, help='prediction sequence length')
         parser.add_argument('--enc_in', type=int, default=2, help='encoder input size')
         parser.add_argument('--dec_in', type=int, default=1, help='decoder input size')
         parser.add_argument('--c_out', type=int, default=2, help='output size')
@@ -452,9 +452,10 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
                 enc_in: int=2, 
                 dec_in: int=1, 
                 c_out: int=2, # output layer size for pretraining fixation classifier 
-                seq_len: int=500, 
-                label_len: int=100, 
-                pred_len: int=150,
+                sequence_length: int=500,
+                pc_seq_len: int=500, 
+                label_length: int=100, 
+                pred_length: int=150,
                 padding: int=0,
                 factor: int=5, 
                 d_model: int=512, 
@@ -508,7 +509,6 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
             self.cl_criterion = nn.CrossEntropyLoss()
             self.cl_metric = torchmetrics.Accuracy(task="multiclass",num_classes=2)
         if "rc" in tasks:
-            #self.decoders["rc"] = create_decoder(hidden_dim,output_seq_length=sequence_length)
             self.rc_decoder = InformerDecoder(dec_in, 2, factor, d_model, n_heads, d_layers, d_ff, dropout, attn, activation, mix)
             decoders.append(self.rc_decoder)
             self.rc_criterion = RMSELoss()
@@ -545,12 +545,13 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
         self._step(batch, batch_idx, step_type="test")
 
     def _step(self, batch, batch_idx, step_type):
+        # TODO: refactor this - initial batch can be (X, fix_y) or (X, fix_y, seq_y) but TODO: cl handled by its own function in if "CL" block
         n_items = len(batch) # this is not the batch size, but the number of items (data and labels) to unpack
-        if n_items==2:
+        if n_items==2: # just gaze sequence and fixation (sample) labels
             X, fix_y = batch
-        elif n_items ==4:
+        elif n_items==4: # contrastive so X and X2 are present
             X, fix_y, X2, cl_y = batch
-        elif n_items==5:
+        elif n_items==5: # sequence and fixation (sample) labels
             X, fix_y, seq_y, X2, cl_y = batch
         else:
             raise ValueError('unpacked batch has {n_items} elements, check collate_fn is compatible with this model')
@@ -585,30 +586,29 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
                 task_metric = self.fm_metric(probs, targets_fm)
                 del enc, probs, targets_fm, fix_y
             elif task == "pc":
-                X_pc, y_pc = predictive_coding_batch(X, self.hparams.seq_len, self.hparams.pred_len, self.hparams.label_len)
+                X_pc, y_pc = predictive_coding_batch(X, self.hparams.pc_seq_len, self.hparams.pred_length, self.hparams.label_length)
                 enc = self.encoder(X_pc)
-                logits = self.pc_decoder(enc, y_pc, pred_len=self.hparams.pred_len).squeeze()[0] \
+                logits = self.pc_decoder(enc, y_pc, pred_length=self.hparams.pred_length).squeeze()[0] \
                      if self.hparams.output_attention else \
-                        self.pc_decoder(enc, y_pc, pred_len=self.hparams.pred_len).squeeze()
+                        self.pc_decoder(enc, y_pc, pred_length=self.hparams.pred_length).squeeze()
                 # print(f'logits_pc: {logits.shape}')
                 # print(f'y_pc: {y_pc.shape}')
                 assert(logits.shape == y_pc.shape)
-                mask = y_pc > -180
+                mask = y_pc > -180 # TODO: is this just mussing data or also representing pad values? 
                 task_loss = self.pc_criterion(logits[mask], y_pc[mask])
                 logits = self.scaler.inverse_transform(logits)
                 y_pc = self.scaler.inverse_transform(y_pc)
                 task_metric = self.pc_metric(logits[mask], y_pc[mask])
                 #task_loss = torch.clamp(self.pc_criterion(logits, y_pc), max=self.hparams.max_rmse_err)
-                #task_metric = self.pc_metric(logits, y_pc)
                 del X_pc, y_pc
             elif task == "rc":
                 enc = self.encoder(X)
                 logits = self.rc_decoder(enc, X).squeeze()
                 mask = X > -180
-                task_loss = self.pc_criterion(logits[mask], X[mask])
+                task_loss = self.rc_criterion(logits[mask], X[mask]) 
                 logits = self.scaler.inverse_transform(logits)
                 y_rc = self.scaler.inverse_transform(X)
-                task_metric = self.pc_metric(logits[mask], y_rc[mask])
+                task_metric = self.rc_metric(logits[mask], y_rc[mask])
                 #task_loss = torch.clamp(self.rc_criterion(logits, X), max=self.hparams.max_rmse_err)
                 #task_metric = self.rc_metric(logits, X)
                 del y_rc
@@ -656,8 +656,9 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
         parser = parent_parser.add_argument_group("InformerMultiTaskModel")
         parser.add_argument('--learning_rate', type=float, default=0.001)
         parser.add_argument('--sequence_length', type=int, default=250)
-        parser.add_argument('--label_len', type=int, default=100, help='start token length of Informer decoder')
-        parser.add_argument('--pred_len', type=int, default=150, help='prediction sequence length')
+        parser.add_argument('--pc_seq_len', type=int, default=250, help = 'sequence length for predictive coding task')
+        parser.add_argument('--label_length', type=int, default=100, help='start token length of Informer decoder')
+        parser.add_argument('--pred_length', type=int, default=150, help='prediction sequence length')
         parser.add_argument('--enc_in', type=int, default=2, help='encoder input size')
         parser.add_argument('--dec_in', type=int, default=1, help='decoder input size')
         parser.add_argument('--c_out', type=int, default=2, help='output size/nclass for fixations')
@@ -878,8 +879,8 @@ class InformerEncoderMulticlassModel(InformerEncoderFixationModel):
         parser = parent_parser.add_argument_group("InformerEncoderDecoderModel")
         parser.add_argument('--learning_rate', type=float, default=0.001)
         parser.add_argument('--sequence_length', type=int, default=250)
-        parser.add_argument('--label_len', type=int, default=100, help='start token length of Informer decoder')
-        parser.add_argument('--pred_len', type=int, default=150, help='prediction sequence length')
+        parser.add_argument('--label_length', type=int, default=100, help='start token length of Informer decoder')
+        parser.add_argument('--pred_length', type=int, default=150, help='prediction sequence length')
         parser.add_argument('--enc_in', type=int, default=2, help='encoder input size')
         parser.add_argument('--dec_in', type=int, default=1, help='decoder input size')
         parser.add_argument('--c_out', type=int, default=3, help='output size, n classes')

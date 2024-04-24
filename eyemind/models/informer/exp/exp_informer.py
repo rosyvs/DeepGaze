@@ -34,8 +34,8 @@ class Exp_Informer(Exp_Basic):
                 self.args.dec_in, 
                 self.args.c_out, 
                 self.args.seq_len, 
-                self.args.label_len,
-                self.args.pred_len, 
+                self.args.label_length,
+                self.args.pred_length, 
                 self.args.factor,
                 self.args.d_model, 
                 self.args.n_heads, 
@@ -84,7 +84,7 @@ class Exp_Informer(Exp_Basic):
             root_path=args.root_path,
             data_path=args.data_path,
             flag=flag,
-            size=[args.seq_len, args.label_len, args.pred_len],
+            size=[args.seq_len, args.label_length, args.pred_length],
             features=args.features,
             target=args.target,
             inverse=args.inverse,
@@ -265,10 +265,10 @@ class Exp_Informer(Exp_Basic):
 
         # decoder input
         if self.args.padding==0:
-            dec_inp = torch.zeros([batch_y.shape[0], self.args.pred_len, batch_y.shape[-1]]).float()
+            dec_inp = torch.zeros([batch_y.shape[0], self.args.pred_length, batch_y.shape[-1]]).float()
         elif self.args.padding==1:
-            dec_inp = torch.ones([batch_y.shape[0], self.args.pred_len, batch_y.shape[-1]]).float()
-        dec_inp = torch.cat([batch_y[:,:self.args.label_len,:], dec_inp], dim=1).float().to(self.device)
+            dec_inp = torch.ones([batch_y.shape[0], self.args.pred_length, batch_y.shape[-1]]).float()
+        dec_inp = torch.cat([batch_y[:,:self.args.label_length,:], dec_inp], dim=1).float().to(self.device)
         # encoder - decoder
         if self.args.use_amp:
             with torch.cuda.amp.autocast():
@@ -284,6 +284,6 @@ class Exp_Informer(Exp_Basic):
         if self.args.inverse:
             outputs = dataset_object.inverse_transform(outputs)
         f_dim = -1 if self.args.features=='MS' else 0
-        batch_y = batch_y[:,-self.args.pred_len:,f_dim:].to(self.device)
+        batch_y = batch_y[:,-self.args.pred_length:,f_dim:].to(self.device)
 
         return outputs, batch_y

@@ -74,9 +74,9 @@ model:
   enc_in: 2
   dec_in: 2
   c_out: 3
-  seq_len: 500
-  label_len: 100
-  pred_len: 150
+  pc_seq_len: 500
+  label_length: 100
+  pred_length: 150
   padding: 0
   factor: 5
   d_model: 512

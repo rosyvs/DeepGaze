@@ -56,9 +56,9 @@ class Fixation_Experiment(Experiment):
         seq_lengths = self.config["sequence_length"]
         x_transforms = []
         y_transforms = []
-        for seq_len in seq_lengths:
-            lim_seq_len = partial(limit_sequence_len, sequence_len=seq_len, random_part=False)
-            limit_labels = partial(limit_label_seq, sequence_length=seq_len) 
+        for pc_seq_len in seq_lengths:
+            lim_seq_len = partial(limit_sequence_len, sequence_len=pc_seq_len, random_part=False)
+            limit_labels = partial(limit_label_seq, sequence_length=pc_seq_len) 
             x_transforms.append([lim_seq_len,convert_to_float_tensor])
             y_transforms.append([limit_labels,convert_to_float_tensor])
         return x_transforms, y_transforms
@@ -118,7 +118,7 @@ class Hyperparameter_Experiment(Experiment):
         gru_hidden_size = self.config.gru_hidden_size      
         for seq_length in seq_lengths:
             for size in gru_hidden_size:
-                logger=self.get_logger(sub_dir=f"seq_len:{seq_length}-hidden_size:{size}")
+                logger=self.get_logger(sub_dir=f"pc_seq_len:{seq_length}-hidden_size:{size}")
                 callbacks = self.get_callbacks()
                 trainer = Trainer.from_argparse_args(self.config, logger=logger, callbacks=callbacks)
                 trainers.append(trainer)

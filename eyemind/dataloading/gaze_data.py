@@ -10,7 +10,7 @@ from sklearn.model_selection import train_test_split
 import yaml
 from eyemind.dataloading.transforms import StandardScaler, GazeScaler
 from eyemind.dataloading.load_dataset import label_samples, filter_files_by_seqlen, get_filenames_for_dataset, get_label_df, get_label_mapper, get_participant_splits, get_stratified_group_splits, limit_sequence_len, load_file_folds, write_splits, label_samples_and_files
-from eyemind.dataloading.batch_loading import multitask_collate_fn, random_collate_fn, random_multitask_collate_fn, split_collate_fn, random_multilabel_multitask_collate_fn
+from eyemind.dataloading.batch_loading import random_collate_fn, random_multitask_collate_fn, split_collate_fn, random_multilabel_multitask_collate_fn
 import torchvision.transforms as T
 from torch.utils.data import Dataset, DataLoader, Sampler, Subset
 
@@ -1169,7 +1169,7 @@ class VariableSequenceToSequenceDataModule(SequenceToSequenceDataModule):
             num_workers=self.num_workers, 
             drop_last=self.drop_last, 
             pin_memory=self.pin_memory,
-            collate_fn=partial(variable_sequence_collate_fn, self.min_sequence_length, self.max_sequence_length))
+            collate_fn=partial(variable_length_random_collate_fn, self.min_sequence_length, self.max_sequence_length))
 
     @staticmethod
     def add_datamodule_specific_args(parent_parser):

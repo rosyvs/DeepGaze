@@ -16,16 +16,16 @@ class Dataset_ETT_hour(Dataset):
     def __init__(self, root_path, flag='train', size=None, 
                  features='S', data_path='ETTh1.csv', 
                  target='OT', scale=True, inverse=False, timeenc=0, freq='h', cols=None):
-        # size [seq_len, label_len, pred_len]
+        # size [seq_len, label_length, pred_length]
         # info
         if size == None:
             self.seq_len = 24*4*4
-            self.label_len = 24*4
-            self.pred_len = 24*4
+            self.label_length = 24*4
+            self.pred_length = 24*4
         else:
             self.seq_len = size[0]
-            self.label_len = size[1]
-            self.pred_len = size[2]
+            self.label_length = size[1]
+            self.pred_length = size[2]
         # init
         assert flag in ['train', 'test', 'val']
         type_map = {'train':0, 'val':1, 'test':2}
@@ -79,12 +79,12 @@ class Dataset_ETT_hour(Dataset):
     def __getitem__(self, index):
         s_begin = index
         s_end = s_begin + self.seq_len
-        r_begin = s_end - self.label_len 
-        r_end = r_begin + self.label_len + self.pred_len
+        r_begin = s_end - self.label_length 
+        r_end = r_begin + self.label_length + self.pred_length
 
         seq_x = self.data_x[s_begin:s_end]
         if self.inverse:
-            seq_y = np.concatenate([self.data_x[r_begin:r_begin+self.label_len], self.data_y[r_begin+self.label_len:r_end]], 0)
+            seq_y = np.concatenate([self.data_x[r_begin:r_begin+self.label_length], self.data_y[r_begin+self.label_length:r_end]], 0)
         else:
             seq_y = self.data_y[r_begin:r_end]
         seq_x_mark = self.data_stamp[s_begin:s_end]
@@ -93,7 +93,7 @@ class Dataset_ETT_hour(Dataset):
         return seq_x, seq_y, seq_x_mark, seq_y_mark
     
     def __len__(self):
-        return len(self.data_x) - self.seq_len- self.pred_len + 1
+        return len(self.data_x) - self.seq_len- self.pred_length + 1
 
     def inverse_transform(self, data):
         return self.scaler.inverse_transform(data)
@@ -102,16 +102,16 @@ class Dataset_ETT_minute(Dataset):
     def __init__(self, root_path, flag='train', size=None, 
                  features='S', data_path='ETTm1.csv', 
                  target='OT', scale=True, inverse=False, timeenc=0, freq='t', cols=None):
-        # size [seq_len, label_len, pred_len]
+        # size [seq_len, label_length, pred_length]
         # info
         if size == None:
             self.seq_len = 24*4*4
-            self.label_len = 24*4
-            self.pred_len = 24*4
+            self.label_length = 24*4
+            self.pred_length = 24*4
         else:
             self.seq_len = size[0]
-            self.label_len = size[1]
-            self.pred_len = size[2]
+            self.label_length = size[1]
+            self.pred_length = size[2]
         # init
         assert flag in ['train', 'test', 'val']
         type_map = {'train':0, 'val':1, 'test':2}
@@ -165,12 +165,12 @@ class Dataset_ETT_minute(Dataset):
     def __getitem__(self, index):
         s_begin = index
         s_end = s_begin + self.seq_len
-        r_begin = s_end - self.label_len
-        r_end = r_begin + self.label_len + self.pred_len
+        r_begin = s_end - self.label_length
+        r_end = r_begin + self.label_length + self.pred_length
 
         seq_x = self.data_x[s_begin:s_end]
         if self.inverse:
-            seq_y = np.concatenate([self.data_x[r_begin:r_begin+self.label_len], self.data_y[r_begin+self.label_len:r_end]], 0)
+            seq_y = np.concatenate([self.data_x[r_begin:r_begin+self.label_length], self.data_y[r_begin+self.label_length:r_end]], 0)
         else:
             seq_y = self.data_y[r_begin:r_end]
         seq_x_mark = self.data_stamp[s_begin:s_end]
@@ -179,7 +179,7 @@ class Dataset_ETT_minute(Dataset):
         return seq_x, seq_y, seq_x_mark, seq_y_mark
     
     def __len__(self):
-        return len(self.data_x) - self.seq_len - self.pred_len + 1
+        return len(self.data_x) - self.seq_len - self.pred_length + 1
 
     def inverse_transform(self, data):
         return self.scaler.inverse_transform(data)
@@ -189,16 +189,16 @@ class Dataset_Custom(Dataset):
     def __init__(self, root_path, flag='train', size=None, 
                  features='S', data_path='ETTh1.csv', 
                  target='OT', scale=True, inverse=False, timeenc=0, freq='h', cols=None):
-        # size [seq_len, label_len, pred_len]
+        # size [seq_len, label_length, pred_length]
         # info
         if size == None:
             self.seq_len = 24*4*4
-            self.label_len = 24*4
-            self.pred_len = 24*4
+            self.label_length = 24*4
+            self.pred_length = 24*4
         else:
             self.seq_len = size[0]
-            self.label_len = size[1]
-            self.pred_len = size[2]
+            self.label_length = size[1]
+            self.pred_length = size[2]
         # init
         assert flag in ['train', 'test', 'val']
         type_map = {'train':0, 'val':1, 'test':2}
@@ -265,12 +265,12 @@ class Dataset_Custom(Dataset):
     def __getitem__(self, index):
         s_begin = index
         s_end = s_begin + self.seq_len
-        r_begin = s_end - self.label_len 
-        r_end = r_begin + self.label_len + self.pred_len
+        r_begin = s_end - self.label_length 
+        r_end = r_begin + self.label_length + self.pred_length
 
         seq_x = self.data_x[s_begin:s_end]
         if self.inverse:
-            seq_y = np.concatenate([self.data_x[r_begin:r_begin+self.label_len], self.data_y[r_begin+self.label_len:r_end]], 0)
+            seq_y = np.concatenate([self.data_x[r_begin:r_begin+self.label_length], self.data_y[r_begin+self.label_length:r_end]], 0)
         else:
             seq_y = self.data_y[r_begin:r_end]
         seq_x_mark = self.data_stamp[s_begin:s_end]
@@ -279,7 +279,7 @@ class Dataset_Custom(Dataset):
         return seq_x, seq_y, seq_x_mark, seq_y_mark
     
     def __len__(self):
-        return len(self.data_x) - self.seq_len- self.pred_len + 1
+        return len(self.data_x) - self.seq_len- self.pred_length + 1
 
     def inverse_transform(self, data):
         return self.scaler.inverse_transform(data)
@@ -288,16 +288,16 @@ class Dataset_Pred(Dataset):
     def __init__(self, root_path, flag='pred', size=None, 
                  features='S', data_path='ETTh1.csv', 
                  target='OT', scale=True, inverse=False, timeenc=0, freq='15min', cols=None):
-        # size [seq_len, label_len, pred_len]
+        # size [seq_len, label_length, pred_length]
         # info
         if size == None:
             self.seq_len = 24*4*4
-            self.label_len = 24*4
-            self.pred_len = 24*4
+            self.label_length = 24*4
+            self.pred_length = 24*4
         else:
             self.seq_len = size[0]
-            self.label_len = size[1]
-            self.pred_len = size[2]
+            self.label_length = size[1]
+            self.pred_length = size[2]
         # init
         assert flag in ['pred']
         
@@ -343,7 +343,7 @@ class Dataset_Pred(Dataset):
             
         tmp_stamp = df_raw[['date']][border1:border2]
         tmp_stamp['date'] = pd.to_datetime(tmp_stamp.date)
-        pred_dates = pd.date_range(tmp_stamp.date.values[-1], periods=self.pred_len+1, freq=self.freq)
+        pred_dates = pd.date_range(tmp_stamp.date.values[-1], periods=self.pred_length+1, freq=self.freq)
         
         df_stamp = pd.DataFrame(columns = ['date'])
         df_stamp.date = list(tmp_stamp.date.values) + list(pred_dates[1:])
@@ -359,14 +359,14 @@ class Dataset_Pred(Dataset):
     def __getitem__(self, index):
         s_begin = index
         s_end = s_begin + self.seq_len
-        r_begin = s_end - self.label_len
-        r_end = r_begin + self.label_len + self.pred_len
+        r_begin = s_end - self.label_length
+        r_end = r_begin + self.label_length + self.pred_length
 
         seq_x = self.data_x[s_begin:s_end]
         if self.inverse:
-            seq_y = self.data_x[r_begin:r_begin+self.label_len]
+            seq_y = self.data_x[r_begin:r_begin+self.label_length]
         else:
-            seq_y = self.data_y[r_begin:r_begin+self.label_len]
+            seq_y = self.data_y[r_begin:r_begin+self.label_length]
         seq_x_mark = self.data_stamp[s_begin:s_end]
         seq_y_mark = self.data_stamp[r_begin:r_end]
 

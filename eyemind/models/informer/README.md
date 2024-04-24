@@ -93,7 +93,7 @@ We provide a more detailed and complete command description for training and tes
 python -u main_informer.py --model <model> --data <data>
 --root_path <root_path> --data_path <data_path> --features <features>
 --target <target> --freq <freq> --checkpoints <checkpoints>
---seq_len <seq_len> --label_len <label_len> --pred_len <pred_len>
+--seq_len <seq_len> --label_length <label_length> --pred_length <pred_length>
 --enc_in <enc_in> --dec_in <dec_in> --c_out <c_out> --d_model <d_model>
 --n_heads <n_heads> --e_layers <e_layers> --d_layers <d_layers>
 --s_layers <s_layers> --d_ff <d_ff> --factor <factor> --padding <padding>
@@ -118,8 +118,8 @@ The detailed descriptions about the arguments are as following:
 | freq           | Freq for time features encoding (defaults to `h`). This can be set to `s`,`t`,`h`,`d`,`b`,`w`,`m` (s:secondly, t:minutely, h:hourly, d:daily, b:business days, w:weekly, m:monthly).You can also use more detailed freq like 15min or 3h |
 | checkpoints    | Location of model checkpoints (defaults to `./checkpoints/`)  |
 | seq_len | Input sequence length of Informer encoder (defaults to 96) |
-| label_len | Start token length of Informer decoder (defaults to 48) |
-| pred_len | Prediction sequence length (defaults to 24) |
+| label_length | Start token length of Informer decoder (defaults to 48) |
+| pred_length | Prediction sequence length (defaults to 24) |
 | enc_in | Encoder input size (defaults to 7) |
 | dec_in | Decoder input size (defaults to 7) |
 | c_out | Output size (defaults to 7) |
