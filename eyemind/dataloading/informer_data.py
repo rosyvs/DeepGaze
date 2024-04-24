@@ -136,7 +136,7 @@ class InformerDataModule(BaseSequenceToSequenceDataModule, ParticipantKFoldDataM
         group.add_argument("--label_filepath", type=str)
         group.add_argument("--sample_label_col", type=str)
         group.add_argument("--file_label_col", type=str)
-        group.add_argument("--sequence_length", type=int, default=250)
+        group.add_argument("--sequence_length", type=int, default=500)
         group.add_argument("--min_sequence_length", type=int, default=500)
         group.add_argument("--contrastive", type=bool, default=False)
         return parent_parser

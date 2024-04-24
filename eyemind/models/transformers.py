@@ -27,7 +27,7 @@ class InformerEncoder(nn.Module):
                 n_heads: int=8, 
                 e_layers: int=3,
                 d_ff: int=512, 
-                dropout: float=0.05, 
+                dropout: float=0.05, # orig paper uses .1
                 attn: str='prob', 
                 activation: str='gelu', 
                 output_attention: bool=False, 
@@ -220,7 +220,7 @@ class InformerEncoderDecoderModel(LightningModule):
             raise e
 
         # Predictive Coding:
-        X_pc, Y_pc = predictive_coding_batch(X, self.hparams.pc_seq_len, self.hparams.pred_length, self.hparams.label_length)
+        X_pc, Y_pc = predictive_coding_batch(X, self.hparams.sequence_length, self.hparams.label_length, self.hparams.pred_length)
         if self.hparams.output_attention:
             logits = self(X_pc, Y_pc)[0]
         else:
@@ -452,8 +452,8 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
                 enc_in: int=2, 
                 dec_in: int=1, 
                 c_out: int=2, # output layer size for pretraining fixation classifier 
-                sequence_length: int=500,
-                pc_seq_len: int=500, 
+                pc_seq_length: int=300,
+                sequence_length: int=500, 
                 label_length: int=100, 
                 pred_length: int=150,
                 padding: int=0,
@@ -586,7 +586,7 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
                 task_metric = self.fm_metric(probs, targets_fm)
                 del enc, probs, targets_fm, fix_y
             elif task == "pc":
-                X_pc, y_pc = predictive_coding_batch(X, self.hparams.pc_seq_len, self.hparams.pred_length, self.hparams.label_length)
+                X_pc, y_pc = predictive_coding_batch(X, self.hparams.pc_seq_length, self.hparams.label_length, self.hparams.pred_length)
                 enc = self.encoder(X_pc)
                 logits = self.pc_decoder(enc, y_pc, pred_length=self.hparams.pred_length).squeeze()[0] \
                      if self.hparams.output_attention else \
@@ -594,7 +594,8 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
                 # print(f'logits_pc: {logits.shape}')
                 # print(f'y_pc: {y_pc.shape}')
                 assert(logits.shape == y_pc.shape)
-                mask = y_pc > -180 # TODO: is this just mussing data or also representing pad values? 
+                mask = y_pc > -180 # TODO: is -180 just mussing data or also representing pad values? 
+                # Surely also needs to be masking seen portion of data (i.e. label_length)
                 task_loss = self.pc_criterion(logits[mask], y_pc[mask])
                 logits = self.scaler.inverse_transform(logits)
                 y_pc = self.scaler.inverse_transform(y_pc)
@@ -603,7 +604,7 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
                 del X_pc, y_pc
             elif task == "rc":
                 enc = self.encoder(X)
-                logits = self.rc_decoder(enc, X).squeeze()
+                logits = self.rc_decoder(enc, X).squeeze() # why not passing pred_length here? 
                 mask = X > -180
                 task_loss = self.rc_criterion(logits[mask], X[mask]) 
                 logits = self.scaler.inverse_transform(logits)
@@ -656,7 +657,7 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
         parser = parent_parser.add_argument_group("InformerMultiTaskModel")
         parser.add_argument('--learning_rate', type=float, default=0.001)
         parser.add_argument('--sequence_length', type=int, default=250)
-        parser.add_argument('--pc_seq_len', type=int, default=250, help = 'sequence length for predictive coding task')
+        parser.add_argument('--pc_seq_length', type=int, default=250, help = 'sequence length for predictive coding task')
         parser.add_argument('--label_length', type=int, default=100, help='start token length of Informer decoder')
         parser.add_argument('--pred_length', type=int, default=150, help='prediction sequence length')
         parser.add_argument('--enc_in', type=int, default=2, help='encoder input size')

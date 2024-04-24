@@ -158,13 +158,54 @@ def random_multilabel_multitask_collate_fn(sequence_length, batch, min_seq=1.0, 
             X2_batched[i] = X[i][start_ind:end_ind,:] 
     return X_batched, fix_y_batched, seq_y_batched, X2_batched, cl_y_batched.float()
 
-def predictive_coding_batch(X_batch, sequence_length, pred_length, label_length): 
-    # NOTE: this is actually used already and assumes X is already trimmed to sequence_length
-    # but I am confused about how this works when sequence_length+pred_length exceeds the length of the sequence
-    full_sl = X_batch.shape[1]
-    X_seq = X_batch[:,:sequence_length,:]
-    y_seq = X_batch[:,sequence_length-label_length:sequence_length+pred_length,:] # taken from later in the sequence, this is the target
+# TODO: why are the 2 definitions so different? First is method, second is imported func that informer uses
+# Id rather import these as funcs from batch_loading for consistency
+
+def predictive_coding_batch(X_batch, pc_seq_len, label_length, pred_length, offset=None): 
+    # TODO: use offset ot select random segment if not None
+    # for the vanilla encoder-decoder models label_lengthshuld be 0 for consistency w old implementation
+    assert pc_seq_len + pred_length <= X_batch.shape[1], f'pc_seq_len: {pc_seq_len} + pred_length: {pred_length} must be <= X_batch.shape[1]: {X_batch.shape[1]}'
+    X_seq = X_batch[:,:pc_seq_len,:]
+    y_seq = X_batch[:,pc_seq_len-label_length:pc_seq_len+pred_length,:] # taken from later in the sequence, this is the target
     return X_seq, y_seq
+
+def predictive_coding_batch_variable_length(X_batch, X_pad_mask, label_length, pred_length): 
+    # here X_pc is allowed to be variable length
+    # X_pad_mask is a mask of the same shape as X_batch, with 1s where there is data and 0s where there is padding
+    # get maximum sequence length
+    max_seq_len = X_pad_mask.sum(dim=1).max().item()-pred_length
+    batch_size = X_batch.shape[0]
+    X_pc = torch.zeros((batch_size, max_seq_len, X_batch.shape[2]))
+    Y_pc = torch.zeros((batch_size, label_length+pred_length, X_batch.shape[2]))
+    X_pc_mask = torch.zeros((batch_size, max_seq_len))
+    for x, pad in zip(X_batch, X_pad_mask):
+        assert x[0].shape[0] == x[1].shape[0], f'X_batch and X_pad_mask must have the same length'
+        # select x where pad is 1
+        xpc = x[pad==1][:-pred_length]
+        ypc = x[pad==1][-(pred_length+label_length):]
+        # re-pad to max_seq_len with padding at start of sequence #TODO: use flag value for these? 
+        pad_mask = torch.cat([torch.zeros((max_seq_len-xpc.shape[0])), torch.ones(xpc.shape[0])], dim=0)
+        xpc = torch.cat([torch.zeros((max_seq_len-xpc.shape[0], xpc.shape[1])), xpc], dim=0)
+        X_pc[i] = xpc
+        Y_pc[i] = ypc
+        X_pc_mask[i] = pad_mask
+    return X_pc, Y_pc, X_pc_mask
+# predictive_coding_batch_variable_length(X, torch.ones_like(X), self.hparams.label_length, self.hparams.pred_length)
+
+
+
+
+    X_seq = X_batch[:,:input_length,:]
+    y_seq = X_batch[:,input_length-label_length:input_length+pred_length,:] # taken from later in the sequence, this is the target
+    return X_seq, y_seq
+
+# # encoder method:
+# def predictive_coding_batch(self, X_batch):
+#     # no label_length arg? 
+#     input_length = self.hparams.sequence_length - self.hparams.pred_length
+#     X_seq = X_batch[:,:input_length,:]
+#     y_seq = X_batch[:,input_length:input_length+self.hparams.pred_length,:]
+#     return X_seq, y_seq
 
 # NOTE: not used
 def reconstruction_batch(X_batch, label_length): # not used

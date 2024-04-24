@@ -73,16 +73,16 @@ model:
   enc_in: 2
   dec_in: 2
   c_out: 3
-  pc_seq_len: 500 # TODO: allow variable length
-  label_length: 100 
-  pred_length: 150 
+  pc_seq_length: 50 # was 500, TODO: allow variable length
+  label_length: 10 
+  pred_length: 15
   padding: 0
   factor: 5
-  d_model: 512
-  n_heads: 8
+  d_model: 64 # 512 in real thing
+  n_heads: 2 # 8 in real thing
   e_layers: 3
   d_layers: 2
-  d_ff: 512
+  d_ff: 64 # 512 in real thing
   dropout: 0.1 # TODO: 
   attn: prob
   activation: gelu
@@ -96,8 +96,8 @@ model:
   learning_rate: 0.004 # per Zhou et al. 2021
   freeze_encoder: false
 data:
-  data_dir: ./data/EML/gaze+fix+reg_interleaved16/
-  label_filepath: ./data/EML/EML1_pageLevel_500+_matchEDMinstances_interleaved16.csv
+  data_dir: ../../EyeMindLink/Processed/Gaze/Timeseries/DeepGaze/EML/gaze+fix+reg_interleaved16/
+  label_filepath: ../../EyeMindLink/Processed/Gaze/Timeseries/DeepGaze/EML/EML1_pageLevel_500+_matchEDMinstances_interleaved16.csv
   file_label_col: readWPM
   sample_label_col: regression_label
   scale_file_label: true
@@ -110,11 +110,11 @@ data:
   test_dataset: null
   train_fold: null
   val_fold: null
-  sequence_length: 500
+  sequence_length: 50
   num_workers: 4
   batch_size: 32
   pin_memory: true
   drop_last: true
-  min_sequence_length: 500 # TODO: how is this different from sequence_length?
+  min_sequence_length: 500 
   contrastive: true
 

@@ -272,7 +272,7 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
             self.cl_criterion = nn.CrossEntropyLoss()
             self.cl_metric = torchmetrics.Accuracy(num_classes=2)
         if "rc" in tasks:
-            self.rc_decoder = create_decoder(hidden_dim,output_seq_length=2)
+            self.rc_decoder = create_decoder(hidden_dim,output_seq_length=2) # TODO: why length 2?
             self.decoders.append(self.rc_decoder)
             self.rc_criterion = RMSELoss()
             self.rc_metric = torchmetrics.MeanSquaredError(squared=False)     
@@ -403,7 +403,7 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
                 enc = self.encoder(X)
                 logits = self.rc_decoder(enc).squeeze()
                 mask = X > -180
-                task_loss = self.rc_criterion_criterion(logits[mask], X[mask])
+                task_loss = self.rc_criterion(logits[mask], X[mask])
                 task_metric = self.rc_metric(logits[mask], X[mask])
                 #task_loss = torch.clamp(self.rc_criterion(logits, X), max=self.hparams.max_rmse_err)
                 #task_metric = self.rc_metric(logits, X)               
@@ -424,20 +424,7 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
         res['lr_scheduler'] = {"scheduler": torch.optim.lr_scheduler.StepLR(optimizer, step_size=max(1,int(self.trainer.max_epochs / 5)), gamma=0.5)}
         return res    
 
-    # TODO: why are the 2 definitions so different? First is method, second is imported func that informer uses
-    # Id rather import these as funcs from batch_loading for consistency
-    def predictive_coding_batch(self, X_batch):
-        # no label_length arg? 
-        input_length = self.hparams.sequence_length - self.hparams.pred_length
-        X_seq = X_batch[:,:input_length,:]
-        y_seq = X_batch[:,input_length:input_length+self.hparams.pred_length,:]
-        return X_seq, y_seq
 
-    # note that this gets called with input_length = hparams.sequence_length 
-    def predictive_coding_batch(X_batch, input_length, pred_length, label_length):
-        X_seq = X_batch[:,:input_length,:]
-        y_seq = X_batch[:,input_length-label_length:input_length+pred_length,:] # taken from later in the sequence, this is the target
-        return X_seq, y_seq
 
     # def contrastive_batch(self, X_batch, cl_y):
     #     n,_,fs = X_batch.shape
