@@ -110,7 +110,7 @@ class oldEncoderClassifierModel(LightningModule):
 
     def configure_optimizers(self):
         params = self.model[1:].parameters() if self.hparams.freeze_encoder else self.model.parameters()
-        optimizer = torch.optim.Adam(params, lr=self.hparams.learning_rate)
+        optimizer = torch.optim.AdamW(params, lr=self.hparams.learning_rate)
         res = {"optimizer": optimizer}
         res['lr_scheduler'] = {"scheduler": torch.optim.lr_scheduler.StepLR(optimizer, step_size=max(1, int(self.trainer.max_epochs / 5)), gamma=0.5)}
         return res
@@ -218,7 +218,7 @@ class EncoderClassifierMultiSequenceModel(LightningModule):
 
     def configure_optimizers(self):
         params = self.model[1:].parameters() if self.hparams.freeze_encoder else self.model.parameters()
-        optimizer = torch.optim.Adam(params, lr=self.hparams.learning_rate)
+        optimizer = torch.optim.AdamW(params, lr=self.hparams.learning_rate)
         res = {"optimizer": optimizer}
         res['lr_scheduler'] = {"scheduler": torch.optim.lr_scheduler.StepLR(optimizer, step_size=max(1, int(self.trainer.max_epochs / 5)), gamma=0.5)}
         return res
@@ -332,7 +332,7 @@ class EncoderClassifierModel(LightningModule):
     def configure_optimizers(self):
         #params = self.classifier_head.parameters() if self.hparams.freeze_encoder else list(self.enc_embedding.parameters()) + list(self.encoder.parameters()) + list(self.classifier_head.parameters())
         params = self.parameters()
-        optimizer = torch.optim.Adam(params, lr=self.hparams.learning_rate)
+        optimizer = torch.optim.AdamW(params, lr=self.hparams.learning_rate)
         res = {"optimizer": optimizer}
         res['lr_scheduler'] = {"scheduler": torch.optim.lr_scheduler.StepLR(optimizer, step_size=max(1, int(self.trainer.max_epochs / 5)), gamma=0.5)}
         return res

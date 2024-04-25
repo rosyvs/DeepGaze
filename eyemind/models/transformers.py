@@ -240,7 +240,7 @@ class InformerEncoderDecoderModel(LightningModule):
 
     def configure_optimizers(self):
         params = self.decoder.parameters() if self.hparams.freeze_encoder else list(self.encoder.parameters()) + list(self.decoder.parameters())
-        optimizer = torch.optim.Adam(params, lr=self.hparams.learning_rate)
+        optimizer = torch.optim.AdamW(params, lr=self.hparams.learning_rate)
         res = {"optimizer": optimizer}
         res['lr_scheduler'] = {"scheduler": torch.optim.lr_scheduler.StepLR(optimizer, step_size=max(1,int(self.trainer.max_epochs / 5)), gamma=0.5)}
         return res
@@ -399,7 +399,7 @@ class InformerEncoderFixationModel(LightningModule):
 
     def configure_optimizers(self):
         params = self.decoder.parameters() if self.hparams.freeze_encoder else list(self.encoder.parameters()) + list(self.decoder.parameters())
-        optimizer = torch.optim.Adam(params, lr=self.hparams.learning_rate)
+        optimizer = torch.optim.AdamW(params, lr=self.hparams.learning_rate)
         res = {"optimizer": optimizer}
         res['lr_scheduler'] = {"scheduler": torch.optim.lr_scheduler.StepLR(optimizer, step_size=max(1,int(self.trainer.max_epochs / 5)), gamma=0.5)}
         return res
@@ -632,7 +632,7 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
         params = [list(m.parameters()) for m in self.decoders]
         params.append(list(self.encoder.parameters()))
         params = reduce(lambda x,y: x + y, params)
-        optimizer = torch.optim.Adam(params, lr=self.hparams.learning_rate)
+        optimizer = torch.optim.AdamW(params, lr=self.hparams.learning_rate)
         res = {"optimizer": optimizer}
         res['lr_scheduler'] = {"scheduler": torch.optim.lr_scheduler.StepLR(optimizer, step_size=max(1,int(self.trainer.max_epochs / 5)), gamma=0.5)}
         return res
@@ -800,7 +800,7 @@ class InformerClassifierModel(LightningModule):
     def configure_optimizers(self):
         #params = self.classifier_head.parameters() if self.hparams.freeze_encoder else list(self.enc_embedding.parameters()) + list(self.encoder.parameters()) + list(self.classifier_head.parameters())
         params = self.parameters()
-        optimizer = torch.optim.Adam(params, lr=self.hparams.learning_rate)
+        optimizer = torch.optim.AdamW(params, lr=self.hparams.learning_rate)
         res = {"optimizer": optimizer}
         res['lr_scheduler'] = {"scheduler": torch.optim.lr_scheduler.StepLR(optimizer, step_size=max(1, int(self.trainer.max_epochs / 5)), gamma=0.5)}
         return res
@@ -1022,7 +1022,7 @@ class InformerEncoderScalarRegModel(LightningModule):
     def configure_optimizers(self):
         #params = self.classifier_head.parameters() if self.hparams.freeze_encoder else list(self.enc_embedding.parameters()) + list(self.encoder.parameters()) + list(self.classifier_head.parameters())
         params = self.parameters()
-        optimizer = torch.optim.Adam(params, lr=self.hparams.learning_rate)
+        optimizer = torch.optim.AdamW(params, lr=self.hparams.learning_rate)
         res = {"optimizer": optimizer}
         res['lr_scheduler'] = {"scheduler": torch.optim.lr_scheduler.StepLR(optimizer, step_size=max(1, int(self.trainer.max_epochs / 5)), gamma=0.5)}
         return res

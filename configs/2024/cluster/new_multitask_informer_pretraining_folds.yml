@@ -55,7 +55,7 @@ trainer:
   benchmark: null
   deterministic: null
   reload_dataloaders_every_n_epochs: 0
-  auto_lr_find: true #TODO: this is new and untested
+  auto_lr_find: false #TODO: this is new and untested
   replace_sampler_ddp: true
   detect_anomaly: false
   auto_scale_batch_size: power
