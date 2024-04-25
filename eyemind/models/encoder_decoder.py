@@ -392,7 +392,7 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
                 X_pc, y_pc = predictive_coding_batch(X, self.hparams.pc_seq_len, self.hparams.pred_length, self.hparams.label_length)
                 enc = self.encoder(X_pc)
                 logits = self.pc_decoder(enc).squeeze()
-                assert(logits.shape == y_pc.shape)
+                assert(logits.shape == y_pc.shape) #
                 mask = y_pc > -180
                 task_loss = self.pc_criterion(logits[mask], y_pc[mask])
                 task_metric = self.pc_metric(logits[mask], y_pc[mask])

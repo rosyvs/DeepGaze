@@ -593,6 +593,7 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
                         self.pc_decoder(enc, y_pc, pred_length=self.hparams.pred_length).squeeze()
                 # print(f'logits_pc: {logits.shape}')
                 # print(f'y_pc: {y_pc.shape}')
+                y_pc=y_pc[:,-self.hparams.pred_length:] # take just the predicted part as target
                 assert(logits.shape == y_pc.shape)
                 mask = y_pc > -180 # TODO: is -180 just mussing data or also representing pad values? 
                 # Surely also needs to be masking seen portion of data (i.e. label_length)
