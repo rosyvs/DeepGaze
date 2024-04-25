@@ -1,15 +1,16 @@
 #!/bin/bash
 
 #SBATCH --nodes=1
-#SBATCH --time=4:00:00 
+#SBATCH --time=24:00:00 
 #SBATCH --partition=aa100
-#SBATCH --ntasks=1
+#SBATCH --ntasks=16
 #SBATCH --gres=gpu
 #SBATCH --job-name=multitask-informer-pretraining-fold-%j
 #SBATCH --cpus-per-task=8
 #SBATCH --output=slurm_logs/pretraining.%j.out
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=roso8920@colorado.edu
+
 
 echo "running new_multitask_informer_pretraining.py with new pretraining tasks"
 
@@ -37,5 +38,5 @@ if [ -z "$resume_dir"]
 then
   python3 eyemind/experiments/new_multitask_informer_pretraining.py -c ${config} --fold_number $1 --trainer.logger.init_args.version ${version}
 else
-  python3 eyemind/experiments/new_multitask_informer_pretraining.py -c ${config} --fold_number $1 --trainer.logger.init_args.version ${version} --trainer.resume_from_checkpoint ${resume_dir}
+  python3 eyemind/experiments/new_multitask_informer_pretraining.py -c ${config} --fold_number $1 --trainer.logger.init_args.version ${version} --trainer.resume_from_checkpoint {ckpt_path}
 fi
