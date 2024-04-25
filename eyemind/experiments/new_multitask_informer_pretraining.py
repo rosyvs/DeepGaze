@@ -9,7 +9,6 @@ if __name__ == "__main__":
     cli = FoldsLightningCLI(InformerMultiTaskEncoderDecoder, 
                             InformerMultiLabelDatamodule, 
                             run=False, 
-                            seed_everything_default=21, 
                             save_config_overwrite=True)
     cli.datamodule.setup()
     # try to load folds from file, otherwise setup the folds 
