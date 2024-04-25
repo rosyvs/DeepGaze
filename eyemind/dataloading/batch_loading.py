@@ -163,11 +163,11 @@ def random_multilabel_multitask_collate_fn(sequence_length, batch, min_seq=1.0, 
 
 def predictive_coding_batch(X_batch, pc_seq_length, label_length, pred_length, offset=None): 
     # TODO: use offset ot select random segment if not None
-    # for the vanilla encoder-decoder models label_lengthshuld be 0 for consistency w old implementation
+    # for the vanilla encoder-decoder models label_length should be 0 for consistency w old implementation
     assert pc_seq_length + pred_length <= X_batch.shape[1], f'pc_seq_length: {pc_seq_length} + pred_length: {pred_length} must be <= X_batch.shape[1]: {X_batch.shape[1]}'
     X_seq = X_batch[:,:pc_seq_length,:]
-    y_seq = X_batch[:,pc_seq_length-label_length:pc_seq_length+pred_length,:] # taken from later in the sequence, this is the target
-    return X_seq, y_seq
+    Y_seq = X_batch[:,pc_seq_length-label_length:pc_seq_length+pred_length,:] # taken from later in the sequence, this is the target
+    return X_seq, Y_seq
 
 def predictive_coding_batch_variable_length(X_batch, X_pad_mask, label_length, pred_length): 
     # here X_pc is allowed to be variable length
@@ -196,16 +196,16 @@ def predictive_coding_batch_variable_length(X_batch, X_pad_mask, label_length, p
 
 
     X_seq = X_batch[:,:input_length,:]
-    y_seq = X_batch[:,input_length-label_length:input_length+pred_length,:] # taken from later in the sequence, this is the target
-    return X_seq, y_seq
+    Y_seq = X_batch[:,input_length-label_length:input_length+pred_length,:] # taken from later in the sequence, this is the target
+    return X_seq, Y_seq
 
 # # encoder method:
 # def predictive_coding_batch(self, X_batch):
 #     # no label_length arg? 
 #     input_length = self.hparams.sequence_length - self.hparams.pred_length
 #     X_seq = X_batch[:,:input_length,:]
-#     y_seq = X_batch[:,input_length:input_length+self.hparams.pred_length,:]
-#     return X_seq, y_seq
+#     Y_seq = X_batch[:,input_length:input_length+self.hparams.pred_length,:]
+#     return X_seq, Y_seq
 
 # NOTE: not used
 def reconstruction_batch(X_batch, label_length): # not used

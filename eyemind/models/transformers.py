@@ -453,7 +453,7 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
                 enc_in: int=2, 
                 dec_in: int=1, 
                 c_out: int=2, # output layer size for pretraining fixation classifier 
-                pc_seq_length: int=300,
+                pc_seq_length: int=250,
                 sequence_length: int=500, 
                 label_length: int=100, 
                 pred_length: int=150,
