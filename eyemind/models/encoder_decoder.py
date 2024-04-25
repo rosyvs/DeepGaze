@@ -303,10 +303,10 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
     #         preds = self._get_preds(logits)
     #         targets = fix_y
     #     elif task == "pc":
-    #         X_pc, y_pc = self.predictive_coding_batch(batch[0])
+    #         X_pc, Y_pc = self.predictive_coding_batch(batch[0])
     #         enc = self.encoder(X_pc)
     #         logits = self.pc_decoder(enc).squeeze()
-    #         targets = y_pc
+    #         targets = Y_pc
     #     elif task == "rc":
     #         enc = self.encoder(X)
     #         logits = self.rc_decoder(enc).squeeze()
@@ -340,12 +340,12 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
                 task_predictions["fm"] = preds
                 del enc
             elif task == "pc":
-                X_pc, y_pc = predictive_coding_batch(X, self.hparams.pc_seq_length, self.hparams.pred_length, self.hparams.label_length)
+                X_pc, Y_pc = predictive_coding_batch(X, self.hparams.pc_seq_length, self.hparams.pred_length, self.hparams.label_length)
                 enc = self.encoder(X_pc)
                 logits = self.pc_decoder(enc).squeeze()
-                assert(logits.shape == y_pc.shape)
+                assert(logits.shape == Y_pc.shape)
                 task_predictions["pc"] = logits
-                del X_pc, y_pc
+                del X_pc, Y_pc
             elif task == "rc":
                 enc = self.encoder(X)
                 logits = self.rc_decoder(enc).squeeze()
@@ -389,16 +389,16 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
                 task_metric = self.fm_metric(probs, targets_fm)
                 del enc, probs, targets_fm, fix_y
             elif task == "pc":
-                X_pc, y_pc = predictive_coding_batch(X, self.hparams.pc_seq_length, self.hparams.pred_length, self.hparams.label_length)
+                X_pc, Y_pc = predictive_coding_batch(X, self.hparams.pc_seq_length, self.hparams.pred_length, self.hparams.label_length)
                 enc = self.encoder(X_pc)
                 logits = self.pc_decoder(enc).squeeze()
-                assert(logits.shape == y_pc.shape) #
-                mask = y_pc > -180
-                task_loss = self.pc_criterion(logits[mask], y_pc[mask])
-                task_metric = self.pc_metric(logits[mask], y_pc[mask])
-                #task_loss = torch.clamp(self.pc_criterion(logits, y_pc), max=self.hparams.max_rmse_err)
-                #task_metric = self.pc_metric(logits, y_pc)
-                del X_pc, y_pc
+                assert(logits.shape == Y_pc.shape) #
+                mask = Y_pc > -180
+                task_loss = self.pc_criterion(logits[mask], Y_pc[mask])
+                task_metric = self.pc_metric(logits[mask], Y_pc[mask])
+                #task_loss = torch.clamp(self.pc_criterion(logits, Y_pc), max=self.hparams.max_rmse_err)
+                #task_metric = self.pc_metric(logits, Y_pc)
+                del X_pc, Y_pc
             elif task == "rc":
                 enc = self.encoder(X)
                 logits = self.rc_decoder(enc).squeeze()

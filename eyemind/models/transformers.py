@@ -226,6 +226,7 @@ class InformerEncoderDecoderModel(LightningModule):
         else:
             logits = self(X_pc, Y_pc)
         logits = logits.squeeze()
+        Y_pc=Y_pc[:,-self.hparams.pred_length:] # take just the predicted part as target
         assert(logits.shape == Y_pc.shape)
         mask = Y_pc > -180
         #task_loss = torch.clamp(self.pc_criterion(logits, Y_pc),max=self.hparams.max_rmse_err)
@@ -586,23 +587,21 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
                 task_metric = self.fm_metric(probs, targets_fm)
                 del enc, probs, targets_fm, fix_y
             elif task == "pc":
-                X_pc, y_pc = predictive_coding_batch(X, self.hparams.pc_seq_length, self.hparams.label_length, self.hparams.pred_length)
+                X_pc, Y_pc = predictive_coding_batch(X, self.hparams.pc_seq_length, self.hparams.label_length, self.hparams.pred_length)
                 enc = self.encoder(X_pc)
-                logits = self.pc_decoder(enc, y_pc, pred_length=self.hparams.pred_length).squeeze()[0] \
+                logits = self.pc_decoder(enc, Y_pc, pred_length=self.hparams.pred_length).squeeze()[0] \
                      if self.hparams.output_attention else \
-                        self.pc_decoder(enc, y_pc, pred_length=self.hparams.pred_length).squeeze()
-                # print(f'logits_pc: {logits.shape}')
-                # print(f'y_pc: {y_pc.shape}')
-                y_pc=y_pc[:,-self.hparams.pred_length:] # take just the predicted part as target
-                assert(logits.shape == y_pc.shape)
-                mask = y_pc > -180 # TODO: is -180 just mussing data or also representing pad values? 
+                        self.pc_decoder(enc, Y_pc, pred_length=self.hparams.pred_length).squeeze()
+                Y_pc=Y_pc[:,-self.hparams.pred_length:] # take just the predicted part as target
+                assert(logits.shape == Y_pc.shape)
+                mask = Y_pc > -180 # TODO: is -180 just mussing data or also representing pad values? 
                 # Surely also needs to be masking seen portion of data (i.e. label_length)
-                task_loss = self.pc_criterion(logits[mask], y_pc[mask])
+                task_loss = self.pc_criterion(logits[mask], Y_pc[mask])
                 logits = self.scaler.inverse_transform(logits)
-                y_pc = self.scaler.inverse_transform(y_pc)
-                task_metric = self.pc_metric(logits[mask], y_pc[mask])
-                #task_loss = torch.clamp(self.pc_criterion(logits, y_pc), max=self.hparams.max_rmse_err)
-                del X_pc, y_pc
+                Y_pc = self.scaler.inverse_transform(Y_pc)
+                task_metric = self.pc_metric(logits[mask], Y_pc[mask])
+                #task_loss = torch.clamp(self.pc_criterion(logits, Y_pc), max=self.hparams.max_rmse_err)
+                del X_pc, Y_pc
             elif task == "rc":
                 enc = self.encoder(X)
                 logits = self.rc_decoder(enc, X).squeeze() # why not passing pred_length here? 
