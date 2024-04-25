@@ -161,12 +161,12 @@ def random_multilabel_multitask_collate_fn(sequence_length, batch, min_seq=1.0, 
 # TODO: why are the 2 definitions so different? First is method, second is imported func that informer uses
 # Id rather import these as funcs from batch_loading for consistency
 
-def predictive_coding_batch(X_batch, pc_seq_len, label_length, pred_length, offset=None): 
+def predictive_coding_batch(X_batch, pc_seq_length, label_length, pred_length, offset=None): 
     # TODO: use offset ot select random segment if not None
     # for the vanilla encoder-decoder models label_lengthshuld be 0 for consistency w old implementation
-    assert pc_seq_len + pred_length <= X_batch.shape[1], f'pc_seq_len: {pc_seq_len} + pred_length: {pred_length} must be <= X_batch.shape[1]: {X_batch.shape[1]}'
-    X_seq = X_batch[:,:pc_seq_len,:]
-    y_seq = X_batch[:,pc_seq_len-label_length:pc_seq_len+pred_length,:] # taken from later in the sequence, this is the target
+    assert pc_seq_length + pred_length <= X_batch.shape[1], f'pc_seq_length: {pc_seq_length} + pred_length: {pred_length} must be <= X_batch.shape[1]: {X_batch.shape[1]}'
+    X_seq = X_batch[:,:pc_seq_length,:]
+    y_seq = X_batch[:,pc_seq_length-label_length:pc_seq_length+pred_length,:] # taken from later in the sequence, this is the target
     return X_seq, y_seq
 
 def predictive_coding_batch_variable_length(X_batch, X_pad_mask, label_length, pred_length): 

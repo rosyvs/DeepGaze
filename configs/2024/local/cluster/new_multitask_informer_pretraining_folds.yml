@@ -1,20 +1,21 @@
 # pytorch_lightning==1.7.6
 seed_everything: 303
 fold_number: 0
+split_filepath: ./data_splits/4fold_participant/seed303.yml
 num_folds: 4
-split_filepath: ./data_splits/4fold_participant.yml
 trainer:
   logger:
     class_path: pytorch_lightning.loggers.TensorBoardLogger
     init_args:
-      save_dir: ./lightning_logs
-      name: informer_pretraining
-      version: local 
+      save_dir: ./lightning_logs/2024/cluster/
+      name: new_multitask_informer_pretraining
+      version: foldx # TODO: I think this and prev line gets overridden in the call to multitask_infrmer_comp in slurm_,,,_template.sh
   enable_checkpointing: true
   callbacks: 
     - class_path: pytorch_lightning.callbacks.ModelCheckpoint
       init_args:
         monitor: val_loss
+        save_last: true
   default_root_dir: null
   gradient_clip_val: 0.5
   gradient_clip_algorithm: null
@@ -31,7 +32,7 @@ trainer:
   check_val_every_n_epoch: 1
   fast_dev_run: false
   accumulate_grad_batches: null
-  max_epochs: null
+  max_epochs: 1000
   min_epochs: null
   max_steps: -1
   min_steps: null
@@ -41,8 +42,8 @@ trainer:
   limit_test_batches: null
   limit_predict_batches: null
   val_check_interval: null
-  log_every_n_steps: 50
-  accelerator: null
+  log_every_n_steps: 100
+  accelerator: gpu
   strategy: null
   sync_batchnorm: false
   precision: 32
@@ -54,10 +55,10 @@ trainer:
   benchmark: null
   deterministic: null
   reload_dataloaders_every_n_epochs: 0
-  auto_lr_find: false
+  auto_lr_find: true #TODO: this is new and untested
   replace_sampler_ddp: true
   detect_anomaly: false
-  auto_scale_batch_size: false
+  auto_scale_batch_size: power
   plugins: null
   amp_backend: native
   amp_level: null
@@ -65,13 +66,14 @@ trainer:
   multiple_trainloader_mode: max_size_cycle
 model:
   tasks:
-  - fi
+  - fm
   - pc
   - cl
   - rc
+  - sr
   enc_in: 2
   dec_in: 2
-  c_out: 2
+  c_out: 3
   pc_seq_length: 500
   label_length: 100
   pred_length: 150
@@ -82,20 +84,26 @@ model:
   e_layers: 3
   d_layers: 2
   d_ff: 512
-  dropout: 0.05
+  dropout: 0.1
   attn: prob
   activation: gelu
   output_attention: false
   distil: false
   mix: true
-  class_weights:
-  - 2.43
-  - 0.63
-  learning_rate: 0.001
+  class_weights: # these are class weights of the multiclass fixation labels including fixation regression
+  - 1.79
+  - 0.51
+  - 2.09
+  learning_rate: 0.004 # per Zhou et al. 2021
   freeze_encoder: false
 data:
-  data_dir: ./data/processed/fixation
-  label_filepath: ./data/EML/EML1_pageLevel_500+_matchEDMinstances.csv
+  data_dir: ./data/EML/gaze+fix+reg_interleaved16/
+  label_filepath: ./data/EML/EML1_pageLevel_500+_matchEDMinstances_interleaved16.csv
+  file_label_col: readWPM
+  sample_label_col: regression_label
+  scale_file_label: true
+  scale_sample_label: false
+  scale_gaze: true #TODO: get new gaze mean and sd 
   load_setup_path: null
   test_dir: null
   train_dataset: null

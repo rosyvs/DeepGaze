@@ -116,7 +116,7 @@ class InformerEncoderDecoderModel(LightningModule):
                 enc_in: int=2, 
                 dec_in: int=1, 
                 c_out: int=2, 
-                pc_seq_len: int=250, 
+                pc_seq_length: int=250, 
                 label_length: int=100, 
                 pred_length: int=150,
                 padding: int=0,

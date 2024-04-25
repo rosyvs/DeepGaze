@@ -64,7 +64,7 @@ model:
   enc_in: 2
   dec_in: 2
   c_out: 2
-  pc_seq_len: 500
+  pc_seq_length: 500
   label_length: 100
   pred_length: 100
   padding: 0

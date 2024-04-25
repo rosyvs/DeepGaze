@@ -1,20 +1,22 @@
 # pytorch_lightning==1.7.6
-seed_everything: 303
+seed_everything: 21
 fold_number: 0
+split_filepath: ./data_splits/4fold_participant/seed21.yml
 num_folds: 4
-split_filepath: ./data_splits/4fold_participant.yml
 trainer:
   logger:
     class_path: pytorch_lightning.loggers.TensorBoardLogger
     init_args:
       save_dir: ./lightning_logs
-      name: informer_pretraining
-      version: local 
+      name: new_multitask_informer_comp
+      version: foldx
   enable_checkpointing: true
   callbacks: 
     - class_path: pytorch_lightning.callbacks.ModelCheckpoint
       init_args:
         monitor: val_loss
+        save_last: true
+        save_top_k: 2 
   default_root_dir: null
   gradient_clip_val: 0.5
   gradient_clip_algorithm: null
@@ -31,7 +33,7 @@ trainer:
   check_val_every_n_epoch: 1
   fast_dev_run: false
   accumulate_grad_batches: null
-  max_epochs: null
+  max_epochs: 100
   min_epochs: null
   max_steps: -1
   min_steps: null
@@ -64,42 +66,27 @@ trainer:
   move_metrics_to_cpu: false
   multiple_trainloader_mode: max_size_cycle
 model:
-  tasks:
-  - fi
-  - pc
-  - cl
-  - rc
   enc_in: 2
-  dec_in: 2
-  c_out: 2
-  pc_seq_length: 500
-  label_length: 100
-  pred_length: 150
-  padding: 0
   factor: 5
   d_model: 512
   n_heads: 8
   e_layers: 3
-  d_layers: 2
   d_ff: 512
   dropout: 0.05
   attn: prob
   activation: gelu
   output_attention: false
   distil: false
-  mix: true
-  class_weights:
-  - 2.43
-  - 0.63
   learning_rate: 0.001
-  freeze_encoder: false
+  encoder_ckpt: PLACEHOLDER
+  freeze_encoder: true
 data:
-  data_dir: ./data/processed/fixation
+  data_dir: ./data/EML/gaze+fix+reg/
   label_filepath: ./data/EML/EML1_pageLevel_500+_matchEDMinstances.csv
+  label_col: Rote_X
   load_setup_path: null
   test_dir: null
   train_dataset: null
-  val_dataset: null
   test_dataset: null
   train_fold: null
   val_fold: null
@@ -108,6 +95,4 @@ data:
   batch_size: 32
   pin_memory: true
   drop_last: true
-  min_sequence_length: 500
-  contrastive: true
-
+  scale_gaze: true

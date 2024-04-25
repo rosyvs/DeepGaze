@@ -225,7 +225,7 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
         self, 
         tasks: List[str]=["fi", "pc", "cl", "rc"], 
         sequence_length: int=250, 
-        pc_seq_len: int=250,
+        pc_seq_length: int=250,
         pred_length: int=100, 
         hidden_dim: int=128, # aka d_model in informer
         class_weights: List[float]=[3.,1.], 
@@ -340,7 +340,7 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
                 task_predictions["fm"] = preds
                 del enc
             elif task == "pc":
-                X_pc, y_pc = predictive_coding_batch(X, self.hparams.pc_seq_len, self.hparams.pred_length, self.hparams.label_length)
+                X_pc, y_pc = predictive_coding_batch(X, self.hparams.pc_seq_length, self.hparams.pred_length, self.hparams.label_length)
                 enc = self.encoder(X_pc)
                 logits = self.pc_decoder(enc).squeeze()
                 assert(logits.shape == y_pc.shape)
@@ -389,7 +389,7 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
                 task_metric = self.fm_metric(probs, targets_fm)
                 del enc, probs, targets_fm, fix_y
             elif task == "pc":
-                X_pc, y_pc = predictive_coding_batch(X, self.hparams.pc_seq_len, self.hparams.pred_length, self.hparams.label_length)
+                X_pc, y_pc = predictive_coding_batch(X, self.hparams.pc_seq_length, self.hparams.pred_length, self.hparams.label_length)
                 enc = self.encoder(X_pc)
                 logits = self.pc_decoder(enc).squeeze()
                 assert(logits.shape == y_pc.shape) #

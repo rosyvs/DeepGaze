@@ -73,7 +73,7 @@ model:
   enc_in: 2
   dec_in: 2
   c_out: 3
-  pc_seq_length: 50 # was 500, TODO: allow variable length
+  pc_seq_length: 35 # was 500, TODO: allow variable length
   label_length: 10 
   pred_length: 15
   padding: 0
@@ -83,7 +83,7 @@ model:
   e_layers: 3
   d_layers: 2
   d_ff: 64 # 512 in real thing
-  dropout: 0.1 # TODO: 
+  dropout: 0.1 # 
   attn: prob
   activation: gelu
   output_attention: false
@@ -115,6 +115,6 @@ data:
   batch_size: 32
   pin_memory: true
   drop_last: true
-  min_sequence_length: 500 
+  min_sequence_length: 500
   contrastive: true
 
