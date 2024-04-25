@@ -220,7 +220,7 @@ class InformerEncoderDecoderModel(LightningModule):
             raise e
 
         # Predictive Coding:
-        X_pc, Y_pc = predictive_coding_batch(X, self.hparams.sequence_length, self.hparams.label_length, self.hparams.pred_length)
+        X_pc, Y_pc = predictive_coding_batch(X, self.hparams.pc_seq_length, self.hparams.label_length, self.hparams.pred_length)
         if self.hparams.output_attention:
             logits = self(X_pc, Y_pc)[0]
         else:
@@ -264,7 +264,7 @@ class InformerEncoderDecoderModel(LightningModule):
     def add_model_specific_args(parent_parser):
         parser = parent_parser.add_argument_group("InformerEncoderDecoderModel")
         parser.add_argument('--learning_rate', type=float, default=0.001)
-        parser.add_argument('--sequence_length', type=int, default=250)
+        parser.add_argument('--pc_seq_length', type=int, default=250)
         parser.add_argument('--label_length', type=int, default=100, help='start token length of Informer decoder')
         parser.add_argument('--pred_length', type=int, default=150, help='prediction sequence length')
         parser.add_argument('--enc_in', type=int, default=2, help='encoder input size')
@@ -294,7 +294,7 @@ class InformerEncoderFixationModel(LightningModule):
                 enc_in: int=2, # one neuron for each of X and Y coord
                 dec_in: int=1, 
                 c_out: int=2, # one neuron for each of X and Y coord
-                sequence_length: int=250, 
+                pc_seq_length: int=250, 
                 label_length: int=100, 
                 pred_length: int=150,
                 padding: int=0,
@@ -423,7 +423,7 @@ class InformerEncoderFixationModel(LightningModule):
     def add_model_specific_args(parent_parser):
         parser = parent_parser.add_argument_group("InformerEncoderDecoderModel")
         parser.add_argument('--learning_rate', type=float, default=0.001)
-        parser.add_argument('--sequence_length', type=int, default=250)
+        parser.add_argument('--pc_seq_length', type=int, default=250)
         parser.add_argument('--label_length', type=int, default=100, help='start token length of Informer decoder')
         parser.add_argument('--pred_length', type=int, default=150, help='prediction sequence length')
         parser.add_argument('--enc_in', type=int, default=2, help='encoder input size')
@@ -454,7 +454,7 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
                 dec_in: int=1, 
                 c_out: int=2, # output layer size for pretraining fixation classifier 
                 pc_seq_length: int=250,
-                sequence_length: int=500, 
+                pc_seq_length: int=500, 
                 label_length: int=100, 
                 pred_length: int=150,
                 padding: int=0,
@@ -656,7 +656,7 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
     def add_model_specific_args(parent_parser):
         parser = parent_parser.add_argument_group("InformerMultiTaskModel")
         parser.add_argument('--learning_rate', type=float, default=0.001)
-        parser.add_argument('--sequence_length', type=int, default=250)
+        parser.add_argument('--pc_seq_length', type=int, default=250)
         parser.add_argument('--pc_seq_length', type=int, default=250, help = 'sequence length for predictive coding task')
         parser.add_argument('--label_length', type=int, default=100, help='start token length of Informer decoder')
         parser.add_argument('--pred_length', type=int, default=150, help='prediction sequence length')
@@ -879,7 +879,7 @@ class InformerEncoderMulticlassModel(InformerEncoderFixationModel):
     def add_model_specific_args(parent_parser):
         parser = parent_parser.add_argument_group("InformerEncoderDecoderModel")
         parser.add_argument('--learning_rate', type=float, default=0.001)
-        parser.add_argument('--sequence_length', type=int, default=250)
+        parser.add_argument('--pc_seq_length', type=int, default=250)
         parser.add_argument('--label_length', type=int, default=100, help='start token length of Informer decoder')
         parser.add_argument('--pred_length', type=int, default=150, help='prediction sequence length')
         parser.add_argument('--enc_in', type=int, default=2, help='encoder input size')
