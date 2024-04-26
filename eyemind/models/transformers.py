@@ -474,6 +474,7 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
                 learning_rate: float=1e-3, 
                 freeze_encoder: bool=False):
         super().__init__()
+        self.binarize_threshold = binarize_threshold
         self.save_hyperparameters()
         if len(tasks) == 0:
             raise ValueError("There must be at least one task. Length of tasks is 0")

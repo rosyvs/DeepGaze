@@ -235,7 +235,9 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
         use_conv: bool=True, 
         learning_rate: float=1e-3, 
         freeze_encoder: bool=False):
+
         super().__init__(sequence_length, hidden_dim, class_weights, num_classes, use_conv, learning_rate, freeze_encoder)
+        self.binarize_threshold = binarize_threshold
         self.save_hyperparameters()
         if len(tasks) == 0:
             raise ValueError("There must be at least one task. Length of tasks is 0")
