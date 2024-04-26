@@ -677,6 +677,7 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
         parser.add_argument('--class_weights', type=float, nargs='*', default=[3., 1.])
         parser.add_argument('--tasks', type=str, nargs='*', default=["fm", "cl", "rc", "pc","sr"])
         parser.add_argument('--freeze_encoder', type=bool, default=False)
+        parser.add_argument('--binarize_threshold', type=float, default=0.5)
         return parser
     
 class InformerClassifierModel(LightningModule):
