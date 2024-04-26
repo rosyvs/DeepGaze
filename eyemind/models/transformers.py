@@ -470,11 +470,9 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
                 distil: bool=True, 
                 mix: bool=True, 
                 class_weights: List[float]=[3.,1.],
-                binarize_threshold: float=0.5,
                 learning_rate: float=1e-3, 
                 freeze_encoder: bool=False):
         super().__init__()
-        self.binarize_threshold = binarize_threshold
         self.save_hyperparameters()
         if len(tasks) == 0:
             raise ValueError("There must be at least one task. Length of tasks is 0")
@@ -573,7 +571,7 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
             elif task == "fi":
                 enc = self.encoder(X)
                 logits = self.fi_decoder(enc).squeeze().reshape(-1,2)
-                targets_fi = binarize_labels(fix_y.reshape(-1).long(), self.binarize_threshold) # ensures labels are binary even if mroe classes in file. 
+                targets_fi = binarize_labels(fix_y.reshape(-1).long()) # ensures labels are binary even if mroe classes in file. 
                 task_loss = self.fi_criterion(logits, targets_fi)
                 probs = self._get_probs(logits)
                 task_metric = self.fi_metric(probs, targets_fi.int())
@@ -678,7 +676,7 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
         parser.add_argument('--class_weights', type=float, nargs='*', default=[3., 1.])
         parser.add_argument('--tasks', type=str, nargs='*', default=["fm", "cl", "rc", "pc","sr"])
         parser.add_argument('--freeze_encoder', type=bool, default=False)
-        parser.add_argument('--binarize_threshold', type=float, default=0.5)
+        # parser.add_argument('--binarize_threshold', type=float, default=0.5)
         return parser
     
 class InformerClassifierModel(LightningModule):

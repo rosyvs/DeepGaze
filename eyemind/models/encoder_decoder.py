@@ -229,7 +229,6 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
         pred_length: int=100, 
         hidden_dim: int=128, # aka d_model in informer
         class_weights: List[float]=[3.,1.], 
-        binarize_threshold: float=0.5,
         max_rmse_err: float=70., 
         num_classes: int=2, 
         use_conv: bool=True, 
@@ -237,7 +236,6 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
         freeze_encoder: bool=False):
 
         super().__init__(sequence_length, hidden_dim, class_weights, num_classes, use_conv, learning_rate, freeze_encoder)
-        self.binarize_threshold = binarize_threshold
         self.save_hyperparameters()
         if len(tasks) == 0:
             raise ValueError("There must be at least one task. Length of tasks is 0")
@@ -377,7 +375,7 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
             elif task == "fi":
                 enc = self.encoder(X)
                 logits = self.fi_decoder(enc).squeeze().reshape(-1,2)
-                targets_fi = binarize_labels(fix_y.reshape(-1).long(), self.binarize_threshold) # ensures labels are binary even if mroe classes in file. 
+                targets_fi = binarize_labels(fix_y.reshape(-1).long()) # ensures labels are binary even if mroe classes in file. 
                 task_loss = self.fi_criterion(logits, targets_fi)
                 probs = self._get_probs(logits)
                 task_metric = self.fi_metric(probs, targets_fi.int())
