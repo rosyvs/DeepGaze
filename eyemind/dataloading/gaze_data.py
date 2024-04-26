@@ -10,7 +10,7 @@ from sklearn.model_selection import train_test_split
 import yaml
 from eyemind.dataloading.transforms import StandardScaler, GazeScaler
 from eyemind.dataloading.load_dataset import label_samples, filter_files_by_seqlen, get_filenames_for_dataset, get_label_df, get_label_mapper, get_participant_splits, get_stratified_group_splits, limit_sequence_len, load_file_folds, write_splits, label_samples_and_files
-from eyemind.dataloading.batch_loading import random_collate_fn, random_multitask_collate_fn, split_collate_fn, random_multilabel_multitask_collate_fn
+from eyemind.dataloading.batch_loading import random_collate_fn, random_multitask_collate_fn, split_collate_fn, random_multilabel_multitask_collate_fn, variable_length_random_collate_fn, variable_length_random_multilabel_multitask_collate_fn, variable_length_random_multitask_collate_fn
 import torchvision.transforms as T
 from torch.utils.data import Dataset, DataLoader, Sampler, Subset
 
@@ -536,7 +536,7 @@ class SequenceToLabelDataModule(GroupStratifiedNestedCVDataModule, BaseGazeDataM
 
     @property
     def x_transforms(self):
-        return T.Compose([LimitSequenceLength(self.sequence_length), ToTensor()])
+        return T.Compose([LimitSequenceLength(self.sequence_length), ToTensor()]) 
 
     @property
     def y_transforms(self):
@@ -1177,3 +1177,35 @@ class VariableSequenceToSequenceDataModule(SequenceToSequenceDataModule):
         group.add_argument("--min_sequence_length", type=int, default=500)
         group.add_argument("--max_sequence_length", type=int, default=500)
         return parent_parser
+
+
+class VariableSequenceToLabelDataModule(SequenceToLabelDataModule):
+    # initialise supercass
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # remove sequence_length
+        self.sequence_length = None # because it is determined by min and max sequence length now
+        # add min and max sequence length
+        self.min_sequence_length = kwargs.get("min_sequence_length", 500)
+        self.max_sequence_length = kwargs.get("max_sequence_length", 500)
+
+    def get_dataloader(self, dataset: Dataset):
+        return DataLoader(
+            dataset, 
+            batch_size=self.batch_size, 
+            num_workers=self.num_workers, 
+            drop_last=self.drop_last, 
+            pin_memory=self.pin_memory,
+            collate_fn=partial(variable_length_random_collate_fn, self.min_sequence_length, self.max_sequence_length))
+    
+    @property # overridign the x_transform with limit sequence length
+    def x_transforms(self):
+        return ToTensor()
+
+    @staticmethod
+    def add_datamodule_specific_args(parent_parser):
+        group = parent_parser.add_argument_group("VariableSequenceToLabelDataModule")
+        group.add_argument("--min_sequence_length", type=int, default=500)
+        group.add_argument("--max_sequence_length", type=int, default=500)
+        return parent_parser
+

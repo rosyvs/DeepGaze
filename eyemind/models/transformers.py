@@ -593,7 +593,7 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
                 Y_pc=Y_pc[:,-self.hparams.pred_length:] # take just the predicted part as target
                 assert(logits.shape == Y_pc.shape)
                 mask = Y_pc > -180 # TODO: is -180 just mussing data or also representing pad values? 
-                # Surely also needs to be masking seen portion of data (i.e. label_length)
+                 # Surely also needs to be masking seen portion of data (i.e. label_length)
                 task_loss = self.pc_criterion(logits[mask], Y_pc[mask])
                 logits = self.scaler.inverse_transform(logits)
                 Y_pc = self.scaler.inverse_transform(Y_pc)
@@ -779,16 +779,20 @@ class InformerClassifierModel(LightningModule):
 
     def _step(self, batch, batch_idx, step_type):
         try:
-            X, y = batch
+            if len(batch) == 2:
+                X, y = batch
+                pad_mask=ones_like(X)
+            elif len(batch) == 3:
+                X, y, pad_mask = batch
         except ValueError as e:
             print(f"{batch}")
             raise e
-        logits = self(X).squeeze()
-        loss = self.criterion(logits, y)
+        logits = self(X, pad_mask).squeeze()
+        loss=self.criterion(logits[pad_mask], y[pad_mask] )
         probs = self._get_probs(logits)
         y = y.int()
-        accuracy = self.accuracy_metric(probs, y)
-        auroc = self.auroc_metric(probs, y)
+        accuracy = self.accuracy_metric(probs[pad_mask], y[pad_mask])
+        auroc = self.auroc_metric(probs[pad_mask], y[pad_mask])
         self.logger.experiment.add_scalars("losses", {f"{step_type}_loss": loss}, self.current_epoch)        
         self.log(f"{step_type}_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
         self.log(f"{step_type}_accuracy", accuracy, on_step=True, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)

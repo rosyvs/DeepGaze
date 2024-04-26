@@ -30,6 +30,7 @@ def main(args):
                 else:
                     print(f'no existing ckpt in resume_dir for fold {i}')
                     ckpt_path = "" 
+            print(f"Resuming from {ckpt_path}")
         else:
             ckpt_path = "" 
         

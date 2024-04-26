@@ -287,7 +287,6 @@ def predictive_coding_batch_variable_length(X_batch, X_pad_mask, label_length, p
 
 # full-sequence collate functions
 def variable_length_random_collate_fn(sequence_length, batch, max_sequence_length):
-    # TODO: these to return pad masks as well, for passing to model
     X, fix_y = zip(*batch)
     bs = len(X)
     fs = X[0].shape[-1]

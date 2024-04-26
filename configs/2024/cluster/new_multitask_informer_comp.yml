@@ -8,7 +8,7 @@ trainer:
     class_path: pytorch_lightning.loggers.TensorBoardLogger
     init_args:
       save_dir: ./lightning_logs
-      name: new_multitask_informer_comp
+      name: comp_fullseq
       version: foldx
   enable_checkpointing: true
   callbacks: 
@@ -90,7 +90,8 @@ data:
   test_dataset: null
   train_fold: null
   val_fold: null
-  sequence_length: 500
+  min_sequence_length: 500
+  max_sequence_length: 10000
   num_workers: 4
   batch_size: 32
   pin_memory: true
