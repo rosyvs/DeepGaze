@@ -124,7 +124,7 @@ def get_samplers():
 
 def binarize_labels(y_data, threshold=0.5):
     # generate 0 if below threshold, 1 if above
-    y_data = np.where(y_data > threshold, 1, 0)
+    y_data = (y_data > threshold).int()
     return y_data
 
 # def stratified_group_split(X, y, folds=4):
