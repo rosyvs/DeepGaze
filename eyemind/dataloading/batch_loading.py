@@ -169,27 +169,7 @@ def predictive_coding_batch(X_batch, pc_seq_length, label_length, pred_length, o
     Y_seq = X_batch[:,pc_seq_length-label_length:pc_seq_length+pred_length,:] # taken from later in the sequence, this is the target
     return X_seq, Y_seq
 
-def predictive_coding_batch_variable_length(X_batch, X_pad_mask, label_length, pred_length): 
-    # here X_pc is allowed to be variable length
-    # X_pad_mask is a mask of the same shape as X_batch, with 1s where there is data and 0s where there is padding
-    # get maximum sequence length
-    max_seq_len = X_pad_mask.sum(dim=1).max().item()-pred_length
-    batch_size = X_batch.shape[0]
-    X_pc = torch.zeros((batch_size, max_seq_len, X_batch.shape[2]))
-    Y_pc = torch.zeros((batch_size, label_length+pred_length, X_batch.shape[2]))
-    X_pc_mask = torch.zeros((batch_size, max_seq_len))
-    for x, pad in zip(X_batch, X_pad_mask):
-        assert x[0].shape[0] == x[1].shape[0], f'X_batch and X_pad_mask must have the same length'
-        # select x where pad is 1
-        xpc = x[pad==1][:-pred_length]
-        ypc = x[pad==1][-(pred_length+label_length):]
-        # re-pad to max_seq_len with padding at start of sequence #TODO: use flag value for these? 
-        pad_mask = torch.cat([torch.zeros((max_seq_len-xpc.shape[0])), torch.ones(xpc.shape[0])], dim=0)
-        xpc = torch.cat([torch.zeros((max_seq_len-xpc.shape[0], xpc.shape[1])), xpc], dim=0)
-        X_pc[i] = xpc
-        Y_pc[i] = ypc
-        X_pc_mask[i] = pad_mask
-    return X_pc, Y_pc, X_pc_mask
+
 # predictive_coding_batch_variable_length(X, torch.ones_like(X), self.hparams.label_length, self.hparams.pred_length)
 
 
@@ -283,24 +263,53 @@ def fixation_batch(input_length, label_length, pred_length, X, y, padding=-1.):
 
 
 
-
+def predictive_coding_batch_variable_length(X_batch, X_pad_mask, label_length, pred_length): 
+    # here X_pc is allowed to be variable length
+    # X_pad_mask is a mask of the same shape as X_batch, with 1s where there is data and 0s where there is padding
+    # get maximum sequence length
+    max_seq_len = X_pad_mask.sum(dim=1).max().item()-pred_length
+    batch_size = X_batch.shape[0]
+    X_pc = torch.zeros((batch_size, max_seq_len, X_batch.shape[2]))
+    Y_pc = torch.zeros((batch_size, label_length+pred_length, X_batch.shape[2]))
+    X_pc_mask = torch.zeros((batch_size, max_seq_len))
+    for x, pad in zip(X_batch, X_pad_mask):
+        assert x[0].shape[0] == x[1].shape[0], f'X_batch and X_pad_mask must have the same length'
+        # select x where pad is 1
+        xpc = x[pad==1][:-pred_length]
+        ypc = x[pad==1][-(pred_length+label_length):]
+        # re-pad to max_seq_len with padding at start of sequence #TODO: use flag value for these? 
+        pad_mask = torch.cat([torch.zeros((max_seq_len-xpc.shape[0])), torch.ones(xpc.shape[0])], dim=0)
+        xpc = torch.cat([torch.zeros((max_seq_len-xpc.shape[0], xpc.shape[1])), xpc], dim=0)
+        X_pc[i] = xpc
+        Y_pc[i] = ypc
+        X_pc_mask[i] = pad_mask
+    return X_pc, Y_pc, X_pc_mask
 
 # full-sequence collate functions
-def variable_length_random_collate_fn(sequence_length, batch,  min_seq=1.0, max_seq=1.0):
+def variable_length_random_collate_fn(sequence_length, batch, max_sequence_length):
+    # TODO: these to return pad masks as well, for passing to model
     X, fix_y = zip(*batch)
     bs = len(X)
     fs = X[0].shape[-1]
-    if min_seq != max_seq:
-        sequence_length = random.randrange(int(min_seq*sequence_length), int(max_seq*sequence_length))
-    X_batched = torch.zeros((bs,sequence_length,fs))
-    fix_y_batched = torch.zeros((bs, sequence_length))
+    lens = [x.shape[0] for x in X] # sequence lengths
+    max_sequence_length = min(max_sequence_length, max(lens)) # if max_sequence_length is greater than the longest sequence, set it to the longest sequence
+    X_batched = torch.zeros((bs,max_sequence_length,fs))
+    fix_y_batched = torch.zeros((bs, max_sequence_length))
+    pad_mask = torch.zeros((batch_size, max_sequence_length))
+
     for i in range(bs):
         full_sl = X[i].shape[0]
-        start_ind = random.randrange(0,full_sl-sequence_length)
-        end_ind = start_ind + sequence_length 
-        X_batched[i] = X[i][start_ind:end_ind,:]
-        fix_y_batched[i] = fix_y[i][start_ind:end_ind]
-    return X_batched, fix_y_batched
+        if full_sl > max_sequence_length:
+            start_ind = random.randrange(0,full_sl-max_sequence_length)
+            end_ind = start_ind + max_sequence_length 
+            X_batched[i] = X[i][start_ind:end_ind,:]
+            fix_y_batched[i] = fix_y[i][start_ind:end_ind]
+            pad_mask[i, :] = 1
+        else:
+            X_batched[i, :full_sl] = X[i]
+            fix_y_batched[i, :full_sl] = fix_y[i]
+            pad_mask[i, :full_sl] = 1
+    return X_batched, fix_y_batched, pad_mask
     
 def variable_length_random_multitask_collate_fn(max_sequence_length, batch, CL_ratio = [0.2, 0.4]):
     """

@@ -877,9 +877,6 @@ class InformerEncoderMulticlassModel(InformerEncoderFixationModel):
     def add_model_specific_args(parent_parser):
         parser = parent_parser.add_argument_group("InformerEncoderDecoderModel")
         parser.add_argument('--learning_rate', type=float, default=0.001)
-        parser.add_argument('--pc_seq_length', type=int, default=250)
-        parser.add_argument('--label_length', type=int, default=100, help='start token length of Informer decoder')
-        parser.add_argument('--pred_length', type=int, default=150, help='prediction sequence length')
         parser.add_argument('--enc_in', type=int, default=2, help='encoder input size')
         parser.add_argument('--dec_in', type=int, default=1, help='decoder input size')
         parser.add_argument('--c_out', type=int, default=3, help='output size, n classes')
