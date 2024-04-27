@@ -8,8 +8,8 @@ trainer:
     class_path: pytorch_lightning.loggers.TensorBoardLogger
     init_args:
       save_dir: ./lightning_logs/2024/cluster/
-      name: pretrain_5task_oldOptim_downsamp
-      version: foldx #  this and prev line gets overridden in the call to multitask_infrmer_comp in slurm_,,,_template.sh
+      name: pretrain_4task_downsamp
+      version: foldx # TODO: I think this and prev line gets overridden in the call to multitask_infrmer_comp in slurm_,,,_template.sh
   enable_checkpointing: true
   callbacks: 
     - class_path: pytorch_lightning.callbacks.ModelCheckpoint
@@ -26,7 +26,7 @@ trainer:
   auto_select_gpus: false
   tpu_cores: null
   ipus: null
-  enable_progress_bar: true # maybe this will fix the slurm log excessive printing
+  enable_progress_bar: true
   overfit_batches: 0.0
   track_grad_norm: -1
   check_val_every_n_epoch: 1
@@ -55,7 +55,7 @@ trainer:
   benchmark: null
   deterministic: null
   reload_dataloaders_every_n_epochs: 0
-  auto_lr_find: false 
+  auto_lr_find: false #TODO: this is new and untested
   replace_sampler_ddp: true
   detect_anomaly: false
   auto_scale_batch_size: power
@@ -66,14 +66,13 @@ trainer:
   multiple_trainloader_mode: max_size_cycle
 model:
   tasks:
-  - fm
+  - fi
   - pc
   - cl
   - rc
-  - sr
   enc_in: 2
   dec_in: 2
-  c_out: 3
+  c_out: 2
   pc_seq_length: 350
   label_length: 100
   pred_length: 150
@@ -84,23 +83,22 @@ model:
   e_layers: 3
   d_layers: 2
   d_ff: 512
-  dropout: 0.05
+  dropout: 0.1
   attn: prob
   activation: gelu
   output_attention: false
   distil: false
   mix: true
-  class_weights: # these are class weights of the multiclass fixation labels including fixation regression
-  - 1.79
-  - 0.51
-  - 2.09
-  learning_rate: 0.002 #note this is 0.001 * batch size multiplier 
+  class_weights: # these are class weights of the fixation labels with 1,2 both treated as fixation (binarized)
+  - 2.68
+  - 0.61
+  learning_rate: 0.004 # per Zhou et al. 2021
   freeze_encoder: false
 data:
   data_dir: ./data/EML/gaze+fix+reg/
   label_filepath: ./data/EML/EML1_pageLevel_500+_matchEDMinstances.csv
-  file_label_col: readWPM
-  sample_label_col: regression_label
+  file_label_col: null
+  sample_label_col: fixation_label
   scale_file_label: true
   scale_sample_label: false
   scale_gaze: true #TODO: get new gaze mean and sd 
@@ -113,7 +111,7 @@ data:
   val_fold: null
   sequence_length: 500
   num_workers: 16
-  batch_size: 64 # was 32
+  batch_size: 32
   pin_memory: true
   drop_last: true
   min_sequence_length: 500

@@ -26,7 +26,7 @@ trainer:
   auto_select_gpus: false
   tpu_cores: null
   ipus: null
-  enable_progress_bar: true # maybe this will fix the slurm log excessive printing
+  enable_progress_bar: false # maybe this will fix the slurm log excessive printing
   overfit_batches: 0.0
   track_grad_norm: -1
   check_val_every_n_epoch: 1
@@ -94,7 +94,7 @@ model:
   - 1.79
   - 0.51
   - 2.09
-  learning_rate: 0.002 #note this is 0.001 * batch size multiplier 
+  learning_rate: 0.001 #note this is 0.001 * batch size multiplier 
   freeze_encoder: false
 data:
   data_dir: ./data/EML/gaze+fix+reg/
@@ -113,7 +113,7 @@ data:
   val_fold: null
   sequence_length: 500
   num_workers: 16
-  batch_size: 64 # was 32
+  batch_size: 32 # was 32
   pin_memory: true
   drop_last: true
   min_sequence_length: 500

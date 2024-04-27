@@ -72,7 +72,7 @@ model:
   - rc
   enc_in: 2
   dec_in: 2
-  c_out: 3
+  c_out: 2
   pc_seq_length: 350
   label_length: 100
   pred_length: 150
@@ -89,17 +89,16 @@ model:
   output_attention: false
   distil: false
   mix: true
-  class_weights: # these are class weights of the multiclass fixation labels including fixation regression
-  - 1.79
-  - 0.51
-  - 2.09
+  class_weights: # these are class weights of the fixation labels with 1,2 both treated as fixation (binarized)
+  - 2.68
+  - 0.61
   learning_rate: 0.004 # per Zhou et al. 2021
   freeze_encoder: false
 data:
   data_dir: ./data/EML/gaze+fix+reg_interleaved16/
   label_filepath: ./data/EML/EML1_pageLevel_500+_matchEDMinstances_interleaved16.csv
   file_label_col: null
-  sample_label_col: regression_label
+  sample_label_col: fixation_label
   scale_file_label: true
   scale_sample_label: false
   scale_gaze: true #TODO: get new gaze mean and sd 

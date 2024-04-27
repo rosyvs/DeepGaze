@@ -18,7 +18,7 @@ from eyemind.models.informer.models.attn import FullAttention, ProbAttention, At
 from eyemind.models.informer.models.embed import GazeEmbedding
 from eyemind.models.loss import RMSELoss
 from eyemind.dataloading.load_dataset import binarize_labels
-
+from eyemind.analysis.visualize import plot_scanpath_labels, plot_scanpath_pc, viz_coding
 class InformerEncoder(nn.Module):
     def __init__(self,
                 enc_in: int=2,
@@ -240,7 +240,7 @@ class InformerEncoderDecoderModel(LightningModule):
 
     def configure_optimizers(self):
         params = self.decoder.parameters() if self.hparams.freeze_encoder else list(self.encoder.parameters()) + list(self.decoder.parameters())
-        optimizer = torch.optim.AdamW(params, lr=self.hparams.learning_rate)
+        optimizer = torch.optim.Adam(params, lr=self.hparams.learning_rate)
         res = {"optimizer": optimizer}
         res['lr_scheduler'] = {"scheduler": torch.optim.lr_scheduler.StepLR(optimizer, step_size=max(1,int(self.trainer.max_epochs / 5)), gamma=0.5)}
         return res
@@ -399,7 +399,7 @@ class InformerEncoderFixationModel(LightningModule):
 
     def configure_optimizers(self):
         params = self.decoder.parameters() if self.hparams.freeze_encoder else list(self.encoder.parameters()) + list(self.decoder.parameters())
-        optimizer = torch.optim.AdamW(params, lr=self.hparams.learning_rate)
+        optimizer = torch.optim.Adam(params, lr=self.hparams.learning_rate)
         res = {"optimizer": optimizer}
         res['lr_scheduler'] = {"scheduler": torch.optim.lr_scheduler.StepLR(optimizer, step_size=max(1,int(self.trainer.max_epochs / 5)), gamma=0.5)}
         return res
@@ -446,6 +446,8 @@ class InformerEncoderFixationModel(LightningModule):
         parser.add_argument('--freeze_encoder', type=bool, default=False)
         parser.add_argument('--max_rmse_err', type=float, default=70., help='clamps max rmse loss')
         return parser
+
+
 
 class InformerMultiTaskEncoderDecoder(LightningModule):
     def __init__(self,
@@ -555,6 +557,7 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
         else:
             raise ValueError('unpacked batch has {n_items} elements, check collate_fn is compatible with this model')
         total_loss = 0
+        # handle = plot_scanpath_labels(X[0,:,0].cpu(), X[0,:,1].cpu())
         for task in self.hparams.tasks: # TODO: pass these as a list of models each with own class defined separately
             if task == "cl":
                 enc1 = self.encoder(X)
@@ -571,7 +574,7 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
             elif task == "fi":
                 enc = self.encoder(X)
                 logits = self.fi_decoder(enc).squeeze().reshape(-1,2)
-                targets_fi = binarize_labels(fix_y.reshape(-1).long()) # ensures labels are binary even if mroe classes in file. 
+                targets_fi = binarize_labels(fix_y.reshape(-1)).long() # ensur.long()es labels are binary even if mroe classes in file. 
                 task_loss = self.fi_criterion(logits, targets_fi)
                 probs = self._get_probs(logits)
                 task_metric = self.fi_metric(probs, targets_fi.int())
@@ -583,6 +586,9 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
                 task_loss = self.fm_criterion(logits, targets_fm)
                 probs = self._get_probs(logits)
                 task_metric = self.fm_metric(probs, targets_fm)
+                # handle = plot_scanpath_labels(X[0,:,0].cpu(), X[0,:,1].cpu(), labels=fix_y[0,:].cpu().detach().float())
+                # handle = plot_scanpath_labels(X[0,:,0].cpu(), X[0,:,1].cpu())
+
                 del enc, probs, targets_fm, fix_y
             elif task == "pc":
                 X_pc, Y_pc = predictive_coding_batch(X, self.hparams.pc_seq_length, self.hparams.label_length, self.hparams.pred_length)
@@ -590,14 +596,15 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
                 logits = self.pc_decoder(enc, Y_pc, pred_length=self.hparams.pred_length).squeeze()[0] \
                      if self.hparams.output_attention else \
                         self.pc_decoder(enc, Y_pc, pred_length=self.hparams.pred_length).squeeze()
-                Y_pc=Y_pc[:,-self.hparams.pred_length:] # take just the predicted part as target
-                assert(logits.shape == Y_pc.shape)
-                mask = Y_pc > -180 # TODO: is -180 just mussing data or also representing pad values? 
+                target=Y_pc[:,-self.hparams.pred_length:] # take just the predicted part as target
+                assert(logits.shape == target.shape)
+                mask = target > -180 # TODO: is -180 just mussing data or also representing pad values? 
                  # Surely also needs to be masking seen portion of data (i.e. label_length)
-                task_loss = self.pc_criterion(logits[mask], Y_pc[mask])
+                task_loss = self.pc_criterion(logits[mask], target[mask])
                 logits = self.scaler.inverse_transform(logits)
-                Y_pc = self.scaler.inverse_transform(Y_pc)
-                task_metric = self.pc_metric(logits[mask], Y_pc[mask])
+                target = self.scaler.inverse_transform(target)
+                task_metric = self.pc_metric(logits[mask], target[mask])
+                # handle = plot_scanpath_pc(Y_pc[0,:,0].cpu(), Y_pc[0,:,1].cpu(), logits[0,:,0].cpu().detach().numpy(), logits[0,:,1].cpu().detach().numpy())
                 #task_loss = torch.clamp(self.pc_criterion(logits, Y_pc), max=self.hparams.max_rmse_err)
                 del X_pc, Y_pc
             elif task == "rc":
@@ -608,6 +615,7 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
                 logits = self.scaler.inverse_transform(logits)
                 y_rc = self.scaler.inverse_transform(X)
                 task_metric = self.rc_metric(logits[mask], y_rc[mask])
+                # handle = plot_scanpath_pc(y_rc[0,:,0].cpu(), y_rc[0,:,1].cpu(), logits[0,:,0].cpu().detach().numpy(), logits[0,:,1].cpu().detach().numpy())
                 #task_loss = torch.clamp(self.rc_criterion(logits, X), max=self.hparams.max_rmse_err)
                 #task_metric = self.rc_metric(logits, X)
                 del y_rc
@@ -630,7 +638,7 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
         params = [list(m.parameters()) for m in self.decoders]
         params.append(list(self.encoder.parameters()))
         params = reduce(lambda x,y: x + y, params)
-        optimizer = torch.optim.AdamW(params, lr=self.hparams.learning_rate)
+        optimizer = torch.optim.Adam(params, lr=self.hparams.learning_rate)
         res = {"optimizer": optimizer}
         res['lr_scheduler'] = {"scheduler": torch.optim.lr_scheduler.StepLR(optimizer, step_size=max(1,int(self.trainer.max_epochs / 5)), gamma=0.5)}
         return res
@@ -802,7 +810,7 @@ class InformerClassifierModel(LightningModule):
     def configure_optimizers(self):
         #params = self.classifier_head.parameters() if self.hparams.freeze_encoder else list(self.enc_embedding.parameters()) + list(self.encoder.parameters()) + list(self.classifier_head.parameters())
         params = self.parameters()
-        optimizer = torch.optim.AdamW(params, lr=self.hparams.learning_rate)
+        optimizer = torch.optim.Adam(params, lr=self.hparams.learning_rate)
         res = {"optimizer": optimizer}
         res['lr_scheduler'] = {"scheduler": torch.optim.lr_scheduler.StepLR(optimizer, step_size=max(1, int(self.trainer.max_epochs / 5)), gamma=0.5)}
         return res
@@ -1021,7 +1029,7 @@ class InformerEncoderScalarRegModel(LightningModule):
     def configure_optimizers(self):
         #params = self.classifier_head.parameters() if self.hparams.freeze_encoder else list(self.enc_embedding.parameters()) + list(self.encoder.parameters()) + list(self.classifier_head.parameters())
         params = self.parameters()
-        optimizer = torch.optim.AdamW(params, lr=self.hparams.learning_rate)
+        optimizer = torch.optim.Adam(params, lr=self.hparams.learning_rate)
         res = {"optimizer": optimizer}
         res['lr_scheduler'] = {"scheduler": torch.optim.lr_scheduler.StepLR(optimizer, step_size=max(1, int(self.trainer.max_epochs / 5)), gamma=0.5)}
         return res

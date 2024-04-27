@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.patches as mpatches
 import torch
-
+import numpy as np
 def plot_figures(preds, targets):
     num_plots = len(preds)
     rows = (num_plots // 5) + 1
@@ -14,7 +14,7 @@ def plot_figures(preds, targets):
             ax.step(np.arange(len(preds[0])),targets[j * i].numpy(), preds[j * i].numpy())
     plt.show()
 
-def plot_scanpath_labels(df,event=None,exclude=None, label=None):
+def plot_scanpath_labels_df(df,event=None,exclude=None, label=None):
     if event:
         temp_df = df.loc[df['event']==event]
     else: 
@@ -33,6 +33,36 @@ def plot_scanpath_labels(df,event=None,exclude=None, label=None):
     name = f'{temp_df["ParticipantID"].iloc[0]} {temp_df["event"].iloc[0]}'
     plt.title(name)
     plt.show() 
+
+def plot_scanpath_labels(x,y, labels=None, remove_masked=True):
+    na_mask_val=-180
+    # remove masked values
+    if remove_masked:
+        x[x<=na_mask_val]=np.nan
+        y[y<=na_mask_val]=np.nan
+        if labels is not None:
+            labels[labels==na_mask_val]=np.nan
+    fig,ax = plt.subplots()
+    ax.plot(x, -y, color='k')
+    if labels:
+        grouped = zip(x,y,labels)
+        groups = {}
+        unique_labels = set(labels)
+        for label in unique_labels:
+            ax.scatter(x[labels==label], -y[labels==label], s=(15 if label>0 else 1), alpha=.4, label=label)
+        ax.legend(title=label)
+    return fig
+
+def plot_scanpath_pc(x,y,pred_x,pred_y, remove_masked=True):
+    na_mask_val=-180
+    # remove masked values
+    if remove_masked:
+        x[x<=na_mask_val]=np.nan
+        y[y<=na_mask_val]=np.nan
+    fig,ax = plt.subplots()
+    ax.plot(x, -y, color='k')
+    ax.plot(pred_x, -pred_y, color='r')
+    return fig
 
 def viz_coding(inputs, preds, title):
     """

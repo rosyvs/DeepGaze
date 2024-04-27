@@ -36,6 +36,9 @@ class InformerDataModule(BaseSequenceToSequenceDataModule, ParticipantKFoldDataM
                 drop_last: bool = True,
                 min_sequence_length: int = 500,
                 contrastive: bool = False,
+                scale_gaze: Optional[bool] = False,
+                mean_gaze_xy: Optional[list]=[-0.698, -1.940],
+                std_gaze_xy: Optional[list]=[4.15, 3.286],
                 ):
         super().__init__(data_dir,
                         label_filepath,
@@ -60,6 +63,9 @@ class InformerDataModule(BaseSequenceToSequenceDataModule, ParticipantKFoldDataM
         self.contrastive = contrastive
         self.sample_label_col=sample_label_col #TODO: needed??
         self.file_label_col=file_label_col #TODO: needed??
+        self.scale_gaze =scale_gaze
+        self.mean_gaze_xy=mean_gaze_xy
+        self.std_gaze_xy=std_gaze_xy
 
     def prepare_data(self):
         '''
@@ -76,7 +82,8 @@ class InformerDataModule(BaseSequenceToSequenceDataModule, ParticipantKFoldDataM
                 transform_x=self.x_transforms, 
                 transform_y=self.y_transforms, 
                 usecols=[1,2], 
-                scale=True) # this is scaling X
+                scale_gaze=self.scale_gaze,
+                gaze_scaler=self.gaze_scaler) # this is scaling X
             if self.load_setup_path:
                 self.load_setup(dataset)
             else:
@@ -129,6 +136,9 @@ class InformerDataModule(BaseSequenceToSequenceDataModule, ParticipantKFoldDataM
     @staticmethod
     def add_datamodule_specific_args(parent_parser):
         group = parent_parser.add_argument_group("InformerDataModule")
+        group.add_argument("--scale_gaze", type=bool, default=False)
+        group.add_argument("--mean_gaze_xy",nargs='*', default=None)
+        group.add_argument("--std_gaze_xy",nargs='*', default=None)
         group.add_argument("--data_dir", type=str)
         group.add_argument("--test_dir", type=str, default="")
         group.add_argument("--num_workers", type=int, default=0)
@@ -156,6 +166,14 @@ class InformerDataModule(BaseSequenceToSequenceDataModule, ParticipantKFoldDataM
     @property
     def file_mapper(self):
         return partial(filter_files_by_seqlen, self.label_df, min_sequence_length=self.min_sequence_length)
+
+    @property
+    def gaze_scaler(self):
+        if self.scale_gaze:
+            scaler=partial(GazeScaler(mean=self.mean_gaze_xy, std=self.std_gaze_xy))
+        else:
+            scaler=None
+        return scaler
 
 class InformerMultiLabelDatamodule(SequenceToMultiLabelDataModule):
     pass

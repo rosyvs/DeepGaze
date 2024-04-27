@@ -113,7 +113,7 @@ class EncoderDecoderModel(LightningModule):
 
     def configure_optimizers(self):
         params = self.decoder.parameters() if self.hparams.freeze_encoder else list(self.encoder.parameters()) + list(self.decoder.parameters())
-        optimizer = torch.optim.AdamW(params, lr=self.hparams.learning_rate)
+        optimizer = torch.optim.Adam(params, lr=self.hparams.learning_rate)
         res = {"optimizer": optimizer}
         res['lr_scheduler'] = {"scheduler": torch.optim.lr_scheduler.StepLR(optimizer, step_size=max(1,int(self.trainer.max_epochs / 5)), gamma=0.5)}
         return res
@@ -248,6 +248,9 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
         if "fi" in tasks:
             self.fi_decoder = fi_decoder
             self.decoders.append(fi_decoder)
+            # split class weights if more than 2 classes
+            if len(class_weights) > 2:
+                raise ValueError("Only binary classification supported for fixation task but more than 2 class_weightts defined in haparams.")
             self.fi_criterion = nn.CrossEntropyLoss(torch.Tensor(class_weights))
             self.fi_metric = torchmetrics.AveragePrecision(task="multiclass",num_classes=2)
         if "fm" in tasks:
@@ -375,7 +378,7 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
             elif task == "fi":
                 enc = self.encoder(X)
                 logits = self.fi_decoder(enc).squeeze().reshape(-1,2)
-                targets_fi = binarize_labels(fix_y.reshape(-1).long()) # ensures labels are binary even if mroe classes in file. 
+                targets_fi = binarize_labels(fix_y.reshape(-1)).long() # ensures labels are binary even if mroe classes in file. 
                 task_loss = self.fi_criterion(logits, targets_fi)
                 probs = self._get_probs(logits)
                 task_metric = self.fi_metric(probs, targets_fi.int())
@@ -419,7 +422,7 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
         params = [list(m.parameters()) for m in self.decoders]
         params.append(list(self.encoder.parameters()))
         params = reduce(lambda x,y: x + y, params)
-        optimizer = torch.optim.AdamW(params, lr=self.hparams.learning_rate)
+        optimizer = torch.optim.Adam(params, lr=self.hparams.learning_rate)
         res = {"optimizer": optimizer}
         res['lr_scheduler'] = {"scheduler": torch.optim.lr_scheduler.StepLR(optimizer, step_size=max(1,int(self.trainer.max_epochs / 5)), gamma=0.5)}
         return res    
