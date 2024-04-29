@@ -2,24 +2,6 @@
 import random
 import torch
 
-# NOTE: UNUSED
-# def collate_fn_pad(batch, sequence_length):
-#     '''
-#     Pads batch of variable length
-
-#     note: it converts things ToTensor manually here since the ToTensor transform
-#     assume it takes in images rather than arbitrary tensors.
-#     '''
-#     X, y = zip(*batch)
-#     X_lengths = torch.tensor([ t.shape[0] for t in X ])
-#     y_lengths = torch.tensor([ t.shape[0] for t in y ])
-#     ## padd
-#     X_padded = torch.nn.utils.rnn.pad_sequence(X, batch_first=True, padding_value=-181.)
-#     y_padded = torch.nn.utils.rnn.pad_sequence(y, batch_first=True, padding_value=-181.)
-#     # Split
-#     torch.split(X_padded, sequence_length, ) #TODO: this doing antyhing?? not returned...
-#     ## compute mask # TODO: why no mask here?
-#     return X_padded, y_padded, X_lengths, y_lengths
 
 # used in SequenceToSequenceDataModule
 def split_collate_fn(sequence_length, batch, contrastive=False):
@@ -47,48 +29,38 @@ def split_collate_fn(sequence_length, batch, contrastive=False):
         return X, fix_y, cl_y
     return X, fix_y
 
-# # NOTE: unused
-# def multitask_collate_fn(sequence_length, batch, contrastive=False):
-#     '''
-#     Takes variable length sequences, splits them each into 
-#     subsequences of sequence_length, and returns tensors:
-    
-#     Args:
-#         batch: List[Tuples(Tensor(X), Tensor(y))] Contains a list of the returned items from dataset
-#         sequence_length: int lengths of the subsequences
 
-#     Returns:
-#         X: Tensor shape (bs, sequence_length, *)
-#         y: Tensor shape (bs, sequence_length)
-#     '''
-#     X, fix_y = zip(*batch)
-#     # Splits each example into tensors with sequence length and drops last in case it is a different length
-#     X_splits = [torch.stack(torch.split(t, sequence_length, dim=0)[:-1], dim=0) for t in X]
-#     fix_y_splits = [torch.stack(torch.split(t, sequence_length, dim=0)[:-1], dim=0) for t in fix_y]
-#     X_fix = torch.cat(X_splits, dim=0)
-#     fix_y = torch.cat(fix_y_splits, dim=0)
-#     if contrastive:
-#         X1, X2, y = contrastive_batch(X,sequence_length)
-#         return X_fix, fix_y, X1, X2, y
-#     return X_fix, fix_y
-
-def random_collate_fn(sequence_length, batch,  min_seq=1.0, max_seq=1.0):
+def random_collate_fn(sequence_length, batch,  min_seq=1.0, max_seq=1.0, flag=-180, replace_na_flag=False, replacement=0):
     X, fix_y = zip(*batch)
-    bs = len(X)
-    fs = X[0].shape[-1]
+
+    bs = len(X) # batch size
+    fs = X[0].shape[-1] # features
     if min_seq != max_seq:
         sequence_length = random.randrange(int(min_seq*sequence_length), int(max_seq*sequence_length))
     X_batched = torch.zeros((bs,sequence_length,fs))
     fix_y_batched = torch.zeros((bs, sequence_length))
+    X_mask = torch.ones_like(X)
+    fix_y_mask = torch.ones_like(fix_y)
     for i in range(bs):
         full_sl = X[i].shape[0]
         start_ind = random.randrange(0,full_sl-sequence_length)
         end_ind = start_ind + sequence_length 
         X_batched[i] = X[i][start_ind:end_ind,:]
         fix_y_batched[i] = fix_y[i][start_ind:end_ind]
-    return X_batched, fix_y_batched
+        # detect flagged and NA values in X and fix_y and compute a elementwise mask to return (0 = flagged, 1 = not flagged)
+    # mask is elementwise, 0 if flagged, 1 if not flagged
+    X_mask[X_batched == flag or torch.isnan(X_batched)] = 0
+    fix_y_mask[fix_y_batched == flag or torch.isnan(fix_y_batched)] = 0
+    # also na NaN and inf valeus add to mask
+
+    # if replace_na_flag is True, replace masked values with replacement value using the mask
+    if replace_na_flag:
+        X_batched[X_mask==0] = replacement
+        fix_y_batched[fix_y_mask==0] = replacement
     
-def random_multitask_collate_fn(sequence_length, batch, min_seq=1.0, max_seq=1.0):
+    return (X_batched,X_mask), (fix_y_batched, fix_y_mask)
+    
+def random_multitask_collate_fn(sequence_length, batch, min_seq=1.0, max_seq=1.0, flag=-180, replace_na_flag=False, replacement=0):
     """
     Takes variable length scanpaths and selects a random part of SET sequence length and batches them
     """
@@ -119,9 +91,19 @@ def random_multitask_collate_fn(sequence_length, batch, min_seq=1.0, max_seq=1.0
             start_ind = random.randrange(0,full_sl-sequence_length)
             end_ind = start_ind + sequence_length
             X2_batched[i] = X[i][start_ind:end_ind,:]
-    return X_batched, fix_y_batched, X2_batched, cl_y_batched.float()
+    # masks
+    X_mask[X_batched == flag or torch.isnan(X_batched)] = 0
+    fix_y_mask[fix_y_batched == flag or torch.isnan(fix_y_batched)] = 0
+    X2_mask[X2_batched == flag or torch.isnan(X2_batched)] = 0
+    # replacements
+    if replace_na_flag:
+        X_batched[X_mask==0] = replacement
+        fix_y_batched[fix_y_mask==0] = replacement
+        X2_batched[X2_mask==0] = replacement
+    return (X_batched, X_mask), (fix_y_batched, fix_y_mask),(X2_batched, X2_mask), cl_y_batched.float()
 
-def random_multilabel_multitask_collate_fn(sequence_length, batch, min_seq=1.0, max_seq=1.0):
+#TODO: mask/flag stuff from here on
+def random_multilabel_multitask_collate_fn(sequence_length, batch, min_seq=1.0, max_seq=1.0, flag=-180):
     """
     Takes variable length scanpaths and selects a random part of sequence length and batches them
     For multilabel data (sequence and fixation labels) for use with class SequenceToMultilabelDataModule
@@ -156,36 +138,140 @@ def random_multilabel_multitask_collate_fn(sequence_length, batch, min_seq=1.0, 
             start_ind = random.randrange(0,full_sl-sequence_length)
             end_ind = start_ind + sequence_length
             X2_batched[i] = X[i][start_ind:end_ind,:] 
+        # compute masks
+        X_mask = torch.tensor([torch.any(t==flag) for t in X])
+        fix_y_mask = torch.tensor([torch.any(t==flag) for t in fix_y])
+        # also na NaN and inf valeus add to mask   
+        X_mask = torch.logical_or(X_mask, torch.isnan(X).any(dim=(1,2)))
+        fix_y_mask = torch.logical_or(fix_y_mask, torch.isnan(fix_y).any(dim=(1,2)))
+        X2_mask = torch.tensor([torch.any(t==flag) for t in X2_batched])
+        X2_mask = torch.logical_or(X2_mask, torch.isnan(X2_batched).any(dim=(1,2)))
+        seq_y_mask = torch.tensor([torch.any(t==flag) for t in seq_y])
+        seq_y_mask = torch.logical_or(seq_y_mask, torch.isnan(seq_y).any(dim=(1,2)))
+    return (X_batched, X_mask), (fix_y_batched, fix_y_mask), (seq_y_batched, seq_y_mask), (X2_batched, X2_mask), cl_y_batched.float()
+
+
+
+
+# full-sequence collate functions
+def variable_length_random_collate_fn(sequence_length, batch, max_sequence_length):
+    X, fix_y = zip(*batch)
+    bs = len(X)
+    fs = X[0].shape[-1]
+    lens = [x.shape[0] for x in X] # sequence lengths
+    max_sequence_length = min(max_sequence_length, max(lens)) # if max_sequence_length is greater than the longest sequence, set it to the longest sequence
+    X_batched = torch.zeros((bs,max_sequence_length,fs))
+    fix_y_batched = torch.zeros((bs, max_sequence_length))
+    pad_mask = torch.zeros((batch_size, max_sequence_length))
+
+    for i in range(bs):
+        full_sl = X[i].shape[0]
+        if full_sl > max_sequence_length:
+            start_ind = random.randrange(0,full_sl-max_sequence_length)
+            end_ind = start_ind + max_sequence_length 
+            X_batched[i] = X[i][start_ind:end_ind,:]
+            fix_y_batched[i] = fix_y[i][start_ind:end_ind]
+            pad_mask[i, :] = 1
+        else:
+            X_batched[i, :full_sl] = X[i]
+            fix_y_batched[i, :full_sl] = fix_y[i]
+            pad_mask[i, :full_sl] = 1
+    return (X_batched, pad_mask),fix_y_batched
+    
+def variable_length_random_multitask_collate_fn(max_sequence_length, batch, CL_ratio = [0.2, 0.4]):
+    """
+    Takes variable length scanpaths and forms batch using full sequence 
+    (if exceeding max_sequence_length) selects a random part of max_sequence_length
+    for CL a subsequence of length CL_ratio[0] to CL_ratio[1] * full sequence length is selected
+    # TODO: this incomplete, need to do mask and return it
+    """
+    X, fix_y = zip(*batch)
+    bs = len(X) # batch size
+    fs = X[0].shape[-1] # feature size
+    lens = [x.shape[0] for x in X] # sequence lengths
+    max_sequence_length = min(max_sequence_length, max(lens)) # if max_sequence_length is greater than the longest sequence, set it to the longest sequence
+    X_batched = torch.zeros((bs,max_sequence_length,fs))
+    fix_y_batched = torch.zeros((bs, max_sequence_length))
+    X2_batched = torch.zeros((bs,max_sequence_length,fs))
+    cl_y_batched = torch.randint(0,2,(bs,))
+    for i in range(bs):
+        full_sl = X[i].shape[0]
+        if full_sl > max_sequence_length:
+            start_ind = random.randrange(0,full_sl-max_sequence_length)
+            end_ind = start_ind + max_sequence_length 
+            X_batched[i] = X[i][start_ind:end_ind,:] # choose random interval within sequence
+            fix_y_batched[i] = fix_y[i][start_ind:end_ind]
+        else:
+            X_batched[i] = X[i]
+            fix_y_batched[i] = fix_y[i]
+        if cl_y_batched[i] == 0: # different source
+            j = i
+            while j == i:
+                j = random.randrange(0,bs) # ransomly choose another in the batch
+            full_sl = X[j].shape[0]
+            subseq_len = random.randrange(int(CL_ratio[0]*full_sl), int(CL_ratio[1]*full_sl))
+            if subseq_len > max_sequence_length:
+                subseq_len = max_sequence_length
+            start_ind = random.randrange(0,full_sl-subseq_len)
+            end_ind = start_ind + sequence_length
+            X2_batched[i] = X[j][start_ind:end_ind,:]
+        else:
+            start_ind = random.randrange(0,full_sl-sequence_length)
+            end_ind = start_ind + sequence_length
+            X2_batched[i] = X[i][start_ind:end_ind,:]
+    return X_batched, fix_y_batched, X2_batched, cl_y_batched.float()
+
+def variable_length_random_multilabel_multitask_collate_fn(sequence_length, batch, min_seq=1.0, max_seq=1.0):
+    """
+    Takes variable length scanpaths and selects a random part of sequence length and batches them
+    For multilabel data (sequence and fixation labels) for use with class SequenceToMultilabelDataModule
+    # TODO: this incomplete, need to do mask and return it
+
+    """
+    X, Y  = zip(*batch) # todo perhaps unpack y first then split into fix and seq? 
+    fix_y, seq_y = zip(*Y)
+    bs = len(X)
+    fs = X[0].shape[-1]
+    if min_seq != max_seq:
+        sequence_length = random.randrange(int(min_seq*sequence_length), int(max_seq*sequence_length))
+    X_batched = torch.zeros((bs,sequence_length,fs))
+    fix_y_batched = torch.zeros((bs, sequence_length))
+    X2_batched = torch.zeros((bs,sequence_length,fs))
+    cl_y_batched = torch.randint(0,2,(bs,)) # randomly set each item in batch to have same or diff source for CL
+    seq_y_batched=torch.zeros((bs,1)) # needs to be converted from tuple to tensor for batch
+    for i in range(bs): # loop over batch
+        full_sl = X[i].shape[0]
+        start_ind = random.randrange(0,full_sl-sequence_length) # randomly choose sequence start
+        end_ind = start_ind + sequence_length 
+        X_batched[i] = X[i][start_ind:end_ind,:] # choose random interval within sequence
+        fix_y_batched[i] = fix_y[i][start_ind:end_ind]
+        seq_y_batched[i,] = seq_y[i]
+        if cl_y_batched[i] == 0:
+            j = i
+            while j == i:
+                j = random.randrange(0,bs) # choose another item from batch to pair this x with
+            full_sl = X[j].shape[0]
+            start_ind = random.randrange(0,full_sl-sequence_length)
+            end_ind = start_ind + sequence_length
+            X2_batched[i] = X[j][start_ind:end_ind,:]
+        else: # simply choose another random subsequence from same seq (can overlap)
+            start_ind = random.randrange(0,full_sl-sequence_length)
+            end_ind = start_ind + sequence_length
+            X2_batched[i] = X[i][start_ind:end_ind,:] 
     return X_batched, fix_y_batched, seq_y_batched, X2_batched, cl_y_batched.float()
 
-# TODO: why are the 2 definitions so different? First is method, second is imported func that informer uses
-# Id rather import these as funcs from batch_loading for consistency
 
-def predictive_coding_batch(X_batch, pc_seq_length, label_length, pred_length, offset=None): 
+
+    # BATCH LOADERS #
+
+    def predictive_coding_batch(X_batch, pc_seq_length, label_length, pred_length, offset=None): 
     # TODO: use offset ot select random segment if not None
+    # TODO: deal w na and nan flag here? 
     # for the vanilla encoder-decoder models label_length should be 0 for consistency w old implementation
     assert pc_seq_length + pred_length <= X_batch.shape[1], f'pc_seq_length: {pc_seq_length} + pred_length: {pred_length} must be <= X_batch.shape[1]: {X_batch.shape[1]}'
     X_seq = X_batch[:,:pc_seq_length,:]
     Y_seq = X_batch[:,pc_seq_length-label_length:pc_seq_length+pred_length,:] # taken from later in the sequence, this is the target
     return X_seq, Y_seq
-
-
-# predictive_coding_batch_variable_length(X, torch.ones_like(X), self.hparams.label_length, self.hparams.pred_length)
-
-
-
-
-    X_seq = X_batch[:,:input_length,:]
-    Y_seq = X_batch[:,input_length-label_length:input_length+pred_length,:] # taken from later in the sequence, this is the target
-    return X_seq, Y_seq
-
-# # encoder method:
-# def predictive_coding_batch(self, X_batch):
-#     # no label_length arg? 
-#     input_length = self.hparams.sequence_length - self.hparams.pred_length
-#     X_seq = X_batch[:,:input_length,:]
-#     Y_seq = X_batch[:,input_length:input_length+self.hparams.pred_length,:]
-#     return X_seq, Y_seq
 
 # NOTE: not used
 def reconstruction_batch(X_batch, label_length): # not used
@@ -283,108 +369,4 @@ def predictive_coding_batch_variable_length(X_batch, X_pad_mask, label_length, p
         X_pc[i] = xpc
         Y_pc[i] = ypc
         X_pc_mask[i] = pad_mask
-    return X_pc, Y_pc, X_pc_mask
-
-# full-sequence collate functions
-def variable_length_random_collate_fn(sequence_length, batch, max_sequence_length):
-    X, fix_y = zip(*batch)
-    bs = len(X)
-    fs = X[0].shape[-1]
-    lens = [x.shape[0] for x in X] # sequence lengths
-    max_sequence_length = min(max_sequence_length, max(lens)) # if max_sequence_length is greater than the longest sequence, set it to the longest sequence
-    X_batched = torch.zeros((bs,max_sequence_length,fs))
-    fix_y_batched = torch.zeros((bs, max_sequence_length))
-    pad_mask = torch.zeros((batch_size, max_sequence_length))
-
-    for i in range(bs):
-        full_sl = X[i].shape[0]
-        if full_sl > max_sequence_length:
-            start_ind = random.randrange(0,full_sl-max_sequence_length)
-            end_ind = start_ind + max_sequence_length 
-            X_batched[i] = X[i][start_ind:end_ind,:]
-            fix_y_batched[i] = fix_y[i][start_ind:end_ind]
-            pad_mask[i, :] = 1
-        else:
-            X_batched[i, :full_sl] = X[i]
-            fix_y_batched[i, :full_sl] = fix_y[i]
-            pad_mask[i, :full_sl] = 1
-    return X_batched, fix_y_batched, pad_mask
-    
-def variable_length_random_multitask_collate_fn(max_sequence_length, batch, CL_ratio = [0.2, 0.4]):
-    """
-    Takes variable length scanpaths and forms batch using full sequence 
-    (if exceeding max_sequence_length) selects a random part of max_sequence_length
-    for CL a subsequence of length CL_ratio[0] to CL_ratio[1] * full sequence length is selected
-    """
-    X, fix_y = zip(*batch)
-    bs = len(X) # batch size
-    fs = X[0].shape[-1] # feature size
-    lens = [x.shape[0] for x in X] # sequence lengths
-    max_sequence_length = min(max_sequence_length, max(lens)) # if max_sequence_length is greater than the longest sequence, set it to the longest sequence
-    X_batched = torch.zeros((bs,max_sequence_length,fs))
-    fix_y_batched = torch.zeros((bs, max_sequence_length))
-    X2_batched = torch.zeros((bs,max_sequence_length,fs))
-    cl_y_batched = torch.randint(0,2,(bs,))
-    for i in range(bs):
-        full_sl = X[i].shape[0]
-        if full_sl > max_sequence_length:
-            start_ind = random.randrange(0,full_sl-max_sequence_length)
-            end_ind = start_ind + max_sequence_length 
-            X_batched[i] = X[i][start_ind:end_ind,:] # choose random interval within sequence
-            fix_y_batched[i] = fix_y[i][start_ind:end_ind]
-        else:
-            X_batched[i] = X[i]
-            fix_y_batched[i] = fix_y[i]
-        if cl_y_batched[i] == 0: # different source
-            j = i
-            while j == i:
-                j = random.randrange(0,bs) # ransomly choose another in the batch
-            full_sl = X[j].shape[0]
-            subseq_len = random.randrange(int(CL_ratio[0]*full_sl), int(CL_ratio[1]*full_sl))
-            if subseq_len > max_sequence_length:
-                subseq_len = max_sequence_length
-            start_ind = random.randrange(0,full_sl-subseq_len)
-            end_ind = start_ind + sequence_length
-            X2_batched[i] = X[j][start_ind:end_ind,:]
-        else:
-            start_ind = random.randrange(0,full_sl-sequence_length)
-            end_ind = start_ind + sequence_length
-            X2_batched[i] = X[i][start_ind:end_ind,:]
-    return X_batched, fix_y_batched, X2_batched, cl_y_batched.float()
-
-def variable_length_random_multilabel_multitask_collate_fn(sequence_length, batch, min_seq=1.0, max_seq=1.0):
-    """
-    Takes variable length scanpaths and selects a random part of sequence length and batches them
-    For multilabel data (sequence and fixation labels) for use with class SequenceToMultilabelDataModule
-    """
-    X, Y  = zip(*batch) # todo perhaps unpack y first then split into fix and seq? 
-    fix_y, seq_y = zip(*Y)
-    bs = len(X)
-    fs = X[0].shape[-1]
-    if min_seq != max_seq:
-        sequence_length = random.randrange(int(min_seq*sequence_length), int(max_seq*sequence_length))
-    X_batched = torch.zeros((bs,sequence_length,fs))
-    fix_y_batched = torch.zeros((bs, sequence_length))
-    X2_batched = torch.zeros((bs,sequence_length,fs))
-    cl_y_batched = torch.randint(0,2,(bs,)) # randomly set each item in batch to have same or diff source for CL
-    seq_y_batched=torch.zeros((bs,1)) # needs to be converted from tuple to tensor for batch
-    for i in range(bs): # loop over batch
-        full_sl = X[i].shape[0]
-        start_ind = random.randrange(0,full_sl-sequence_length) # randomly choose sequence start
-        end_ind = start_ind + sequence_length 
-        X_batched[i] = X[i][start_ind:end_ind,:] # choose random interval within sequence
-        fix_y_batched[i] = fix_y[i][start_ind:end_ind]
-        seq_y_batched[i,] = seq_y[i]
-        if cl_y_batched[i] == 0:
-            j = i
-            while j == i:
-                j = random.randrange(0,bs) # choose another item from batch to pair this x with
-            full_sl = X[j].shape[0]
-            start_ind = random.randrange(0,full_sl-sequence_length)
-            end_ind = start_ind + sequence_length
-            X2_batched[i] = X[j][start_ind:end_ind,:]
-        else: # simply choose another random subsequence from same seq (can overlap)
-            start_ind = random.randrange(0,full_sl-sequence_length)
-            end_ind = start_ind + sequence_length
-            X2_batched[i] = X[i][start_ind:end_ind,:] 
-    return X_batched, fix_y_batched, seq_y_batched, X2_batched, cl_y_batched.float()
+    return (X_pc,X_pc_mask) , Y_pc 

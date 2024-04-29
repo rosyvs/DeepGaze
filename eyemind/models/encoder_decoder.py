@@ -89,7 +89,7 @@ class EncoderDecoderModel(LightningModule):
 
     def _step(self, batch, batch_idx, step_type):
         try:
-            X, y = batch
+            X, y, Xmask, Ymask = batch
         except ValueError as e:
             print(f"{batch}")
             raise e

@@ -23,6 +23,7 @@ def get_dataloader(config_path, dm_cls=BaseSequenceToSequenceDataModule, data_ba
     dm.setup()
     return dm.predict_dataloader()
 
+# TODO: these are unused but in case used infuture note these need editing to use masked values on loading batch
 def fixation_preds_targets(model, dl, samples=1):
     model.eval()
     batch = next(iter(dl))

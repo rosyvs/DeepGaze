@@ -48,7 +48,7 @@ class GazeScaler():
         assert(cols==len(self.std))
         mx = ma.masked_values(data,self.flag)
         mx_stand = (mx - self.mean) / self.std
-        return mx_stand.filled(self.flag)
+        return mx_stand.filled(self.flag) # even sfter scaling flag is still 180
 
     def inverse_transform(self, data):
         # tensors
@@ -82,3 +82,15 @@ class StandardScaler():
             return mx_scaled
         else:
             raise TypeError("Data should be a torch tensor or a numpy array")
+
+class FlagReplacer():
+    # replace values "flagged" during data prep by replacing with a new set value
+    # replacement value is 0 by default, so apply after Scaler() to avoid scaling the new flag value
+    def __init__(self, flag=-180, replacement=0):
+        self.flag = flag
+        self.replacement = replacement
+    def __call__(self, data):
+        data[data==self.flag] = self.replacement
+        return data
+
+
