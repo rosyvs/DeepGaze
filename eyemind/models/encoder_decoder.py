@@ -287,7 +287,7 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
         return logits
 
     # def predict_task(self, batch, task):
-    #     X, fix_y, X2, cl_y = batch
+    #     X, yi, X2, cl_y = batch
     #     if task == "cl":
     #         enc1 = self.encoder(X)
     #         enc2 = self.encoder(X2)
@@ -299,12 +299,12 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
     #         enc = self.encoder(X)
     #         logits = self.fi_decoder(enc).squeeze()
     #         preds = self._get_preds(logits)
-    #         targets = binarize_labels(fix_y.reshape(-1).long(), self.binarize_threshold) # ensures labels are binary even if mroe classes in file. 
+    #         targets = binarize_labels(yi.reshape(-1).long(), self.binarize_threshold) # ensures labels are binary even if mroe classes in file. 
     #     elif task == "fm":
     #         enc = self.encoder(X)
     #         logits = self.fm_decoder(enc).squeeze()
     #         preds = self._get_preds(logits)
-    #         targets = fix_y
+    #         targets = yi
     #     elif task == "pc":
     #         X_pc, Y_pc = self.predictive_coding_batch(batch[0])
     #         enc = self.encoder(X_pc)
@@ -319,7 +319,19 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
     #     return preds, targets
 
     def predict_step(self, batch, batch_idx):
-        X, fix_y, X2, cl_y = batch
+        # TODO: refactor this - initial batch can be (X, yi) or (X, yi, seq_y) but cl handled by its own function in if "CL" block
+        n_items = len(batch) # this is not the batch size, but the number of items (data and labels) to unpack
+        if n_items==2: # just gaze sequence and fixation (sample) labels
+            X, yi = batch
+            X, X_mask = X 
+            yi, yi_mask = yi
+        elif n_items==4: # contrastive so X and X2 are present
+            X, yi, X2, cl_y = batch
+            X, X_mask = X 
+            yi, yi_mask = yi
+            X2, X2_mask = X2
+        else:
+            raise ValueError("Batch size not recognized.")
         task_predictions = {}
         for task in self.hparams.tasks:
             if task == "cl":
@@ -358,11 +370,18 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
         return task_predictions
                
     def _step(self, batch, batch_idx, step_type):
-        try:
-            X, fix_y, X2, cl_y = batch
-        except ValueError as e:
-            print(f"{batch}")
-            raise e
+        n_items = len(batch) # this is not the batch size, but the number of items (data and labels) to unpack
+        if n_items==2: # just gaze sequence and fixation (sample) labels
+            X, yi = batch
+            X, X_mask = X 
+            yi, yi_mask = yi
+        elif n_items==4: # contrastive so X and X2 are present
+            X, yi, X2, cl_y = batch
+            X, X_mask = X 
+            yi, yi_mask = yi
+            X2, X2_mask = X2
+        else:
+            raise ValueError("Batch size not recognized.")
         total_loss = 0
         for task in self.hparams.tasks:
             if task == "cl":
@@ -378,7 +397,7 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
             elif task == "fi":
                 enc = self.encoder(X)
                 logits = self.fi_decoder(enc).squeeze().reshape(-1,2)
-                targets_fi = binarize_labels(fix_y.reshape(-1)).long() # ensures labels are binary even if mroe classes in file. 
+                targets_fi = binarize_labels(yi.reshape(-1)).long() # ensures labels are binary even if mroe classes in file. 
                 task_loss = self.fi_criterion(logits, targets_fi)
                 probs = self._get_probs(logits)
                 task_metric = self.fi_metric(probs, targets_fi.int())
@@ -386,11 +405,11 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
             elif task == "fm":
                 enc = self.encoder(X)
                 logits = self.fm_decoder(enc).squeeze().reshape(-1,self.c_out) #TODO: reshape this differently or not at all? 
-                targets_fm = fix_y.reshape(-1).long() # remove reshape #TODO: reshape to be long, but unreshape the logits
+                targets_fm = yi.reshape(-1).long() # remove reshape #TODO: reshape to be long, but unreshape the logits
                 task_loss = self.fm_criterion(logits, targets_fm)
                 probs = self._get_probs(logits)
                 task_metric = self.fm_metric(probs, targets_fm)
-                del enc, probs, targets_fm, fix_y
+                del enc, probs, targets_fm, yi
             elif task == "pc":
                 X_pc, Y_pc = predictive_coding_batch(X, self.hparams.pc_seq_length, self.hparams.pred_length, self.hparams.label_length)
                 enc = self.encoder(X_pc)
@@ -468,3 +487,5 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
         parser.add_argument('--freeze_encoder', type=bool, default=False)
         parser.add_argument('--max_rmse_err', type=float, default=70., help='clamps max rmse loss')
         return parser
+
+#TODO: multilabel with sequence and sample level labels (as in informer defs in transformers.py)

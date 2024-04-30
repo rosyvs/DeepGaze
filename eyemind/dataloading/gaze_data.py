@@ -10,7 +10,7 @@ from sklearn.model_selection import train_test_split
 import yaml
 from eyemind.dataloading.transforms import StandardScaler, GazeScaler
 from eyemind.dataloading.load_dataset import label_samples, filter_files_by_seqlen, get_filenames_for_dataset, get_label_df, get_label_mapper, get_participant_splits, get_stratified_group_splits, limit_sequence_len, load_file_folds, write_splits, label_samples_and_files
-from eyemind.dataloading.batch_loading import random_collate_fn, random_multitask_collate_fn, split_collate_fn, random_multilabel_multitask_collate_fn, variable_length_random_collate_fn, variable_length_random_multilabel_multitask_collate_fn, variable_length_random_multitask_collate_fn
+from eyemind.dataloading.batch_loading import seq2seq_collate_fn, multitask_collate_fn, split_collate_fn, multilabel_multitask_collate_fn, variable_length_seq2seq_collate_fn, variable_length_multilabel_multitask_collate_fn, variable_length_multitask_collate_fn
 import torchvision.transforms as T
 from torch.utils.data import Dataset, DataLoader, Sampler, Subset
 
@@ -648,9 +648,9 @@ class BaseSequenceToSequenceDataModule(BaseGazeDataModule):
 
     def get_dataloader(self, dataset: Dataset):
         if self.contrastive:
-            collate_fn = random_multitask_collate_fn
+            collate_fn = multitask_collate_fn
         else:
-            collate_fn = random_collate_fn
+            collate_fn = seq2seq_collate_fn
         return DataLoader(
             dataset, 
             batch_size=self.batch_size, 
@@ -1056,9 +1056,9 @@ class SequenceToMultiLabelDataModule(SequenceToSequenceDataModule, SequenceToLab
 
     def get_dataloader(self, dataset: Dataset):
         if self.file_label_col:
-            collate_fn=partial(random_multilabel_multitask_collate_fn, self.sequence_length)
+            collate_fn=partial(multilabel_multitask_collate_fn, self.sequence_length)
         else:
-            collate_fn=partial(random_multitask_collate_fn, self.sequence_length)
+            collate_fn=partial(multitask_collate_fn, self.sequence_length)
         return DataLoader(
             dataset, 
             batch_size=self.batch_size, 
@@ -1149,10 +1149,10 @@ class SequenceToMultiLabelDataModule(SequenceToSequenceDataModule, SequenceToLab
         if self.scale_gaze:
             scaler=partial(GazeScaler(mean=self.mean_gaze_xy, std=self.std_gaze_xy))
         else:
-            scaler=None
+            scaler=None 
         return scaler
 
-class VariableSequenceToSequenceDataModule(SequenceToSequenceDataModule):
+class VariableLengthSequenceToSequenceDataModule(SequenceToSequenceDataModule):
     # initialise supercass
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1169,17 +1169,17 @@ class VariableSequenceToSequenceDataModule(SequenceToSequenceDataModule):
             num_workers=self.num_workers, 
             drop_last=self.drop_last, 
             pin_memory=self.pin_memory,
-            collate_fn=partial(variable_length_random_collate_fn, self.min_sequence_length, self.max_sequence_length))
+            collate_fn=partial(variable_length_seq2seq_collate_fn, self.max_sequence_length))
 
     @staticmethod
     def add_datamodule_specific_args(parent_parser):
-        group = parent_parser.add_argument_group("VariableSequenceToSequenceDataModule")
+        group = parent_parser.add_argument_group("VariableLengthSequenceToSequenceDataModule")
         group.add_argument("--min_sequence_length", type=int, default=500)
         group.add_argument("--max_sequence_length", type=int, default=500)
         return parent_parser
 
 
-class VariableSequenceToLabelDataModule(SequenceToLabelDataModule):
+class VariableLengthSequenceToLabelDataModule(SequenceToLabelDataModule):
     # initialise supercass
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1196,7 +1196,7 @@ class VariableSequenceToLabelDataModule(SequenceToLabelDataModule):
             num_workers=self.num_workers, 
             drop_last=self.drop_last, 
             pin_memory=self.pin_memory,
-            collate_fn=partial(variable_length_random_collate_fn, self.min_sequence_length, self.max_sequence_length))
+            collate_fn=partial(variable_length_seq2label_collate_fn, self.max_sequence_length))
     
     @property # overridign the x_transform with limit sequence length
     def x_transforms(self):
@@ -1204,8 +1204,9 @@ class VariableSequenceToLabelDataModule(SequenceToLabelDataModule):
 
     @staticmethod
     def add_datamodule_specific_args(parent_parser):
-        group = parent_parser.add_argument_group("VariableSequenceToLabelDataModule")
+        group = parent_parser.add_argument_group("VariableLengthSequenceToLabelDataModule")
         group.add_argument("--min_sequence_length", type=int, default=500)
         group.add_argument("--max_sequence_length", type=int, default=500)
         return parent_parser
 
+#TODO: VariableLengthSequenceToMultiLabelDataModule

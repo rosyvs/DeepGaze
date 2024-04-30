@@ -1,12 +1,12 @@
 from pytorch_lightning.cli import LightningCLI
-from eyemind.dataloading.gaze_data import SequenceToLabelDataModule, VariableSequenceToLabelDataModule
+from eyemind.dataloading.gaze_data import SequenceToLabelDataModule, VariableLengthSequenceToLabelDataModule
 from eyemind.models.transformers import InformerClassifierModel
 from eyemind.experiments.cli import FoldsLightningCLI
 
 
 if __name__ == "__main__":
     cli = FoldsLightningCLI(InformerClassifierModel, 
-                            VariableSequenceToLabelDataModule, 
+                            VariableLengthSequenceToLabelDataModule, 
                             run=False, 
                             save_config_overwrite=True)
     cli.datamodule.setup()

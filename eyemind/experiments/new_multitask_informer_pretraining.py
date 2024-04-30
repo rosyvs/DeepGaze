@@ -1,13 +1,13 @@
 from pytorch_lightning.cli import LightningCLI
 from eyemind.models.transformers import InformerMultiTaskEncoderDecoder
-from eyemind.dataloading.informer_data import InformerMultiLabelDatamodule
+from eyemind.dataloading.gaze_data import SequenceToMultiLabelDataModule
 from eyemind.experiments.cli import FoldsLightningCLI
 import os
 
 if __name__ == "__main__":
     # print(f'CWD: {os.getcwd()}')
     cli = FoldsLightningCLI(InformerMultiTaskEncoderDecoder, 
-                            InformerMultiLabelDatamodule, 
+                           SequenceToMultiLabelDataModule, 
                             run=False, 
                             save_config_overwrite=True)
     cli.datamodule.setup()

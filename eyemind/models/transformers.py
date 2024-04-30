@@ -64,6 +64,7 @@ class InformerEncoder(nn.Module):
             return enc_out, attns
         else:
             return enc_out
+    # TODO: batch loading wiht mask? 
 
 class InformerDecoder(nn.Module):
     def __init__(self,                 
@@ -214,26 +215,31 @@ class InformerEncoderDecoderModel(LightningModule):
 
     def _step(self, batch, batch_idx, step_type):
         try:
-            X, fix_y = batch
+            X, yi = batch
+            X, X_mask = X
+            yi, yi_mask = yi
         except ValueError as e:
             print(f"{batch}")
             raise e
 
         # Predictive Coding:
         X_pc, Y_pc = predictive_coding_batch(X, self.hparams.pc_seq_length, self.hparams.label_length, self.hparams.pred_length)
+        X_pc_mask, Y_pc_mask = predictive_coding_batch(X_mask, self.hparams.pc_seq_length, self.hparams.label_length, self.hparams.pred_length)
         if self.hparams.output_attention:
-            logits = self(X_pc, Y_pc)[0]
+            logits = self(X_pc, Y_pc)[0] #TODO: use masks? 
         else:
             logits = self(X_pc, Y_pc)
         logits = logits.squeeze()
-        Y_pc=Y_pc[:,-self.hparams.pred_length:] # take just the predicted part as target
+        target=Y_pc[:,-self.hparams.pred_length:] # take just the predicted part as target
+        target_mask = Y_pc_mask[:,-self.hparams.pred_length:]
+
         assert(logits.shape == Y_pc.shape)
-        mask = Y_pc > -180
+        # mask = Y_pc > -180
         #task_loss = torch.clamp(self.pc_criterion(logits, Y_pc),max=self.hparams.max_rmse_err)
-        task_loss = self.pc_criterion(logits[mask], Y_pc[mask])
+        task_loss = self.pc_criterion(logits[target_mask], target[target_mask])
         logits = self.scaler.inverse_transform(logits)
-        Y_pc = self.scaler.inverse_transform(Y_pc)
-        task_metric = self.pc_metric(logits[mask], Y_pc[mask])
+        target = self.scaler.inverse_transform(target)
+        task_metric = self.pc_metric(logits[target_mask], target[target_mask])
         self.log(f"{step_type}_loss", task_loss, on_step=True, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
         self.log(f"{step_type}_pc_metric", task_metric, on_step=True, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
         return task_loss
@@ -375,7 +381,7 @@ class InformerEncoderFixationModel(LightningModule):
 
     def _step(self, batch, batch_idx, step_type):
         try:
-            X, fix_y = batch
+            X, yi = batch
         except ValueError as e:
             print(f"{batch}")
             raise e
@@ -385,7 +391,7 @@ class InformerEncoderFixationModel(LightningModule):
         else:
             logits = self(X)
         logits = logits.squeeze().reshape(-1,2) # make long for whole batch
-        targets = fix_y.reshape(-1).long() # make 1D vector for whole batch
+        targets = yi.reshape(-1).long() # make 1D vector for whole batch
         #mask = torch.any(X == -180, dim=1)
         loss = self.fi_criterion(logits, targets)
         preds = self._get_preds(logits)
@@ -546,23 +552,33 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
         self._step(batch, batch_idx, step_type="test")
 
     def _step(self, batch, batch_idx, step_type):
-        # TODO: refactor this - initial batch can be (X, fix_y) or (X, fix_y, seq_y) but TODO: cl handled by its own function in if "CL" block
+        # TODO: refactor this - initial batch can be (X, yi) or (X, yi, seq_y) but cl handled by its own function in if "CL" block
         n_items = len(batch) # this is not the batch size, but the number of items (data and labels) to unpack
         if n_items==2: # just gaze sequence and fixation (sample) labels
-            X, fix_y = batch
+            X, yi = batch
+            X, X_mask = X 
+            yi, yi_mask = yi
         elif n_items==4: # contrastive so X and X2 are present
-            X, fix_y, X2, cl_y = batch
+            X, yi, X2, cl_y = batch
+            X, X_mask = X 
+            yi, yi_mask = yi
+            X2, X2_mask = X2
         elif n_items==5: # sequence and fixation (sample) labels
-            X, fix_y, seq_y, X2, cl_y = batch
+            X, yi, seq_y, X2, cl_y = batch
+            X, X_mask = X
+            yi, yi_mask = yi
+            seq_y, seq_y_mask = seq_y
+            X2, X2_mask = X2
         else:
             raise ValueError('unpacked batch has {n_items} elements, check collate_fn is compatible with this model')
         total_loss = 0
+
         # handle = plot_scanpath_labels(X[0,:,0].cpu(), X[0,:,1].cpu())
         for task in self.hparams.tasks: # TODO: pass these as a list of models each with own class defined separately
             if task == "cl":
-                enc1 = self.encoder(X)
+                enc1 = self.encoder(X) #TODO: pass with mask
                 enc1 = enc1.mean(dim=1)
-                enc2 = self.encoder(X2)
+                enc2 = self.encoder(X2)#TODO: pass with mask
                 enc2 = enc2.mean(dim=1)
                 embed = torch.abs(enc1 - enc2)
                 logits = self.cl_decoder(embed).squeeze()
@@ -572,49 +588,49 @@ class InformerMultiTaskEncoderDecoder(LightningModule):
                 task_metric = self.cl_metric(probs, cl_y.int())
                 del X2, cl_y, enc1, enc2, embed, probs
             elif task == "fi":
-                enc = self.encoder(X)
+                enc = self.encoder(X)#TODO: pass with mask
                 logits = self.fi_decoder(enc).squeeze().reshape(-1,2)
-                targets_fi = binarize_labels(fix_y.reshape(-1)).long() # ensur.long()es labels are binary even if mroe classes in file. 
-                task_loss = self.fi_criterion(logits, targets_fi)
+                targets_fi = binarize_labels(yi.reshape(-1)).long() # ensur.long()es labels are binary even if mroe classes in file. 
+                task_loss = self.fi_criterion(logits, targets_fi)#TODO: pass with mask
                 probs = self._get_probs(logits)
                 task_metric = self.fi_metric(probs, targets_fi.int())
-                del enc, probs, targets_fi, fix_y
+                del enc, probs, targets_fi, yi
             elif task == "fm":
-                enc = self.encoder(X)
+                enc = self.encoder(X)#TODO: pass with mask
                 logits = self.fm_decoder(enc).squeeze().reshape(-1,self.c_out) 
-                targets_fm = fix_y.reshape(-1).long() 
+                targets_fm = yi.reshape(-1).long() 
                 task_loss = self.fm_criterion(logits, targets_fm)
                 probs = self._get_probs(logits)
                 task_metric = self.fm_metric(probs, targets_fm)
-                # handle = plot_scanpath_labels(X[0,:,0].cpu(), X[0,:,1].cpu(), labels=fix_y[0,:].cpu().detach().float())
+                # handle = plot_scanpath_labels(X[0,:,0].cpu(), X[0,:,1].cpu(), labels=yi[0,:].cpu().detach().float())
                 # handle = plot_scanpath_labels(X[0,:,0].cpu(), X[0,:,1].cpu())
-
-                del enc, probs, targets_fm, fix_y
+                del enc, probs, targets_fm, yi
             elif task == "pc":
                 X_pc, Y_pc = predictive_coding_batch(X, self.hparams.pc_seq_length, self.hparams.label_length, self.hparams.pred_length)
-                enc = self.encoder(X_pc)
+                X_pc_mask, Y_pc_mask = predictive_coding_batch(X_mask, self.hparams.pc_seq_length, self.hparams.label_length, self.hparams.pred_length)
+                enc = self.encoder(X_pc) #TODO: pass with mask
                 logits = self.pc_decoder(enc, Y_pc, pred_length=self.hparams.pred_length).squeeze()[0] \
                      if self.hparams.output_attention else \
                         self.pc_decoder(enc, Y_pc, pred_length=self.hparams.pred_length).squeeze()
                 target=Y_pc[:,-self.hparams.pred_length:] # take just the predicted part as target
                 assert(logits.shape == target.shape)
-                mask = target > -180 # TODO: is -180 just mussing data or also representing pad values? 
+                target_mask = Y_pc_mask[:,-self.hparams.pred_length:] 
                  # Surely also needs to be masking seen portion of data (i.e. label_length)
-                task_loss = self.pc_criterion(logits[mask], target[mask])
+                task_loss = self.pc_criterion(logits[target_mask], target[target_mask])
                 logits = self.scaler.inverse_transform(logits)
                 target = self.scaler.inverse_transform(target)
-                task_metric = self.pc_metric(logits[mask], target[mask])
+                task_metric = self.pc_metric(logits[target_mask], target[target_mask])
                 # handle = plot_scanpath_pc(Y_pc[0,:,0].cpu(), Y_pc[0,:,1].cpu(), logits[0,:,0].cpu().detach().numpy(), logits[0,:,1].cpu().detach().numpy())
                 #task_loss = torch.clamp(self.pc_criterion(logits, Y_pc), max=self.hparams.max_rmse_err)
                 del X_pc, Y_pc
             elif task == "rc":
-                enc = self.encoder(X)
+                enc = self.encoder(X)#TODO: pass with mask
                 logits = self.rc_decoder(enc, X).squeeze() # why not passing pred_length here? 
-                mask = X > -180
-                task_loss = self.rc_criterion(logits[mask], X[mask]) 
+                # mask = X > -180
+                task_loss = self.rc_criterion(logits[X_mask], X[X_mask]) 
                 logits = self.scaler.inverse_transform(logits)
                 y_rc = self.scaler.inverse_transform(X)
-                task_metric = self.rc_metric(logits[mask], y_rc[mask])
+                task_metric = self.rc_metric(logits[X_mask], y_rc[mask])
                 # handle = plot_scanpath_pc(y_rc[0,:,0].cpu(), y_rc[0,:,1].cpu(), logits[0,:,0].cpu().detach().numpy(), logits[0,:,1].cpu().detach().numpy())
                 #task_loss = torch.clamp(self.rc_criterion(logits, X), max=self.hparams.max_rmse_err)
                 #task_metric = self.rc_metric(logits, X)
@@ -863,7 +879,7 @@ class InformerEncoderMulticlassModel(InformerEncoderFixationModel):
 
     def _step(self, batch, batch_idx, step_type):
             try:
-                X, fix_y = batch
+                X, yi = batch
             except ValueError as e:
                 print(f"{batch}")
                 raise e
@@ -873,7 +889,7 @@ class InformerEncoderMulticlassModel(InformerEncoderFixationModel):
             else:
                 logits = self(X)
             logits = logits.squeeze().reshape(-1,2) # make long for whole batch
-            targets = fix_y.reshape(-1).long() # make 1D vector for whole batch
+            targets = yi.reshape(-1).long() # make 1D vector for whole batch
             #mask = torch.any(X == -180, dim=1)
             loss = self.fm_criterion(logits, targets)
             preds = self._get_preds(logits)

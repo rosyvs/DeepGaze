@@ -5,7 +5,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 
 import torch
-from eyemind.dataloading.gaze_data import BaseSequenceToSequenceDataModule, ParticipantKFoldDataModule, SequenceLabelDataset, SequenceToMultiLabelDataModule
+from eyemind.dataloading.gaze_data import BaseSequenceToSequenceDataModule, ParticipantKFoldDataModule, SequenceLabelDataset, SequenceToMultiLabelDataModule, VariableLengthSequenceToLabelDataModule, VariableLengthSequenceToSequenceDataModule
 from torch.utils.data import Dataset, DataLoader, Subset
 
 from eyemind.dataloading.load_dataset import filter_files_by_seqlen, get_label_df, label_samples, label_files
@@ -122,9 +122,9 @@ class InformerDataModule(BaseSequenceToSequenceDataModule, ParticipantKFoldDataM
 
     def get_dataloader(self, dataset: Dataset):
         if self.contrastive:
-            collate_fn = random_multitask_collate_fn
+            collate_fn = multitask_collate_fn
         else:
-            collate_fn = random_collate_fn
+            collate_fn = seq2seq_collate_fn
         return DataLoader(
             dataset, 
             batch_size=self.batch_size, 
@@ -175,5 +175,10 @@ class InformerDataModule(BaseSequenceToSequenceDataModule, ParticipantKFoldDataM
             scaler=None
         return scaler
 
+
+# these classes can be the same as in gaze_data.py, no informer-specific changes needed
 class InformerMultiLabelDatamodule(SequenceToMultiLabelDataModule):
+    pass
+
+class InformerVariableLengthDataModule(VariableLengthSequenceToLabelDataModule):
     pass
