@@ -3,7 +3,7 @@ trainer:
   logger:
     class_path: pytorch_lightning.loggers.TensorBoardLogger
     init_args:
-      save_dir: ./lightning_logs/2024/classifiers/limu_125_finalpos/
+      save_dir: ./lightning_logs/2024/classifiers/limu_125_masked/
       name: Rote_X # set to label col, will be overridden if called using script
       version: fold0
   enable_checkpointing: true
@@ -77,4 +77,4 @@ data:
   batch_size: 32
   num_workers: 0
   pin_memory: true
-  pool_method: final_pos
+  pool_method: masked_mean

@@ -1,11 +1,15 @@
-
-trainer: 
+# pytorch_lightning==1.7.6
+seed_everything: 21
+fold_number: 0
+split_filepath: ./data_splits/4fold_participant/seed21.yml
+num_folds: 4
+trainer:
   logger:
     class_path: pytorch_lightning.loggers.TensorBoardLogger
     init_args:
-      save_dir: ./lightning_logs/2024/classifiers/limu_125_finalpos/
+      save_dir: ./lightning_logs/2024/classifiers/informer_4task_encoder_varlen_finalpos/
       name: Rote_X # set to label col, will be overridden if called using script
-      version: fold0
+      version: foldx
   enable_checkpointing: true
   callbacks: 
     - class_path: pytorch_lightning.callbacks.ModelCheckpoint
@@ -62,19 +66,38 @@ trainer:
   move_metrics_to_cpu: false
   multiple_trainloader_mode: max_size_cycle
 model:
-  input_dim: 512
-  hidden_dim: 64
+  enc_in: 2
+  factor: 5
+  d_model: 512
+  n_heads: 8
+  e_layers: 3
+  d_ff: 512
   dropout: 0.05
+  attn: prob
+  activation: gelu
+  output_attention: false
+  distil: false
   learning_rate: 0.001
-  activation: relu
+  encoder_ckpt: PLACEHOLDER
+  freeze_encoder: true
+  pool_method: final_pos
 data:
-  train_data_path: ./data/limu/embeds_splits_512/rosie_train_1_with_embedding_using_rosie_512_train_split_1.npy
-  val_data_path: ./data/limu/embeds_splits_val_512/rosie_val_1_with_embedding_using_rosie_512_train_split_1.npy
+  data_dir: ./data/processed/fixation/
   label_filepath: ./data/EML/EML1_pageLevel_500+_matchEDMinstances.csv
   label_col: Rote_X
-  min_sequence_length: 125
-  max_sequence_length: 125
+  load_setup_path: null
+  test_dir: null
+  train_dataset: null
+  test_dataset: null
+  train_fold: null
+  val_fold: null
+  min_sequence_length: 50
+  max_sequence_length: 2000
+  num_workers: 4
   batch_size: 32
-  num_workers: 0
   pin_memory: true
-  pool_method: final_pos
+  drop_last: true
+  scale_gaze: true
+  usecols: 
+  - 2
+  - 3

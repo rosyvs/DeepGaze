@@ -80,7 +80,10 @@ def gazeformer_embedding_collate_fn(batch, pool_fn=None):
     # print(batch)
     for t in batch:
         true_len = t['true_len']
-        batch_tgt_y.append(t['sequence_label'])
+        y = t['sequence_label']
+        if len(y)>1:
+            raise ValueError("More than one label found for a sample")
+        batch_tgt_y.append(y)
         emb = t["embedding"]
         if pool_fn:
             emb = pool_fn(emb)
