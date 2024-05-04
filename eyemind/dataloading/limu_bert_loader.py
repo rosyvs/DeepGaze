@@ -11,9 +11,15 @@ import pandas as pd
 from pytorch_lightning import LightningDataModule
 from eyemind.dataloading.transforms import Pooler
 from functools import partial
-def label_files(label_df,label_col,ids,id_col="filename"):
-    labels = label_df[label_col].loc[label_df[id_col].isin(ids)].values.tolist()
-    return labels
+
+def label_files(label_df,label_col,id,id_col="filename"):
+    label = label_df[label_col].loc[label_df[id_col]==id].values
+    if len(label)>1:
+        # needs to be an array of one element in float64
+        label = np.array([label[0]])    # to torch array
+    label = torch.tensor(label).float()
+    return label
+
 def create_filename_col(label_df, id_col="filename"):
     label_df[id_col] = label_df.apply(lambda row: f"{row['ParticipantID']}-{row['Text']}{str(row['PageNum']-1)}.csv", axis=1)
     return label_df
@@ -45,12 +51,10 @@ class GazeformerEmbeddingDataset(Dataset):
         infos = self.data[idx]
         # print(infos['name'])
         embedding = torch.Tensor(infos["embedding"][:self.max_sequence_length, ...])  # out embedding from LIMU bertm [args.max_sequence_length, 72]
-        # swap dims (feat_size, len)--> (len, feat_size) 
-        embedding = embedding.permute(1, 0)
-        ids = [infos['name']]
+        id = infos['name']
         og = infos['original_data']
         true_len = self.get_true_len(og)
-        label = label_files(self.label_df, self.label_col, ids, self.label_id_col)
+        label = label_files(self.label_df, self.label_col, id, self.label_id_col)
         return {"embedding":embedding, "sequence_label":label, 'true_len':true_len}
 
     def filter_dataset(self):
@@ -84,9 +88,7 @@ def gazeformer_embedding_collate_fn(batch, pool_fn=None):
         if len(y)>1:
             raise ValueError("More than one label found for a sample")
         batch_tgt_y.append(y)
-        emb = t["embedding"]
-        if pool_fn:
-            emb = pool_fn(emb)
+        emb = t["embedding"] 
         batch_embedding.append(emb)
         pad_mask = torch.zeros(emb.shape[0])
         pad_mask[:true_len] = 1
@@ -94,6 +96,9 @@ def gazeformer_embedding_collate_fn(batch, pool_fn=None):
     batch_pad_mask = torch.stack(batch_pad_mask)
     batch_tgt_y = torch.Tensor(batch_tgt_y).float()
     batch_embedding = torch.stack(batch_embedding)
+    if pool_fn:
+        batch_embedding = pool_fn(batch_embedding, batch_pad_mask)
+        batch_pad_mask = None #because no longer a time dim
     return (batch_embedding, batch_pad_mask), batch_tgt_y
 
 class EmbeddingDataModule(LightningDataModule):

@@ -8,6 +8,22 @@ Pretraining validation metrics: summarized
 | PC: MSE (deg) |  0.569 | 0.389 | 0.760 |
 | RC: MSE (deg) |  0.745 | 0.464 | 0.977 |
 
+Held-out AUROCs: informer with fixed sequence length 500
+| label       |   mean AUROC |   min AUROC |   max AUROC |
+|-------------|--------------|-------------|-------------|
+| SVT         |        0.517 |       0.483 |       0.540 |
+| Rote_X      |        0.689 |       0.594 |       0.748 |
+| Rote_Y      |        0.617 |       0.594 |       0.630 |
+| Rote_Z      |        0.632 |       0.579 |       0.713 |
+| Rote_D      |        0.708 |       0.611 |       0.764 |
+| Inference_X |        0.599 |       0.556 |       0.674 |
+| Inference_Y |        0.600 |       0.516 |       0.655 |
+| Inference_Z |        0.705 |       0.660 |       0.743 |
+| Inference_D |        0.661 |       0.608 |       0.721 |
+| Deep_X      |        0.602 |       0.575 |       0.633 |
+| Deep_Z      |        0.640 |       0.595 |       0.673 |
+| MW          |        0.609 |       0.590 |       0.635 |
+
 Held-out AUROCs: informer_4task_encoder_varlen_meanpool
 | label       |   mean AUROC |   min AUROC |   max AUROC |
 |-------------|--------------|-------------|-------------|
@@ -39,3 +55,35 @@ Held-out AUROCs: informer_4task_encoder_varlen_maskmeanpool
 | Deep_X      |        0.618 |       0.583 |       0.648 |
 | Deep_Z      |        0.636 |       0.587 |       0.663 |
 | MW          |        0.625 |       0.589 |       0.682 |
+
+Held-out AUROCs: informer_4task_encoder_varlen_finalpos
+| label       |   mean AUROC |   min AUROC |   max AUROC |
+|-------------|--------------|-------------|-------------|
+| SVT         |        0.500 |       0.456 |       0.535 |
+| Rote_X      |        0.550 |       0.536 |       0.576 |
+| Rote_Y      |        0.528 |       0.479 |       0.574 |
+| Rote_Z      |        0.609 |       0.584 |       0.639 |
+| Rote_D      |        0.583 |       0.543 |       0.622 |
+| Inference_X |        0.562 |       0.503 |       0.637 |
+| Inference_Y |        0.551 |       0.538 |       0.560 |
+| Inference_Z |        0.567 |       0.527 |       0.622 |
+| Inference_D |        0.625 |       0.582 |       0.665 |
+| Deep_X      |        0.541 |       0.492 |       0.563 |
+| Deep_Z      |        0.646 |       0.583 |       0.718 |
+| MW          |        0.591 |       0.559 |       0.611 |
+
+Held-out AUROCs: limu_125
+| label       |   mean AUROC |   min AUROC |   max AUROC |
+|-------------|--------------|-------------|-------------|
+| SVT         |        0.454 |       0.435 |       0.466 |
+| Rote_X      |        0.527 |       0.518 |       0.537 |
+| Rote_Y      |        0.633 |       0.625 |       0.641 |
+| Rote_Z      |        0.522 |       0.509 |       0.540 |
+| Rote_D      |        0.350 |       0.335 |       0.359 |
+| Inference_X |        0.498 |       0.487 |       0.514 |
+| Inference_Y |        0.535 |       0.531 |       0.545 |
+| Inference_Z |        0.531 |       0.523 |       0.536 |
+| Inference_D |        0.529 |       0.520 |       0.546 |
+| Deep_X      |        0.525 |       0.514 |       0.530 |
+| Deep_Z      |        0.532 |       0.508 |       0.553 |
+| MW          |        0.523 |       0.517 |       0.529 |

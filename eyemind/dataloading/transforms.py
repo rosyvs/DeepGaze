@@ -102,14 +102,22 @@ class Pooler():
     def mean_pool_logits(self, logits, mask=None):
         return logits.mean(dim=1)
     def masked_mean_pool_logits(self, logits, mask=None):
+        # batch_size, seqlen, feats
         if mask is None:
-            mask = torch.ones(logits.shape[0], logits.shape[1]) # reduce to mean if mask is not provided
-        return (logits*mask.unsqueeze(2)).sum(dim=1) / mask.sum(dim=1).unsqueeze(1)
+            mask = torch.ones_like(logits) # reduce to mean if mask is not provided
+        # if mask is 1 dimension less than logits, expand mask to match logits
+        if len(mask.shape) < len(logits.shape):
+            mask = mask.unsqueeze(-1).expand_as(logits)
+        masked = logits * mask
+        mean_masked = masked.sum(dim=1) / mask.sum(dim=1)
+        return mean_masked
+
     def final_pos_pool_logits(self,logits, mask=None):
         if mask is None:
             mask = torch.ones(logits.shape[0], logits.shape[1])
         final_pos = torch.stack([torch.nonzero(mask[i,:], as_tuple=True)[0][-1] for i in range(mask.shape[0])])
-        return torch.stack([logits[i,final_pos[i],:] for i in range(logits.shape[0])])
+        logits_final = torch.stack([logits[i,final_pos[i]] for i in range(logits.shape[0])])
+        return logits_final
     def get_pooler(self,pool_method):
         if pool_method == 'mean':
             return Pooler.mean_pool_logits
