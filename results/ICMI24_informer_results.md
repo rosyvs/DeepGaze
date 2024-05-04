@@ -120,7 +120,10 @@ Held-out AUROCs: limu_125_finalpos
 | Deep_Z      |        0.525 |       0.506 |       0.546 |
 | MW          |        0.537 |       0.519 |       0.551 |
 
-| label       |   informer_fixlen |   informer_finalpos |   informer_maskmeanpool |   informer_meanpool |   limu |   limu_finalpos |   limu_masked |
+
+
+# OVERALL RESULTS
+mean AUROC over folds per classifier| label       |   informer_fixlen |   informer_finalpos |   informer_maskmeanpool |   informer_meanpool |   limu |   limu_finalpos |   limu_masked |
 |-------------|-------------------|---------------------|-------------------------|---------------------|--------|-----------------|---------------|
 | Deep_X      |             0.602 |               0.541 |                   0.618 |               0.614 |  0.525 |           0.503 |         0.537 |
 | Deep_Z      |             0.640 |               0.646 |                   0.636 |               0.640 |  0.532 |           0.525 |         0.541 |
@@ -134,4 +137,3 @@ Held-out AUROCs: limu_125_finalpos
 | Rote_Y      |             0.617 |               0.528 |                   0.536 |               0.551 |  0.633 |           0.631 |         0.642 |
 | Rote_Z      |             0.632 |               0.609 |                   0.642 |               0.637 |  0.522 |           0.541 |         0.518 |
 | SVT         |             0.517 |               0.500 |                   0.556 |               0.523 |  0.454 |           0.444 |         0.501 |
-
