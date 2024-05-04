@@ -6,7 +6,7 @@ from eyemind.experiments.cli import FoldsLightningCLI
 
 if __name__ == "__main__":
     cli = FoldsLightningCLI(InformerClassifierModel, 
-                            SequenceToLabelDataModule, 
+                            VariableLengthSequenceToLabelDataModule, 
                             run=False, 
                             save_config_overwrite=True)
     cli.datamodule.setup()

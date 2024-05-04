@@ -155,11 +155,31 @@ def multilabel_multitask_collate_fn(sequence_length, batch, min_seq=1.0, max_seq
     return (X_batched, X_mask), (yi_batched, yi_mask), (seq_y_batched, None), (X2_batched, X2_mask), cl_y_batched.float()
 
 
+# full-sequence (or varialbe sequence length) collate functions
 
 #TODO: mask/flag stuff from here on
 def variable_length_seq2label_collate_fn(max_sequence_length, batch):
-# full-sequence (or varialbe sequence length) collate functions
-#TODO: rename this to indicate it is for sequence-to-sequence
+# NOTE: the non-variable length version of this func doesnt seem to have a collate_fn?
+    X, y = zip(*batch)
+    y = torch.stack(y) if y[0] is not None else None
+    bs = len(X)
+    fs = X[0].shape[-1]
+    lens = [x.shape[0] for x in X] # sequence lengths
+    max_sequence_length = min(max_sequence_length, max(lens)) # if max_sequence_length is greater than the longest sequence, set it to the longest sequence
+    X_batched = torch.zeros((bs,max_sequence_length,fs))
+    pad_mask = torch.zeros((bs, max_sequence_length))
+    for i in range(bs):
+        full_sl = X[i].shape[0]
+        if full_sl > max_sequence_length:
+            start_ind = random.randrange(0,full_sl-max_sequence_length)
+            end_ind = start_ind + max_sequence_length 
+            X_batched[i] = X[i][start_ind:end_ind,:]
+            pad_mask[i, :] = 1
+        else:
+            X_batched[i, :full_sl] = X[i]
+            pad_mask[i, :full_sl] = 1
+    return (X_batched, pad_mask), y
+
 def variable_length_seq2seq_collate_fn(max_sequence_length, batch):
     X, yi = zip(*batch)
     bs = len(X)

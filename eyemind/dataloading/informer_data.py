@@ -182,3 +182,4 @@ class InformerMultiLabelDatamodule(SequenceToMultiLabelDataModule):
 
 class InformerVariableLengthDataModule(VariableLengthSequenceToLabelDataModule):
     pass
+

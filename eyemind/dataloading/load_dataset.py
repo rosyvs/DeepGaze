@@ -25,7 +25,10 @@ def load_file_folds(path):
     return [(fold["train"], fold["val"]) for fold in file_folds_dict["folds"]]
 
 def get_filenames_for_dataset(folder, label_df, label_col, id_col="filename", ext="csv", min_sequence_length=500):
-    files = label_df[(~label_df[label_col].isna()) & (label_df["sequence_length"] > min_sequence_length)][id_col].to_list()
+    if label_col:
+        files = label_df[(~label_df[label_col].isna()) & (label_df["sequence_length"] > min_sequence_length)][id_col].to_list()
+    else:
+        files = label_df[id_col].loc[label_df["sequence_length"] > min_sequence_length].to_list()
     label_filenames = set([f"{file}.{ext}" for file in files])
     folder_filenames = set([f.name for f in Path(folder).glob(f'*.{ext}')])
     return list(label_filenames.intersection(folder_filenames))

@@ -10,7 +10,7 @@ from eyemind.obf.model import ae
 from eyemind.obf.model import creator
 from eyemind.models.encoder_decoder import EncoderDecoderModel, MultiTaskEncoderDecoder
 from eyemind.analysis.predictions import get_encoder_from_checkpoint
-
+from eyemind.dataloading.transforms import Pooler
 from eyemind.models.informer.utils.masking import TriangularCausalMask, ProbMask
 from eyemind.models.informer.models.encoder import Encoder, EncoderLayer, ConvLayer, EncoderStack
 from eyemind.models.informer.models.decoder import Decoder, DecoderLayer
@@ -274,7 +274,9 @@ class EncoderClassifierModel(LightningModule):
                 distil: bool=True, 
                 learning_rate: float=1e-3, 
                 encoder_ckpt: str="",
-                freeze_encoder: bool=False):
+                freeze_encoder: bool=False,
+                pool_method: str="mean",
+                ):
         super().__init__()
         self.save_hyperparameters()
         # # Scaler
@@ -284,6 +286,7 @@ class EncoderClassifierModel(LightningModule):
         # Metrics
         self.auroc_metric = torchmetrics.AUROC()
         self.accuracy_metric = torchmetrics.Accuracy()
+        self.pool_fn = Pooler(pool_method)
         # Encoding
         if encoder_ckpt:
             #self.enc_embedding, self.encoder = get_encoder_from_checkpoint(InformerMultiTaskEncoderDecoder, encoder_ckpt)
@@ -299,10 +302,10 @@ class EncoderClassifierModel(LightningModule):
             #self.enc_embedding.requires_grad_(False)
             self.encoder.requires_grad_(False)
 
-    def forward(self, x_enc):
+    def forward(self, x_enc, mask=None):
         #enc_out = self.enc_embedding(x_enc)
-        enc_out = self.encoder(x_enc)
-        dec_in = torch.mean(enc_out, 1)
+        enc_out = self.encoder(x_enc, mask)
+        dec_in = self.pool_fn(enc_out, mask)
         dec_out = self.classifier_head(dec_in)
         return dec_out
         
@@ -324,12 +327,10 @@ class EncoderClassifierModel(LightningModule):
         try:
             X, y = batch
             # if masks are provided these will be tuples
-            if isinstance(X, tuple):
+            if isinstance(X, tuple) or isinstance(X, list):
                 X, Xmask = X
-                raise NotImplementedError("X is a tuple of X, mask. Masks are not implemented")
-            if isinstance(y, tuple):
+            if isinstance(y, tuple) or isinstance(y, list):
                 y, ymask = y
-                raise NotImplementedError("y is a tuple of y, mask. Masks are not implemented")
         except ValueError as e:
             print(f"{batch}")
             raise e
@@ -363,7 +364,7 @@ class EncoderClassifierModel(LightningModule):
         return probs
 
     def add_model_specific_args(parent_parser):
-        parser = parent_parser.add_argument_group("InformerEncoderDecoderModel")
+        parser = parent_parser.add_argument_group("EncoderClassifierModel")
         parser.add_argument('--learning_rate', type=float, default=0.001)
         parser.add_argument('--encoder_ckpt', type=str, default="")
         parser.add_argument('--enc_in', type=int, default=2, help='encoder input size')
@@ -375,6 +376,94 @@ class EncoderClassifierModel(LightningModule):
         parser.add_argument('--padding', type=int, default=0, help='padding type')
         parser.add_argument('--distil', action='store_false', help='whether to use distilling in encoder, using this argument means not using distilling', default=True)
         parser.add_argument('--activation', type=str, default='gelu',help='activation')
-        parser.add_argument('--class_weights', type=float, nargs='*', default=[3., 1.])
+        # parser.add_argument('--class_weights', type=float, nargs='*', default=[3., 1.])
         parser.add_argument('--freeze_encoder', action='store_false')
+        parser.add_argument('--pool_method', type=str, default="mean")
+        return parser
+
+class ClassifierHead(LightningModule):
+    # MLP classifier only - use when loading features from an arbitrary source
+    # NOTE: binary only for now
+    def __init__(self,  
+                input_dim: int=128, 
+                hidden_dim: int=64,
+                dropout: float=0.05, 
+                activation: str='relu', 
+                learning_rate: float=1e-3, 
+                ):
+        super().__init__()
+
+        self.save_hyperparameters()
+        # # Scaler
+        # self.scaler = GazeScaler()
+        # Loss function
+        self.criterion = nn.BCEWithLogitsLoss() # 
+        # Metrics
+        self.accuracy_metric = torchmetrics.Accuracy(task='binary') # todo: for multiclass maybe c_out = n classes
+        self.auroc_metric = torchmetrics.AUROC(task="binary")
+
+        self.classifier_head = ae.MLP(input_dim=input_dim, 
+                                      layers=[hidden_dim,1], 
+                                      activation=activation)
+    def forward(self, x):
+        #enc_out = self.enc_embedding(x_enc)
+        # cls_in = torch.mean(x, 1) # TODO: average being computed over what? And shouold it be using the mask? 
+        cls_out = self.classifier_head(x)
+        return cls_out
+        
+    def training_step(self, batch, batch_idx):
+        return self._step(batch, batch_idx, step_type="train")
+    
+    def validation_step(self, batch, batch_idx):
+        self._step(batch, batch_idx, step_type="val")
+
+    def predict_step(self, batch: Any, batch_idx: int, dataloader_idx: int = 0):
+        X, _ = batch
+        logits = self.forward(X)
+        return self._get_preds(logits) 
+    
+    def test_step(self, batch, batch_idx):
+        self._step(batch, batch_idx, step_type="test")
+
+    def _step(self, batch, batch_idx, step_type):
+        X, y = batch
+        # if masks are provided these will be tuples
+        if isinstance(X, tuple) or isinstance(X, list):
+            X, Xmask = X
+        logits = self(X).squeeze()
+        targets = y.squeeze()
+        loss = self.criterion(logits, targets)
+        probs = self._get_probs(logits)
+        accuracy = self.accuracy_metric(probs, targets)
+        auroc = self.auroc_metric(probs, targets)
+        self.logger.experiment.add_scalars("losses", {f"{step_type}_loss": loss}, self.current_epoch)        
+        self.log(f"{step_type}_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
+        # self.log(f"{step_type}_accuracy", accuracy, on_step=True, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
+        self.log(f"{step_type}_auroc", auroc, on_step=False, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
+
+        return loss
+
+    def configure_optimizers(self):
+        params = self.parameters()
+        optimizer = torch.optim.Adam(params, lr=self.hparams.learning_rate)
+        res = {"optimizer": optimizer}
+        res['lr_scheduler'] = {"scheduler": torch.optim.lr_scheduler.StepLR(optimizer, step_size=max(1, int(self.trainer.max_epochs / 5)), gamma=0.5)}
+        return res
+
+    def _get_preds(self, logits, threshold=0.5):
+        probs = torch.sigmoid(logits)
+        preds = (probs > threshold).float()
+        return preds
+
+    def _get_probs(self, logits):
+        probs = torch.sigmoid(logits)
+        return probs
+
+    def add_model_specific_args(parent_parser):
+        parser = parent_parser.add_argument_group("ClassifierHead")
+        parser.add_argument('--learning_rate', type=float, default=0.001)
+        parser.add_argument('--c_out', type=int, default=1, help='output size')
+        parser.add_argument('--d_model', type=int, default=512, help='dimension of model')
+        parser.add_argument('--activation', type=str, default='gelu',help='activation')
+        # parser.add_argument('--class_weights', type=float, nargs='*', default=[1., 1.])
         return parser

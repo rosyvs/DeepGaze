@@ -10,7 +10,7 @@ from sklearn.model_selection import train_test_split
 import yaml
 from eyemind.dataloading.transforms import StandardScaler, GazeScaler
 from eyemind.dataloading.load_dataset import label_samples, filter_files_by_seqlen, get_filenames_for_dataset, get_label_df, get_label_mapper, get_participant_splits, get_stratified_group_splits, limit_sequence_len, load_file_folds, write_splits, label_samples_and_files
-from eyemind.dataloading.batch_loading import seq2seq_collate_fn, multitask_collate_fn, split_collate_fn, multilabel_multitask_collate_fn, variable_length_seq2seq_collate_fn, variable_length_multilabel_multitask_collate_fn, variable_length_multitask_collate_fn
+from eyemind.dataloading.batch_loading import seq2seq_collate_fn, multitask_collate_fn, split_collate_fn, multilabel_multitask_collate_fn, variable_length_seq2seq_collate_fn, variable_length_multilabel_multitask_collate_fn, variable_length_multitask_collate_fn, variable_length_seq2label_collate_fn
 import torchvision.transforms as T
 from torch.utils.data import Dataset, DataLoader, Sampler, Subset
 
@@ -63,6 +63,8 @@ class SequenceLabelDataset(Dataset):
         self.transform_y = transform_y
         if label_mapper:
             self.labels = label_mapper(filenames=self.files)
+        else:
+            self.labels = None
         
     def __len__(self):
         return len(self.files)
@@ -84,7 +86,7 @@ class SequenceLabelDataset(Dataset):
                 label = self.transform_y(label)
             return x_data, label
         else:
-            return x_data
+            return x_data, None
 
     def get_labels_from_indices(self, indices):
         return [self.labels[ind] for ind in indices]
@@ -414,7 +416,7 @@ class BaseGazeDataModule(LightningDataModule, ABC):
     def file_mapper(self) -> None:
         pass
 class SequenceToLabelDataModule(GroupStratifiedNestedCVDataModule, BaseGazeDataModule):
-
+    # Note: this doesnt have a special collate_fn but it does limit sequence length in x.transforms by takng first sequence-Length elements
     def __init__(self,
                 data_dir: str,
                 label_filepath: str,
@@ -423,6 +425,7 @@ class SequenceToLabelDataModule(GroupStratifiedNestedCVDataModule, BaseGazeDataM
                 test_dir: Optional[str] = None,
                 train_dataset: Optional[Dataset] = None,
                 test_dataset: Optional[Dataset] = None,
+                val_dataset: Optional[Dataset] = None,
                 train_fold: Optional[Dataset] = None,
                 val_fold: Optional[Dataset] = None,
                 sequence_length: int = 500,
@@ -443,6 +446,7 @@ class SequenceToLabelDataModule(GroupStratifiedNestedCVDataModule, BaseGazeDataM
         self.test_dir = test_dir
         self.train_dataset = train_dataset
         self.test_dataset = test_dataset
+        self.val_dataset = val_dataset
         self.train_fold = train_fold
         self.val_fold = val_fold
         self.sequence_length = sequence_length
@@ -544,7 +548,10 @@ class SequenceToLabelDataModule(GroupStratifiedNestedCVDataModule, BaseGazeDataM
     
     @property
     def label_mapper(self):
-        return get_label_mapper(self.label_df, self.label_col)
+        if self.label_col:
+            return get_label_mapper(self.label_df, self.label_col)
+        else:
+            return None
     
     @property
     def file_mapper(self):
@@ -1181,13 +1188,13 @@ class VariableLengthSequenceToSequenceDataModule(SequenceToSequenceDataModule):
 
 class VariableLengthSequenceToLabelDataModule(SequenceToLabelDataModule):
     # initialise supercass
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, *, min_sequence_length=500, max_sequence_length=500, **kwargs):
+        super().__init__( **kwargs)
         # remove sequence_length
         self.sequence_length = None # because it is determined by min and max sequence length now
         # add min and max sequence length
-        self.min_sequence_length = kwargs.get("min_sequence_length", 500)
-        self.max_sequence_length = kwargs.get("max_sequence_length", 500)
+        self.min_sequence_length = min_sequence_length
+        self.max_sequence_length = max_sequence_length
 
     def get_dataloader(self, dataset: Dataset):
         return DataLoader(

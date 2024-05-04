@@ -89,7 +89,11 @@ class EncoderDecoderModel(LightningModule):
 
     def _step(self, batch, batch_idx, step_type):
         try:
-            X, y, Xmask, Ymask = batch
+            X, y = batch
+            if isinstance(X, tuple) or isinstance(X, list):
+                X, X_mask = X
+            if isinstance(y, tuple) or isinstance(y, list):
+                y, y_mask = y
         except ValueError as e:
             print(f"{batch}")
             raise e
@@ -174,10 +178,14 @@ class VariableSequenceLengthEncoderDecoderModel(EncoderDecoderModel):
     def _step(self, batch, batch_idx, step_type):
         try:
             X, y = batch
+            if isinstance(X, tuple) or isinstance(X, list):
+                X, X_mask = X
+            if isinstance(y, tuple) or isinstance(y, list):
+                y, y_mask = y
         except ValueError as e:
             print(f"{batch}")
             raise e
-        # TODO: check if there is a way to not do backprop: maybe just return loss = 0 
+        # TODO: PAss mask
         logits = self(X).squeeze()
         logits = logits.reshape(-1, 2)
         y = y.reshape(-1).long()
@@ -239,7 +247,7 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
         self.save_hyperparameters()
         if len(tasks) == 0:
             raise ValueError("There must be at least one task. Length of tasks is 0")
-        self.encoder, fi_decoder = create_encoder_decoder(hidden_dim, out_dim=num_classes, use_conv, input_seq_length=sequence_length)
+        self.encoder, fi_decoder = create_encoder_decoder(hidden_dim, out_dim=num_classes, use_conv=use_conv, input_seq_length=sequence_length)
         #self.decoders = {}
         self.decoders = []
         self.criterions = [] 
@@ -319,7 +327,7 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
     #     return preds, targets
 
     def predict_step(self, batch, batch_idx):
-        # TODO: refactor this - initial batch can be (X, yi) or (X, yi, seq_y) but cl handled by its own function in if "CL" block
+            # TODO: refactor this - initial batch can be (X, yi) or (X, yi, seq_y) but cl handled by its own function in if "CL" block
         n_items = len(batch) # this is not the batch size, but the number of items (data and labels) to unpack
         if n_items==2: # just gaze sequence and fixation (sample) labels
             X, yi = batch
@@ -330,8 +338,14 @@ class MultiTaskEncoderDecoder(VariableSequenceLengthEncoderDecoderModel):
             X, X_mask = X 
             yi, yi_mask = yi
             X2, X2_mask = X2
+        elif n_items==5: # sequence and fixation (sample) labels
+            X, yi, seq_y, X2, cl_y = batch
+            X, X_mask = X
+            yi, yi_mask = yi
+            seq_y, seq_y_mask = seq_y
+            X2, X2_mask = X2
         else:
-            raise ValueError("Batch size not recognized.")
+            raise ValueError('unpacked batch has {n_items} elements, check collate_fn is compatible with this model')
         task_predictions = {}
         for task in self.hparams.tasks:
             if task == "cl":

@@ -10,7 +10,6 @@ from eyemind.dataloading.batch_loading import predictive_coding_batch
 from eyemind.obf.model import ae
 from ..dataloading.transforms import GazeScaler
 from eyemind.models.informer.models.model import InformerStack
-
 from eyemind.models.informer.utils.masking import TriangularCausalMask, ProbMask
 from eyemind.models.informer.models.encoder import Encoder, EncoderLayer, ConvLayer, EncoderStack
 from eyemind.models.informer.models.decoder import Decoder, DecoderLayer
@@ -18,8 +17,10 @@ from eyemind.models.informer.models.attn import FullAttention, ProbAttention, At
 from eyemind.models.informer.models.embed import GazeEmbedding
 from eyemind.models.loss import RMSELoss
 from eyemind.dataloading.load_dataset import binarize_labels
+from eyemind.dataloading.transforms import Pooler
 from eyemind.analysis.visualize import plot_scanpath_labels, plot_scanpath_pc, viz_coding
-class InformerEncoder(nn.Module):
+
+class InformerEncoder(LightningModule):
     def __init__(self,
                 enc_in: int=2,
                 factor: int=5, #ProbSparse sampling factor (only makes affect when attention_type=“prob”). It is used to control the reduced query matrix (Q_reduce) input length.
@@ -64,6 +65,18 @@ class InformerEncoder(nn.Module):
             return enc_out, attns
         else:
             return enc_out
+    def _step(self, batch, batch_idx, step_type):
+        X, yi = batch
+        try:
+            X, X_mask = X
+        except ValueError as e:
+            print(f"{batch}")
+            raise e
+        if self.hparams.output_attention:
+            logits, attns = self(X, X_mask)
+        else:
+            logits = self(X, x_mask)
+        logits = logits.squeeze().reshape(-1,2)
     # TODO: batch loading wiht mask? 
 
 class InformerDecoder(nn.Module):
@@ -299,7 +312,7 @@ class InformerEncoderFixationModel(LightningModule):
     def __init__(self, 
                 enc_in: int=2, # one neuron for each of X and Y coord
                 dec_in: int=1, 
-                c_out: int=2, # one neuron for each of X and Y coord
+                c_out: int=2, # one neuron for each of 0 and 1
                 pc_seq_length: int=250, 
                 label_length: int=100, 
                 pred_length: int=150,
@@ -327,7 +340,7 @@ class InformerEncoderFixationModel(LightningModule):
         # Loss function
         self.fi_criterion = nn.CrossEntropyLoss(torch.Tensor(class_weights))
         # Metrics
-        self.fi_metric = torchmetrics.AUROC(num_classes=2, average="weighted")
+        self.fi_metric = torchmetrics.AUROC(num_classes=c_out, average="weighted")
         # Encoding
         self.enc_embedding = GazeEmbedding(enc_in, d_model, dropout)
         # Attention
@@ -723,7 +736,9 @@ class InformerClassifierModel(LightningModule):
                 distil: bool=True, 
                 learning_rate: float=1e-3, 
                 encoder_ckpt: str="",
-                freeze_encoder: bool=False):
+                freeze_encoder: bool=False,
+                pool_method: str="mean",
+                ):
         super().__init__()
         self.save_hyperparameters()
         # Scaler
@@ -733,6 +748,7 @@ class InformerClassifierModel(LightningModule):
         # Metrics
         self.auroc_metric = torchmetrics.AUROC(task="binary")
         self.accuracy_metric = torchmetrics.Accuracy(task="binary")
+        self.pool_fn = Pooler(pool_method=pool_method)
         # Encoding
         if encoder_ckpt:
             #self.enc_embedding, self.encoder = get_encoder_from_checkpoint(InformerMultiTaskEncoderDecoder, encoder_ckpt)
@@ -774,12 +790,12 @@ class InformerClassifierModel(LightningModule):
 
         if freeze_encoder:
             #self.enc_embedding.requires_grad_(False)
-            self.encoder.requires_grad_(False)
+            self.encoder.requires_grad_(False)        
 
     def forward(self, x_enc, enc_self_mask=None):
         #enc_out = self.enc_embedding(x_enc)
         enc_out = self.encoder(x_enc, enc_self_mask)
-        dec_in = torch.mean(enc_out, 1)
+        dec_in = self.pool_fn(enc_out, enc_self_mask)
         dec_out = self.classifier_head(dec_in)
         if self.hparams.output_attention:
             #return dec_out, attns
@@ -794,32 +810,39 @@ class InformerClassifierModel(LightningModule):
         self._step(batch, batch_idx, step_type="val")
 
     def predict_step(self, batch: Any, batch_idx: int, dataloader_idx: int = 0):
-        X, _ = batch
-        logits = self(X)
+        if len(batch) == 2:
+            X, y = batch
+            if isinstance(X, tuple) or isinstance(X, list):
+                X, pad_mask = X
+            else:
+                pad_mask=torch.ones_like(X)
+        elif len(batch) == 3:
+            X, y, pad_mask = batch
+        logits = self(X, pad_mask)
         return self._get_preds(logits) 
     
     def test_step(self, batch, batch_idx):
         self._step(batch, batch_idx, step_type="test")
 
     def _step(self, batch, batch_idx, step_type):
-        try:
-            if len(batch) == 2:
-                X, y = batch
-                pad_mask=ones_like(X)
-            elif len(batch) == 3:
-                X, y, pad_mask = batch
-        except ValueError as e:
-            print(f"{batch}")
-            raise e
+        if len(batch) == 2:
+            X, y = batch
+            if isinstance(X, tuple) or isinstance(X, list):
+                X, pad_mask = X
+            else:
+                pad_mask=torch.ones_like(X)
+        elif len(batch) == 3:
+            X, y, pad_mask = batch
+
         logits = self(X, pad_mask).squeeze()
-        loss=self.criterion(logits[pad_mask], y[pad_mask] )
+        targets = y.squeeze()
+        loss=self.criterion(logits, targets)
         probs = self._get_probs(logits)
-        y = y.int()
-        accuracy = self.accuracy_metric(probs[pad_mask], y[pad_mask])
-        auroc = self.auroc_metric(probs[pad_mask], y[pad_mask])
+        accuracy = self.accuracy_metric(probs, targets)
+        auroc = self.auroc_metric(probs, targets)
         self.logger.experiment.add_scalars("losses", {f"{step_type}_loss": loss}, self.current_epoch)        
         self.log(f"{step_type}_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
-        self.log(f"{step_type}_accuracy", accuracy, on_step=True, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
+        # self.log(f"{step_type}_accuracy", accuracy, on_step=True, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
         self.log(f"{step_type}_auroc", auroc, on_step=False, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
         return loss
 
@@ -841,7 +864,7 @@ class InformerClassifierModel(LightningModule):
         return probs
 
     def add_model_specific_args(parent_parser):
-        parser = parent_parser.add_argument_group("InformerEncoderDecoderModel")
+        parser = parent_parser.add_argument_group("InformerClassifierModel")
         parser.add_argument('--learning_rate', type=float, default=0.001)
         parser.add_argument('--encoder_ckpt', type=str, default="")
         parser.add_argument('--enc_in', type=int, default=2, help='encoder input size')
@@ -860,6 +883,7 @@ class InformerClassifierModel(LightningModule):
         parser.add_argument('--output_attention', action='store_true', help='whether to output attention in ecoder')
         parser.add_argument('--class_weights', type=float, nargs='*', default=[3., 1.])
         parser.add_argument('--freeze_encoder', action='store_false')
+        parser.add_argument('--pool_method', type=str, default="mean")
         return parser
 
 
@@ -1028,11 +1052,14 @@ class InformerEncoderScalarRegModel(LightningModule):
         self._step(batch, batch_idx, step_type="test")
 
     def _step(self, batch, batch_idx, step_type):
-        try:
+        if len(batch) == 2:
             X, y = batch
-        except ValueError as e:
-            print(f"{batch}")
-            raise e
+            if isinstance(X, tuple) or isinstance(X, list):
+                X, pad_mask = X
+            else:
+                pad_mask=torch.ones_like(X)
+        elif len(batch) == 3:
+            X, y, pad_mask = batch
         logits = self(X).squeeze()
         loss = self.criterion(logits, y)
         preds = self._get_preds(logits)#TODO: not probsbility

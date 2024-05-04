@@ -93,4 +93,31 @@ class FlagReplacer():
         data[data==self.flag] = self.replacement
         return data
 
-
+class Pooler():
+    # sequence pooling functions for pooling transformer encoder output to flatten time dimension
+    def __init__(self, pool_method):
+        self.pool_fn = self.get_pooler(pool_method)
+    def __call__(self, *args):
+        return self.pool_fn(self, *args)
+    def mean_pool_logits(self, logits, mask=None):
+        return logits.mean(dim=1)
+    def masked_mean_pool_logits(self, logits, mask=None):
+        if mask is None:
+            mask = torch.ones(logits.shape[0], logits.shape[1]) # reduce to mean if mask is not provided
+        return (logits*mask.unsqueeze(2)).sum(dim=1) / mask.sum(dim=1).unsqueeze(1)
+    def final_pos_pool_logits(self,logits, mask=None):
+        if mask is None:
+            mask = torch.ones(logits.shape[0], logits.shape[1])
+        final_pos = torch.stack([torch.nonzero(mask[i,:], as_tuple=True)[0][-1] for i in range(mask.shape[0])])
+        return torch.stack([logits[i,final_pos[i],:] for i in range(logits.shape[0])])
+    def get_pooler(self,pool_method):
+        if pool_method == 'mean':
+            return Pooler.mean_pool_logits
+        elif pool_method == 'masked_mean':
+            return Pooler.masked_mean_pool_logits
+        elif pool_method == 'final_pos':
+            return Pooler.final_pos_pool_logits
+        elif pool_method is None:
+            return lambda x: x  # identity function
+        else:
+            raise ValueError(f"Pooling method {pool_method} not recognized")
