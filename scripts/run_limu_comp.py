@@ -3,14 +3,12 @@ import subprocess
 from pathlib import Path
 
 # This python script automates running a slurm bash script for each fold. 
-# Run this with -s slurm_multitask_informer_comp_template.sh
 
 #e.g.
-# python scripts/run_slurm_multitask_informer_comp.py \
-# -c configs/cluster/new_multitask_informer_comp.yml \
+# python scripts/run_limu_comp.py \
+# -c configs/2024/lvcmp/classifier_limubert_125.yaml \
 # -f 0 1 2 3 \
-# --encoder_dir lightning_logs/new_multitsk_informer_pretraining/ \
-# --label_col Rote_X
+# --label_col ALL
 
 def main(args):
     if not args.config:

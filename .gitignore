@@ -3,6 +3,7 @@ build/*
 **__pycache__
 **.DS_Store
 trained_models/*
+pretrained_models/*
 notes
 **.egg-info
 **logs
@@ -12,3 +13,4 @@ OBF/
 **ray_results
 **notes
 notes/*
+*.pt
