@@ -18,11 +18,13 @@ repodir = os.path.dirname(os.path.dirname(eyemind.__file__))
 import numpy as np
 from functools import partial
 from pytorch_lightning.cli import LightningCLI
+import numpy as np
+
 # %%
-emb_file = os.path.join(repodir,"./data/limu/embeds_splits_512/rosie_train_1_with_embedding_using_rosie_512_train_split_1.npy")
-label_file =  os.path.join(repodir,"./data/EML/EML1_pageLevel_500+_matchEDMinstances.csv")
+emb_file = os.path.normpath(os.path.join(repodir,"./data/embeddings_for_rosy_DST/EML_PTEZ_FTEML_Embeddings_Script_from_long_ago/EML_split4_embeddings.npy"))
+label_file =  os.path.normpath(os.path.join(repodir,"./data/EML/EML1_pageLevel_500+_matchEDMinstances.csv"))
 label_df = pd.read_csv(label_file, keep_default_na=False)
-label_df['Rote_X'].isna().sum()
+
 
 # read the file
 embeddings = np.load(emb_file)
@@ -40,7 +42,7 @@ def get_len(x, pad_val=-1.0):
     true_ix=np.where((xi!=pad_val).sum(axis=1)==xi.shape[1])
     true_length = true_ix[0][-1]+1
     return true_length
-get_len(embeddings[2])
+get_len(embeddings[np.random.randint(0, embeddings.shape[0])])
 # indices are events
 
 #%%
