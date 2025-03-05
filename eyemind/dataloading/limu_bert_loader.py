@@ -103,11 +103,14 @@ class GazeformerEmbeddingDataset(Dataset):
             ids = label_df[id_col].to_list()
         
         ids = set(ids)
-        # print(f"len ids: {len(ids)}")
+        print(f"len ids: {len(ids)}")
         # print(f"random sample of ids: {list(ids)[:5]}")
         # fitler on data true_len
-        data_ids = set([i["name"] for i in self.data if self.get_true_len(i["original_data"])>self.min_sequence_length])
-        # print(f"len data_ids: {len(data_ids)}")
+        true_lens = [self.get_true_len(i["original_data"]) for i in self.data]
+        print(f"sequences with length less than {self.min_sequence_length}: {len([i for i in true_lens if i<self.min_sequence_length])}")
+        # print(f"sequences with length less than {self.min_sequence_length}: {len([i for i in true_lens if i<self.min_sequence_length])}")
+        data_ids = set([i["name"] for i in self.data if self.get_true_len(i["original_data"])>=self.min_sequence_length])
+        print(f"len data_ids: {len(data_ids)}")
         # print(f"random sample of data_ids: {list(data_ids)[:5]}")'
         sel = list(ids.intersection(data_ids))
         return sel
@@ -146,7 +149,7 @@ def gazeformer_embedding_collate_fn(batch, pool_fn=None):
     return (batch_embedding, batch_pad_mask), batch_tgt_y
 
 class EmbeddingDataModule(LightningDataModule):
-    def __init__(self, train_data_path, label_filepath, batch_size=32, num_workers=4, pin_memory=True, min_sequence_length=125, max_sequence_length=125, label_col=None,
+    def __init__(self, train_data_path, label_filepath, batch_size=32, num_workers=4, pin_memory=True, min_sequence_length=2, max_sequence_length=125, label_col=None,
                  test_data_path=None, val_data_path=None, pool_method=None):
         super().__init__()
         self.train_data_path = train_data_path
