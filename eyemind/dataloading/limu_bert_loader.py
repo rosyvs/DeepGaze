@@ -80,10 +80,9 @@ class GazeformerEmbeddingDataset(Dataset):
         # print(infos['name'])
         embedding = torch.Tensor(infos["embedding"][:self.max_sequence_length, ...])  # out embedding from LIMU bertm [args.max_sequence_length, 72]
         id = infos['name']
-        og = infos['original_data']
+        og = infos['embedding']
         true_len = self.get_true_len(og)
         label = label_files(self.label_df, self.label_col, id, self.label_id_col)
-        print(f"embedding: {embedding.shape}, label: {label.shape}, true_len: {true_len}")
         return {"embedding":embedding, "sequence_label":label, 'true_len':true_len}
 
     def filter_dataset(self):
@@ -106,10 +105,10 @@ class GazeformerEmbeddingDataset(Dataset):
         print(f"len ids: {len(ids)}")
         # print(f"random sample of ids: {list(ids)[:5]}")
         # fitler on data true_len
-        true_lens = [self.get_true_len(i["original_data"]) for i in self.data]
+        true_lens = [self.get_true_len(i["embedding"]) for i in self.data]
         print(f"sequences with length less than {self.min_sequence_length}: {len([i for i in true_lens if i<self.min_sequence_length])}")
         # print(f"sequences with length less than {self.min_sequence_length}: {len([i for i in true_lens if i<self.min_sequence_length])}")
-        data_ids = set([i["name"] for i in self.data if self.get_true_len(i["original_data"])>=self.min_sequence_length])
+        data_ids = set([i["name"] for i in self.data if self.get_true_len(i["embedding"])>=self.min_sequence_length])
         print(f"len data_ids: {len(data_ids)}")
         # print(f"random sample of data_ids: {list(data_ids)[:5]}")'
         sel = list(ids.intersection(data_ids))
