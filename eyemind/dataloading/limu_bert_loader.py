@@ -173,11 +173,11 @@ class EmbeddingDataModule(LightningDataModule):
             self.test_dataset = GazeformerEmbeddingDataset(self.test_data_path, self.label_filepath, label_col=self.label_col, max_sequence_length=self.max_sequence_length)
         self.collate_fn = partial(gazeformer_embedding_collate_fn, pool_fn=self.pool_fn)
     def train_dataloader(self):
-        return torch.utils.data.DataLoader(self.train_dataset, batch_size=self.batch_size, num_workers=self.num_workers, pin_memory=self.pin_memory, collate_fn=self.collate_fn)
+        return torch.utils.data.DataLoader(self.train_dataset, batch_size=self.batch_size, num_workers=self.num_workers, pin_memory=self.pin_memory, collate_fn=self.collate_fn, drop_last=self.drop_last)
     def val_dataloader(self):
-        return torch.utils.data.DataLoader(self.val_dataset, batch_size=self.batch_size, num_workers=self.num_workers, pin_memory=self.pin_memory, collate_fn=self.collate_fn)
+        return torch.utils.data.DataLoader(self.val_dataset, batch_size=self.batch_size, num_workers=self.num_workers, pin_memory=self.pin_memory, collate_fn=self.collate_fn, drop_last=)
     def test_dataloader(self):
-        return torch.utils.data.DataLoader(self.test_dataset, batch_size=self.batch_size, num_workers=self.num_workers, pin_memory=self.pin_memory, collate_fn=self.collate_fn)
+        return torch.utils.data.DataLoader(self.test_dataset, batch_size=self.batch_size, num_workers=self.num_workers, pin_memory=self.pin_memory, collate_fn=self.collate_fn, drop_last=self.drop_last)
 
     # def get_collate_fn(self):
     #     return gazeformer_embedding_collate_fn(self.dataset)
