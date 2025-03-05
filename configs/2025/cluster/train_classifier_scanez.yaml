@@ -72,7 +72,7 @@ data:
   val_data_path: ./data/embeddings_for_rosy_DST/EML_PTEZ_FTEML_Embeddings_Script_from_long_ago/EML_split4_embeddings.npy #TODO: this is just temp tp get the pipelone to work, while data still downloading
   label_filepath: ./data/EML/EML1_pageLevel_500+_matchEDMinstances.csv
   label_col: Rote_X
-  min_sequence_length: 0
+  min_sequence_length: 1
   max_sequence_length: 9999
   batch_size: 32
   num_workers: 4

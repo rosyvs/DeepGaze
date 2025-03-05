@@ -56,13 +56,13 @@ def main(args):
             split=i+1
             train_path = path_templates[v].format(split=split, valstr="", part="train")
             val_path = path_templates[v].format(split=split, valstr="_val", part="val")
-            print(f"Train path: {train_path}")
-            print(f"Val path: {val_path}")
+            # print(f"Train path: {train_path}")
+            # print(f"Val path: {val_path}")
             if not Path(train_path).exists():
-                print(f"Path {train_path} does not exist")
+                print(f"Train Path {train_path} does not exist")
                 continue
             if not Path(val_path).exists():
-                print(f"Path {val_path} does not exist")
+                print(f"Val Path {val_path} does not exist")
                 continue
             name=f"{l}_scanez_{v}"
             version = f"fold{i}"
