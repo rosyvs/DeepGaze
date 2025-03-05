@@ -64,7 +64,7 @@ def main(args):
             if not Path(val_path).exists():
                 print(f"Val Path {val_path} does not exist")
                 continue
-            name=f"{l}_scanez_{v}"
+            name=f"{l}_scanez_{v}_{p}"
             version = f"fold{i}"
             cmd = f'python eyemind/experiments/limu_comp.py -c {config} --data.label_col {l} --data.pool_method {p} --data.train_data_path {train_path} --data.val_data_path {val_path} --trainer.logger.init_args.name {name} --trainer.logger.init_args.version {version}'
             print(cmd)
