@@ -36,7 +36,7 @@ import numpy as np
 # The data inside eml_structured_21 and eml_unstructured_21 are the npy files used to train/finetune the LIMU model 
 
 # %%
-emb_file = os.path.normpath(os.path.join(repodir,'./data/ekta_embeddings/new_split1_embeddings.npy/rosie_train_1_with_embedding_usingnew_e_pretrain_200_FT_EML_sentid_split_fold1.npy'))
+emb_file = os.path.normpath(os.path.join(repodir,'./data/ekta_embeddings/new_split2_embeddings.npy/rosie_train_2_with_embedding_usingnew_e_pretrain_200_FT_EML_sentid_split_fold2.npy'))
 label_file =  os.path.normpath(os.path.join(repodir,"./data/EML/EML1_pageLevel_500+_matchEDMinstances.csv"))
 label_df = pd.read_csv(label_file, keep_default_na=False)
 
@@ -68,6 +68,23 @@ collate_fn = partial(gazeformer_embedding_collate_fn)
 dl = torch.utils.data.DataLoader(ds, batch_size=1, collate_fn=collate_fn)
 
 # dl_default = torch.utils.data.DataLoader(ds, batch_size=1)
+
+#%% check for short sequences in dataloader
+max_len = 0
+min_len = 99999
+for i, emb in enumerate(embeddings):
+    # check emv has 2 dims
+    if len(emb['embedding'].shape) != 2:
+        print(f'found embedding with shape {emb["embedding"].shape} at index {i}')
+    if get_len(emb) > max_len:
+        max_len = get_len(emb)
+    if get_len(emb) < min_len:
+        min_len = get_len(emb)
+    if get_len(emb) < 10:
+        print(f'found short sequence at index {i} ({100*i/len(embeddings):.2f}%) with length {get_len(emb)}')
+        print(emb['embedding'].shape)
+        print(emb['original_data'].shape)
+print(f'max len: {max_len}, min len: {min_len}')
 
 #%% iterate dataset
 # for i, batch in enumerate(ds):

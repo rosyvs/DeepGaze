@@ -83,6 +83,7 @@ class GazeformerEmbeddingDataset(Dataset):
         og = infos['original_data']
         true_len = self.get_true_len(og)
         label = label_files(self.label_df, self.label_col, id, self.label_id_col)
+        print(f"embedding: {embedding.shape}, label: {label.shape}, true_len: {true_len}")
         return {"embedding":embedding, "sequence_label":label, 'true_len':true_len}
 
     def filter_dataset(self):
@@ -90,23 +91,26 @@ class GazeformerEmbeddingDataset(Dataset):
         label_df = self.label_df
         # print(f"Filter dataset on label_col: {label_col}")
         # print(f"...using label df: {label_df.columns}, length: {len(label_df)}")
+        # fitler on labeldf stuff
         if label_col:
             # count na in label col
             # print(f"sequences with NaN in label col: {label_df[label_col].isna().sum()}")
             # print(f"sequences with length less than {self.min_sequence_length}: {len(label_df[label_df['sequence_length']<self.min_sequence_length])}")
-            ids = label_df[(~label_df[label_col].isna()) & (label_df["sequence_length"] > self.min_sequence_length)][self.label_id_col].to_list()
+            ids = label_df[(~label_df[label_col].isna())][self.label_id_col].to_list()
         else:
             # print(f"sequences with length less than {self.min_sequence_length}: {len(label_df[label_df['sequence_length']<self.min_sequence_length])}")
 
-            ids = label_df[id_col].loc[label_df["sequence_length"] > min_sequence_length].to_list()
-
+            ids = label_df[id_col].to_list()
+        
         ids = set(ids)
         # print(f"len ids: {len(ids)}")
         # print(f"random sample of ids: {list(ids)[:5]}")
-        data_ids = set([i["name"] for i in self.data])
+        # fitler on data true_len
+        data_ids = set([i["name"] for i in self.data if self.get_true_len(i["original_data"])>self.min_sequence_length])
         # print(f"len data_ids: {len(data_ids)}")
-        # print(f"random sample of data_ids: {list(data_ids)[:5]}")
-        return list(ids.intersection(data_ids))
+        # print(f"random sample of data_ids: {list(data_ids)[:5]}")'
+        sel = list(ids.intersection(data_ids))
+        return sel
         
     def get_true_len(self, xi, pad_val=-1.0):
         # len, 3
