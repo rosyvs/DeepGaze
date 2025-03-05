@@ -1,0 +1,80 @@
+
+trainer: 
+  logger:
+    class_path: pytorch_lightning.loggers.TensorBoardLogger
+    init_args:
+      save_dir: ./lightning_logs/2025/classifiers/scanez/
+      name: Rote_X # set to label col, will be overridden if called using script
+      version: fold0
+  enable_checkpointing: true
+  callbacks: 
+    - class_path: pytorch_lightning.callbacks.ModelCheckpoint
+      init_args:
+        monitor: val_loss
+        save_last: true
+        save_top_k: 2 
+  default_root_dir: null
+  gradient_clip_val: 0.5
+  gradient_clip_algorithm: null
+  num_nodes: 1
+  num_processes: null
+  devices: null
+  gpus: null
+  auto_select_gpus: false
+  tpu_cores: null
+  ipus: null
+  enable_progress_bar: true
+  overfit_batches: 0.0
+  track_grad_norm: -1
+  check_val_every_n_epoch: 1
+  fast_dev_run: false
+  accumulate_grad_batches: null
+  max_epochs: 100
+  min_epochs: null
+  max_steps: -1
+  min_steps: null
+  max_time: null
+  limit_train_batches: null
+  limit_val_batches: null
+  limit_test_batches: null
+  limit_predict_batches: null
+  val_check_interval: null
+  log_every_n_steps: 50
+  accelerator: null
+  strategy: null
+  sync_batchnorm: false
+  precision: 32
+  enable_model_summary: true
+  weights_save_path: null
+  num_sanity_val_steps: 2
+  resume_from_checkpoint: null
+  profiler: null
+  benchmark: null
+  deterministic: null
+  reload_dataloaders_every_n_epochs: 0
+  auto_lr_find: false
+  replace_sampler_ddp: true
+  detect_anomaly: false
+  auto_scale_batch_size: false
+  plugins: null
+  amp_backend: native
+  amp_level: null
+  move_metrics_to_cpu: false
+  multiple_trainloader_mode: max_size_cycle
+model:
+  input_dim: 512
+  hidden_dim: 64
+  dropout: 0.05
+  learning_rate: 0.001
+  activation: relu
+data:
+  train_data_path: ./data/embeddings_for_rosy_DST/EML_PTEZ_FTEML_Embeddings_Script_from_long_ago/EML_split4_embeddings.npy
+  val_data_path: ./data/embeddings_for_rosy_DST/EML_PTEZ_FTEML_Embeddings_Script_from_long_ago/EML_split4_embeddings.npy #TODO: this is just temp tp get the pipelone to work, while data still downloading
+  label_filepath: ./data/EML/EML1_pageLevel_500+_matchEDMinstances.csv
+  label_col: Rote_X
+  min_sequence_length: 0
+  max_sequence_length: 9999
+  batch_size: 32
+  num_workers: 4
+  pin_memory: true
+  pool_method: mean

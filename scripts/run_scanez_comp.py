@@ -9,11 +9,37 @@ from pathlib import Path
 # -c configs/2024/lvcmp/classifier_limubert_125.yaml \
 # -f 0 1 2 3 \
 # --label_col ALL
+# # %%
+# ScanEZ embeddings (I extracted train and val) 
+#     Train: new_split{1,2,3,4}_embeddings.npy
+#      Val:  new_split{1,2,3,4}_embeddings_val.npy
 
+# W/o Pretraining (e.g., only trained on human data)  
+#      Train: new_Only_split{12,3,4}_embeddings.npy
+#      Val: new_Only_split{1,2,3,4}_embeddings_val.npy
+
+# W/o Finetuning (e.g., only trained on synthetic data) 
+#      Train: newEZ_Reader_Only_split{1,2,3,4}_embeddings.npy 
+#      Val: newEZ_Reader_Only_split{12,3,4}_embeddings_val.npy
+
+# The data inside eml_structured_21 and eml_unstructured_21 are the npy files used to train/finetune the LIMU model 
+
+# params for making paths:
+# split
+# VAL (bool). valstr = "_val" if VAL else ""
+# part "train" or "val". Should be "train" when VAL is False, otherwise "val"
+# version_long 
+
+path_templates = {
+    'ptEZftEML': 'data/ekta_embeddings/new_split{split}_embeddings{valstr}.npy/rosie_{part}_{split}_with_embedding_usingnew_e_pretrain_200_FT_EML_sentid_split_fold{split}.npy',
+    'ptEZ': 'data/ekta_embeddings/newEZ_Reader_Only_split{split}_embeddings{valstr}.npy/rosie_{part}_{split}_with_embedding_usingnew_ez_pretrain_200.npy',
+    'ptEML': 'data/ekta_embeddings/new_Only_split{split}_embeddings{valstr}.npy/rosie_{part}_{split}_with_embedding_usingeml_only_200_sentid_fold{split}.npy'
+}
 def main(args):
     v = args.version
+    p = args.pooling
     if not args.config:
-        config='configs/2025/local/classifier_PTEZ_FTEML.yaml'
+        config='configs/2025/cluster/train_classifier_scanez.yaml'
     else:
         config=args.config
     if args.label_col=="ALL":
@@ -27,11 +53,20 @@ def main(args):
     for l in label_list:
         for i in args.folds:
             print(f"Fold: {i}")
-            train_path = f'./data/2025/EML_{v}_Embeddings_Script_from_long_ago/EML_split{i+1}_embeddings.npy'
-            val_path = f'./data/2025/EML_{v}_Embeddings_Script_from_long_ago/EML_split{i+1}_embeddings.npy'
+            split=i+1
+            train_path = path_templates[v].format(split=split, valstr="", part="train")
+            val_path = path_templates[v].format(split=split, valstr="_val", part="val")
+            print(f"Train path: {train_path}")
+            print(f"Val path: {val_path}")
+            if not Path(train_path).exists():
+                print(f"Path {train_path} does not exist")
+                continue
+            if not Path(val_path).exists():
+                print(f"Path {val_path} does not exist")
+                continue
             name=f"{l}_scanez_{v}"
             version = f"fold{i}"
-            cmd = f'python eyemind/experiments/limu_comp.py -c {config} --data.label_col {l} --trainer.logger.init_args.name {name} --trainer.logger.init_args.version {version}'
+            cmd = f'python eyemind/experiments/limu_comp.py -c {config} --data.label_col {l} --data.pool_method {p} --data.train_data_path {train_path} --data.val_data_path {val_path} --trainer.logger.init_args.name {name} --trainer.logger.init_args.version {version}'
             print(cmd)
             cmd_list = cmd.split(" ")
             result = subprocess.run(cmd_list, capture_output=True, text=True, check=True)
@@ -44,6 +79,7 @@ if __name__=="__main__":
     parser.add_argument("-f", "--folds", required=True, type=int, nargs='*', help="list of fold numbers to run (e.g. 0 1 2 3)")
     parser.add_argument("-c", "--config", type=str, default="", help="Path to the yaml of hyperparameters (should end _folds.yml)")
     parser.add_argument("-y", "--label_col", default="ALL" ,help="Comprehension label column name. ALL for all")
-    parser.add_argument("-v", "--version", default="PTEZ_FTEML", help="Version string describing embeddings source")
+    parser.add_argument("-v", "--version", default="ptEZftEML", help="Version string describing embeddings source")
+    parser.add_argument("-p", "--pooling", default="mean", help="Pooling function for embeddings (mean, final_pos, masked_mean)")
     args = parser.parse_args()
     main(args)

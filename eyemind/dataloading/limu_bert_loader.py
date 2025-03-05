@@ -49,27 +49,27 @@ def get_split_from_datapath(data_path):
 class GazeformerEmbeddingDataset(Dataset):
     def __init__(self, data_path, label_filepath,  min_sequence_length=125, max_sequence_length=125, label_col=None):
         self.data = np.load(data_path)
-        print(f"Data has length: {len(self.data)}")
+        # print(f"Data has length: {len(self.data)}")
         self.dataset_name = data_path.split("/")[-1].split("_")[0]
-        print(f"Dataset name extracted from data path: {self.dataset_name}")
+        # print(f"Dataset name extracted from data path: {self.dataset_name}")
         self.label_df = pd.read_csv(label_filepath, keep_default_na=True)
         self.label_id_col = "filename"
         self.label_df = create_filename_col(self.label_df, self.label_id_col)
         self.min_sequence_length = min_sequence_length
         self.max_sequence_length = max_sequence_length
         self.label_col = label_col
-        print(f"Label column: {self.label_col}")
+        # print(f"Label column: {self.label_col}")
         self.ids = self.filter_dataset()
-        print(f"len filtered data: {len(self.ids)}")
+        # print(f"len filtered data: {len(self.ids)}")
         self.ixs = np.where([i["name"] in self.ids for i in self.data])[0]
-        print(f"len ixs: {len(self.ixs)}")
+        # print(f"len ixs: {len(self.ixs)}")
         self.data = self.data[self.ixs]
         split = get_split_from_datapath(data_path)
         self.fold=str(int(split)-1) # 0 indexed sorry
         self.label_df = create_filename_col(self.label_df, self.label_id_col)
-        print(f"label_df: {self.label_df.columns}, length: {len(self.label_df)}")
-        print(f"Dataset: {self.dataset_name}, label_col: {self.label_col}, fold: {self.fold}")
-        print(f"len filtered data: {len(self.data)}")
+        # print(f"label_df: {self.label_df.columns}, length: {len(self.label_df)}")
+        # print(f"Dataset: {self.dataset_name}, label_col: {self.label_col}, fold: {self.fold}")
+        # print(f"len filtered data: {len(self.data)}")
 
 
     def __len__(self):
@@ -88,24 +88,24 @@ class GazeformerEmbeddingDataset(Dataset):
     def filter_dataset(self):
         label_col= self.label_col
         label_df = self.label_df
-        print(f"Filter dataset on label_col: {label_col}")
-        print(f"...using label df: {label_df.columns}, length: {len(label_df)}")
+        # print(f"Filter dataset on label_col: {label_col}")
+        # print(f"...using label df: {label_df.columns}, length: {len(label_df)}")
         if label_col:
             # count na in label col
-            print(f"sequences with NaN in label col: {label_df[label_col].isna().sum()}")
-            print(f"sequences with length less than {self.min_sequence_length}: {len(label_df[label_df['sequence_length']<self.min_sequence_length])}")
+            # print(f"sequences with NaN in label col: {label_df[label_col].isna().sum()}")
+            # print(f"sequences with length less than {self.min_sequence_length}: {len(label_df[label_df['sequence_length']<self.min_sequence_length])}")
             ids = label_df[(~label_df[label_col].isna()) & (label_df["sequence_length"] > self.min_sequence_length)][self.label_id_col].to_list()
         else:
-            print(f"sequences with length less than {self.min_sequence_length}: {len(label_df[label_df['sequence_length']<self.min_sequence_length])}")
+            # print(f"sequences with length less than {self.min_sequence_length}: {len(label_df[label_df['sequence_length']<self.min_sequence_length])}")
 
             ids = label_df[id_col].loc[label_df["sequence_length"] > min_sequence_length].to_list()
 
         ids = set(ids)
-        print(f"len ids: {len(ids)}")
-        print(f"random sample of ids: {list(ids)[:5]}")
+        # print(f"len ids: {len(ids)}")
+        # print(f"random sample of ids: {list(ids)[:5]}")
         data_ids = set([i["name"] for i in self.data])
-        print(f"len data_ids: {len(data_ids)}")
-        print(f"random sample of data_ids: {list(data_ids)[:5]}")
+        # print(f"len data_ids: {len(data_ids)}")
+        # print(f"random sample of data_ids: {list(data_ids)[:5]}")
         return list(ids.intersection(data_ids))
         
     def get_true_len(self, xi, pad_val=-1.0):
