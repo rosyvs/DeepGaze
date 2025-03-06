@@ -341,9 +341,9 @@ class EncoderClassifierModel(LightningModule):
         accuracy = self.accuracy_metric(probs, y)
         auroc = self.auroc_metric(probs, y)
         self.logger.experiment.add_scalars("losses", {f"{step_type}_loss": loss}, self.current_epoch)        
-        self.log(f"{step_type}_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
-        self.log(f"{step_type}_accuracy", accuracy, on_step=True, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
-        self.log(f"{step_type}_auroc", auroc, on_step=False, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
+        self.log(f"{step_type}_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True, sync_dist=True, batch_size=X.size(0))
+        self.log(f"{step_type}_accuracy", accuracy, on_step=True, on_epoch=True, prog_bar=True, logger=True, sync_dist=True, batch_size=X.size(0))
+        self.log(f"{step_type}_auroc", auroc, on_step=False, on_epoch=True, prog_bar=True, logger=True, sync_dist=True, batch_size=X.size(0))
         return loss
 
     def configure_optimizers(self):
@@ -351,7 +351,7 @@ class EncoderClassifierModel(LightningModule):
         params = self.parameters()
         optimizer = torch.optim.Adam(params, lr=self.hparams.learning_rate)
         res = {"optimizer": optimizer}
-        res['lr_scheduler'] = {"scheduler": torch.optim.lr_scheduler.StepLR(optimizer, step_size=max(1, int(self.trainer.max_epochs / 5)), gamma=0.5)}
+        res['lr_scheduler'] = {"scheduler": torch.optim.lr_scheduler.StepLR(optimizer, step_size=max(1, int(self.trainer.max_epochs / 5)), gamma=0.5), "monitor": "val_loss"}
         return res
 
     def _get_preds(self, logits, threshold=0.5):
@@ -437,15 +437,15 @@ class ClassifierHead(LightningModule):
         accuracy = self.accuracy_metric(probs, targets)
         auroc = self.auroc_metric(probs, targets)
         self.logger.experiment.add_scalars("losses", {f"{step_type}_loss": loss}, self.current_epoch)        
-        self.log(f"{step_type}_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
+        self.log(f"{step_type}_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True, sync_dist=True, batch_size=X.size(0))
         # self.log(f"{step_type}_accuracy", accuracy, on_step=True, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
-        self.log(f"{step_type}_auroc", auroc, on_step=False, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
+        self.log(f"{step_type}_auroc", auroc, on_step=False, on_epoch=True, prog_bar=True, logger=True, sync_dist=True, batch_size=X.size(0))
 
         return loss
 
     def configure_optimizers(self):
         params = self.parameters()
-        optimizer = torch.optim.Adam(params, lr=self.hparams.learning_rate)
+        optimizer = torch.optim.Adam(params, lr=self.hparams.learning_rate, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)
         res = {"optimizer": optimizer}
         res['lr_scheduler'] = {"scheduler": torch.optim.lr_scheduler.StepLR(optimizer, step_size=max(1, int(self.trainer.max_epochs / 5)), gamma=0.5)}
         return res

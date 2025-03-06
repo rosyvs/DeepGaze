@@ -7,12 +7,17 @@ trainer:
       name: Rote_X # set to label col, will be overridden if called using script
       version: fold0
   enable_checkpointing: true
-  callbacks: 
-    - class_path: pytorch_lightning.callbacks.ModelCheckpoint
-      init_args:
-        monitor: val_loss
-        save_last: true
-        save_top_k: 2 
+  auto_lr_find: true
+  callbacks:
+  - class_path: pytorch_lightning.callbacks.ModelCheckpoint
+    init_args:
+      monitor: val_loss
+      save_last: true
+      save_top_k: 2
+  - class_path: pytorch_lightning.callbacks.EarlyStopping
+    init_args:
+      monitor: val_loss
+      patience: 20
   default_root_dir: null
   gradient_clip_val: 0.5
   gradient_clip_algorithm: null
@@ -29,7 +34,7 @@ trainer:
   check_val_every_n_epoch: 1
   fast_dev_run: false
   accumulate_grad_batches: null
-  max_epochs: 100
+  max_epochs: 1000
   min_epochs: null
   max_steps: -1
   min_steps: null
@@ -52,7 +57,6 @@ trainer:
   benchmark: null
   deterministic: null
   reload_dataloaders_every_n_epochs: 0
-  auto_lr_find: false
   replace_sampler_ddp: true
   detect_anomaly: false
   auto_scale_batch_size: false
