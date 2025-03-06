@@ -163,3 +163,9 @@ mean AUROC over folds per classifier
 | Rote_Y      |             0.535 | **0.545**           | 0.543        |            0.509 |              0.516 | 0.501       | 0.516                 | 0.515                   | 0.522            |
 | Rote_Z      |             0.465 | 0.475               | 0.468        |            0.475 |              0.478 | 0.473       | **0.485**             | 0.483                   | 0.481            |
 | SVT         |             0.510 | **0.512**           | 0.501        |            0.505 |              0.497 | 0.492       | 0.506                 | 0.506                   | 0.504            |
+
+# SUMMARY TABLE
+Average AUROC over all labels per classifier
+|            |   ptEML_final_pos |   ptEML_masked_mean |   ptEML_mean |   ptEZ_final_pos |   ptEZ_masked_mean |   ptEZ_mean |   ptEZftEML_final_pos |   ptEZftEML_masked_mean |   ptEZftEML_mean |
+|------------|-------------------|---------------------|--------------|------------------|--------------------|-------------|-----------------------|-------------------------|------------------|
+| mean AUROC |             0.507 |               0.513 |        0.511 |            0.493 |              0.494 |       0.496 |                 0.511 |                   0.514 |            0.515 |
