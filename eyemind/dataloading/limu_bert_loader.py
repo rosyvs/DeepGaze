@@ -99,17 +99,17 @@ class GazeformerEmbeddingDataset(Dataset):
         else:
             # print(f"sequences with length less than {self.min_sequence_length}: {len(label_df[label_df['sequence_length']<self.min_sequence_length])}")
 
-            ids = label_df[id_col].to_list()
+            ids = label_df[label_col].to_list()
         
         ids = set(ids)
-        print(f"len ids: {len(ids)}")
+        # print(f"len ids: {len(ids)}")
         # print(f"random sample of ids: {list(ids)[:5]}")
         # fitler on data true_len
         true_lens = [self.get_true_len(i["embedding"]) for i in self.data]
-        print(f"sequences with length less than {self.min_sequence_length}: {len([i for i in true_lens if i<self.min_sequence_length])}")
+        # print(f"sequences with length less than {self.min_sequence_length}: {len([i for i in true_lens if i<self.min_sequence_length])}")
         # print(f"sequences with length less than {self.min_sequence_length}: {len([i for i in true_lens if i<self.min_sequence_length])}")
         data_ids = set([i["name"] for i in self.data if self.get_true_len(i["embedding"])>=self.min_sequence_length])
-        print(f"len data_ids: {len(data_ids)}")
+        # print(f"len data_ids: {len(data_ids)}")
         # print(f"random sample of data_ids: {list(data_ids)[:5]}")'
         sel = list(ids.intersection(data_ids))
         return sel

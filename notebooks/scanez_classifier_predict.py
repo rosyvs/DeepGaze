@@ -31,6 +31,15 @@ label_cols = ['SVT','Rote_X', 'Rote_Y', "Rote_Z",
           "Rote_D","Inference_D",
           "MW"]
 folds = [0,1,2,3]
+def get_latest_ckpt(ckpt_dir):
+    ckpts = [f for f in os.listdir(ckpt_dir) if f.endswith(".ckpt")]
+    # get date etited
+    ckpts = [(f, os.path.getmtime(os.path.join(ckpt_dir,f))) for f in ckpts]
+    ckpts = sorted(ckpts, key=lambda x: x[1], reverse=True)
+    # reconstruct path
+    ckpt_final = os.path.join(ckpt_dir, ckpts[0][0])
+    return ckpt_final
+
 
 #%% TEMP 
 label_col = label_cols[0]
@@ -46,10 +55,12 @@ for version in versions:
         for label_col in label_cols:
             save_dir_base = f"{repodir}/lightning_logs/2025/classifiers/scanez/{label_col}_scanez_{classifier_name}/"
             for fold in folds:
-                print(f"Loading model for {version} {pool_method} {label_col} fold {fold}")
+                print(f"\n------------------------------------")
+                print(f"{version} {pool_method} {label_col} fold {fold}")
                 save_dir = os.path.join(save_dir_base, f'fold{fold}/')
                 config_path=os.path.join(save_dir,"config.yaml")
-                ckpt_path = os.path.join(save_dir,"checkpoints","last.ckpt")
+                ckpt_path = get_latest_ckpt(os.path.join(save_dir,"checkpoints"))
+                print(f"...Loading model from {ckpt_path}")
                 with open(config_path, "r") as f:
                     config = yaml.safe_load(f)
                 # load the classifier head
@@ -91,6 +102,8 @@ for version in versions:
                 res = pd.DataFrame({"version":version, "pool_method":pool_method, "label_col":label_col, 
                                     "id":ids,"fold":fold,"prob":probs,"pred":preds, "label":labels, 
                                     "diff":diff, "correct":correct})
+                # sort res on id
+                res = res.sort_values("id")
                 res_all.append(res)            
 res_all = pd.concat(res_all)
 res_all['diff'] = np.abs(res_all['label'] - res_all['prob'])
@@ -127,16 +140,23 @@ comps = [
     ("ptEZftEML_masked_mean", "ptEML_masked_mean"),
 ]
 comp_res = []
-for comp in comps:
-    version1, pool_method1 = comp[0].split("_",1)
-    version2, pool_method2 = comp[1].split("_",1)
-    model1 = res_all[(res_all["version"]==version1) & (res_all["pool_method"]==pool_method1)]
-    model2 = res_all[(res_all["version"]==version2) & (res_all["pool_method"]==pool_method2)]
-    diff1 = model1["diff"].to_numpy()
-    diff2 = model2["diff"].to_numpy()
-    t, p = ttest_rel(diff1, diff2)
-    print(f"{comp[0]} vs {comp[1]} t: {t:.2f} p: {p:.2f}")
-    comp_res.append({"model1":comp[0], "model2":comp[1], "t":t, "p":p})
+for label_col in label_cols:
+    for comp in comps:
+        version1, pool_method1 = comp[0].split("_",1)
+        version2, pool_method2 = comp[1].split("_",1)
+        model1 = res_all[(res_all["version"]==version1) & (res_all["pool_method"]==pool_method1) & (res_all["label_col"]==label_col)]
+        model2 = res_all[(res_all["version"]==version2) & (res_all["pool_method"]==pool_method2) & (res_all["label_col"]==label_col)]
+        # align the two on id
+        models_comp = pd.merge(model1, model2, on="id", suffixes=("_1","_2"))
+        diff1 = models_comp["diff_1"]
+        diff2 = models_comp["diff_2"]
+        # assert lengths the same
+        if len(diff1)!=len(diff2):
+            print(f"Lengths not the same for {comp}. {len(diff1)} vs {len(diff2)}")
+            continue
+        t, p = ttest_rel(diff1, diff2,nan_policy='omit')
+        print(f"{comp[0]} vs {comp[1]} t: {t:.2f} p: {p:.2f}")
+        comp_res.append({"label_col":label_col,"model1":comp[0], "model2":comp[1], "t":t, "p":p})
 comp_res = pd.DataFrame(comp_res)
 comp_res.to_csv(f"{repodir}/results/scanez_EML_model_comparisons.csv", index=False)
 # %%
@@ -145,4 +165,7 @@ res_all.groupby(["version","pool_method","label_col"])['diff'].mean()
 # look at one id for all models
 res_all[res_all["id"]==list(set(res_all["id"]))[20]]
 
+# %%
+# there should be the same ids per fold regardless of model version. check this# 
+foldchk = res_all.groupby(["version","pool_method","label_col","fold"])['id'].nunique()
 # %%
