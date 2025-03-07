@@ -45,15 +45,13 @@ def get_latest_ckpt(ckpt_dir):
 label_col = label_cols[0]
 version = versions[0]
 pool_method = pooling_methods[0]
-classifier_names = [f"{version}_{pool_method}" for version in versions for pool_method in pooling_methods]
-classifier_name = classifier_names[0]
 fold = folds[0]
 
 res_all = []
 for version in versions:
     for pool_method in pooling_methods:
         for label_col in label_cols:
-            save_dir_base = f"{repodir}/lightning_logs/2025/classifiers/scanez/{label_col}_scanez_{classifier_name}/"
+            save_dir_base = f"{repodir}/lightning_logs/2025/classifiers/scanez/{label_col}_scanez_{version}_{pool_method}"
             for fold in folds:
                 print(f"\n------------------------------------")
                 print(f"{version} {pool_method} {label_col} fold {fold}")
