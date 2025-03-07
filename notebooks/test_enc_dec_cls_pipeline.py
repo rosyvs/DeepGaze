@@ -138,6 +138,7 @@ from eyemind.dataloading.transforms import Pooler
 mean_pooler = Pooler('mean')
 masked_mean_pooler = Pooler('masked_mean')
 final_pos_pooler = Pooler('final_pos')
+
 #%% test using InformerEncoder and ClassifierHead separately
 ch_config = ic_config.copy()
 unu = ['encoder_ckpt','n_heads','e_layers','attn','distil','factor','enc_in','d_ff','output_attention','freeze_encoder']

@@ -14,3 +14,4 @@ OBF/
 **notes
 notes/*
 *.pt
+results/*_predictions.csv

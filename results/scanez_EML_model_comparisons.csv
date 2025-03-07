@@ -1,0 +1,10 @@
+model1,model2,t,p
+ptEZ_mean,ptEZftEML_mean,,
+ptEZ_mean,ptEML_mean,,
+ptEZftEML_mean,ptEML_mean,,
+ptEZ_final_pos,ptEZftEML_final_pos,,
+ptEZ_final_pos,ptEML_final_pos,,
+ptEZftEML_final_pos,ptEML_final_pos,,
+ptEZ_masked_mean,ptEZftEML_masked_mean,,
+ptEZ_masked_mean,ptEML_masked_mean,,
+ptEZftEML_masked_mean,ptEML_masked_mean,,

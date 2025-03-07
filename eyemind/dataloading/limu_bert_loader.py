@@ -148,7 +148,8 @@ def gazeformer_embedding_collate_fn(batch, pool_fn=None):
     return (batch_embedding, batch_pad_mask), batch_tgt_y
 
 class EmbeddingDataModule(LightningDataModule):
-    def __init__(self, train_data_path, label_filepath, batch_size=32, num_workers=4, pin_memory=True, min_sequence_length=2, max_sequence_length=125, label_col=None,
+    def __init__(self, train_data_path, label_filepath, batch_size=32, num_workers=4, pin_memory=True, min_sequence_length=2, 
+                 max_sequence_length=125, label_col=None,
                  test_data_path=None, val_data_path=None, pool_method=None, drop_last=True):
         super().__init__()
         self.train_data_path = train_data_path
