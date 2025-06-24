@@ -1,22 +1,15 @@
-from pathlib import Path
-from typing import Any, List, Optional
+from pathlib import
+from typing import Any
 from pytorch_lightning import LightningModule
 import torchmetrics
 from torch import nn
-import torch.nn.functional as F
 import torch
 
 from eyemind.obf.model import ae
-from eyemind.obf.model import creator
-from eyemind.models.encoder_decoder import EncoderDecoderModel, MultiTaskEncoderDecoder
+# from eyemind.models.encoder_decoder import MultiTaskEncoderDecoder #TODO: Ekta verify this can be omitted
 from eyemind.analysis.predictions import get_encoder_from_checkpoint
 from eyemind.dataloading.transforms import Pooler
-from eyemind.models.informer.utils.masking import TriangularCausalMask, ProbMask
-from eyemind.models.informer.models.encoder import Encoder, EncoderLayer, ConvLayer, EncoderStack
-from eyemind.models.informer.models.decoder import Decoder, DecoderLayer
-from eyemind.models.informer.models.attn import FullAttention, ProbAttention, AttentionLayer
-from eyemind.models.informer.models.embed import GazeEmbedding
-from eyemind.models.loss import RMSELoss
+
 
 
 def create_encoder(hidden_dim=128, backbone_type='gru', nlayers=2, conv_dim=32,input_dim=2,use_conv=True):
@@ -290,7 +283,7 @@ class EncoderClassifierModel(LightningModule):
         # Encoding
         if encoder_ckpt:
             #self.enc_embedding, self.encoder = get_encoder_from_checkpoint(InformerMultiTaskEncoderDecoder, encoder_ckpt)
-            self.encoder = get_encoder_from_checkpoint(MultiTaskEncoderDecoder, 
+            self.encoder = get_encoder_from_checkpoint(LightningModule, # TODO Ekta: this was changed from InformerMultiTaskEncoderDecoder to LightningModule, verify if this is correct
                                                        encoder_ckpt)
         else:
             raise NotImplementedError
