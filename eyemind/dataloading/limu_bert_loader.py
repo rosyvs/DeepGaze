@@ -1,14 +1,9 @@
 # Based on code from Ekta Sood
 
-from torch import nn, Tensor
 from torch.utils.data import Dataset
-from torch.nn.utils.rnn import pad_sequence
 import torch
-import os
 import re
-from os.path import join
 import numpy as np
-import json
 import pandas as pd
 from pytorch_lightning import LightningDataModule
 from eyemind.dataloading.transforms import Pooler

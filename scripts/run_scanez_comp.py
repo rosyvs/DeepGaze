@@ -5,10 +5,7 @@ from pathlib import Path
 # This python script automates running a slurm bash script for each fold. 
 
 #e.g.
-# python scripts/run_limu_comp.py \
-# -c configs/2024/lvcmp/classifier_limubert_125.yaml \
-# -f 0 1 2 3 \
-# --label_col ALL
+# python scripts/run_scanez_comp.py -c configs/2025/cluster/train_classifier_scanez.yaml -f 0 1 2 3 #TODO: Ekta, this is the key command! 
 # # %%
 # ScanEZ embeddings (I extracted train and val) 
 #     Train: new_split{1,2,3,4}_embeddings.npy
