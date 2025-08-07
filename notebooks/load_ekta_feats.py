@@ -20,7 +20,7 @@ from functools import partial
 from pytorch_lightning.cli import LightningCLI
 import numpy as np
 
-# # %%
+# 
 # ScanEZ embeddings (I extracted train and val) 
 #     Train: new_split{1,2,3,4}_embeddings.npy
 #      Val:  new_split{1,2,3,4}_embeddings_val.npy
@@ -36,13 +36,14 @@ import numpy as np
 # The data inside eml_structured_21 and eml_unstructured_21 are the npy files used to train/finetune the LIMU model 
 
 # %%
-emb_file = os.path.normpath(os.path.join(repodir,'./data/ekta_embeddings/new_split2_embeddings.npy/rosie_train_2_with_embedding_usingnew_e_pretrain_200_FT_EML_sentid_split_fold2.npy'))
-label_file =  os.path.normpath(os.path.join(repodir,"./data/EML/EML1_pageLevel_500+_matchEDMinstances.csv"))
+emb_file = os.path.normpath(os.path.join(repodir,'./data/ekta_embeddings/new_Only_split1_embeddings_val.npy/rosie_val_1_with_embedding_usingeml_only_200_sentid_fold1.npy'))
+label_file =  os.path.normpath(os.path.join(repodir,
+                                            "/Users/roso8920/Emotive Computing Dropbox/Rosy Southwell/EyeMindLink/Processed/Gaze/DeepGaze/EML/EML1_pageLevel_500+_matchEDMinstances.csv"))
 label_df = pd.read_csv(label_file, keep_default_na=False)
 
 
 # read the file
-embeddings = np.load(emb_file)
+embeddings = np.load(emb_file, allow_pickle=True, mmap_mode='r')
 print(f'embeddings fields: {embeddings.dtype.names}')
 print(embeddings['embedding'].shape) # n, len, feats
 embeddings[0]['original_data'].shape # len, 3
